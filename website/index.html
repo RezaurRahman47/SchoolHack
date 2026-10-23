@@ -204,6 +204,72 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
 @media (max-width: 380px) { .brand span { display: none; } }
 .pill, .linkbtn, .lang button { white-space: nowrap; }
 @media (max-width: 520px) { .pill.role-pill { display: none; } }
+
+/* archify: the app explained as two live diagrams (technical + business) */
+.footlink { background: none; border: 0; padding: 0; font-weight: 800; color: var(--grape-d); text-decoration: underline; text-underline-offset: 3px; }
+.ax-promo { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 20px; background: var(--ink); color: #fff; box-shadow: 0 6px 0 #0d1333; }
+.ax-promo .txt { flex: 1 1 260px; display: grid; gap: 6px; }
+.ax-promo .muted { color: #b9c0e8; }
+.ax-promo .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn.sm { min-height: 48px; padding: 8px 18px; font-size: 1.05rem; border-radius: 16px; }
+.ax-ctrl { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.ax-ctrl, .ax-card, .ax-grid, .ax-grid > * { min-width: 0; }  /* keep the wide diagram from stretching the page */
+.seg.wrap { flex-wrap: wrap; border-radius: 24px; }
+.ax-card { padding: 10px; }
+.ax-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; border-radius: 20px; }
+.ax-svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.ax-svg .zone text { font: 800 12px var(--font-body); letter-spacing: .08em; fill: var(--muted); }
+.ax-svg .node { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: opacity .2s; }
+.ax-svg .node rect { fill: #fff; stroke: var(--line); stroke-width: 3; transition: fill .2s, stroke .2s; }
+.ax-svg .node .t { font: 600 15.5px var(--font-display); fill: var(--ink); }
+.ax-svg .node .s { font: 700 12px var(--font-body); fill: var(--muted); }
+.ax-svg .node .ico { font-size: 22px; }
+.ax-svg .node:hover rect, .ax-svg .node:focus-visible rect { stroke: var(--grape); }
+.ax-svg .node:focus-visible rect { stroke: var(--sun); stroke-width: 5; }
+.ax-svg .node.is-on rect { stroke: var(--grape); fill: #f1ecff; }
+.ax-svg .node.is-sel rect { stroke: var(--sun); stroke-width: 5; fill: #fffaf0; }
+.ax-svg .edge { transition: opacity .2s; }
+.ax-svg .edge path { fill: none; stroke: #b9c8e2; stroke-width: 2.5; marker-end: url(#axArr); }
+.ax-svg .edge text { font: 800 12px var(--font-body); fill: var(--muted); text-anchor: middle; paint-order: stroke; stroke: var(--card); stroke-width: 5px; stroke-linejoin: round; }
+.ax-svg .edge text.st { text-anchor: start; }
+.ax-svg.build .node { animation: axpop .45s cubic-bezier(.3, 1.5, .6, 1) both; animation-delay: calc(var(--i) * 45ms); }
+.ax-svg.build .edge path { stroke-dasharray: var(--len); animation: axdraw .6s ease both; animation-delay: calc(var(--i) * 40ms + 350ms); }
+.ax-svg .edge.is-on path, .ax-svg .edge.is-hl path { stroke: var(--grape); stroke-width: 3.5; marker-end: url(#axArrOn); }
+.ax-svg .edge.is-on text, .ax-svg .edge.is-hl text { fill: var(--grape-d); }
+.ax-svg .edge.is-now path { stroke-dasharray: 9 7; animation: axflow .6s linear infinite; }
+.ax-svg.hovering .node:not(.is-hl) { opacity: .4; }
+.ax-svg.hovering .edge:not(.is-hl) { opacity: .25; }
+.ax-svg .packet { fill: var(--sun); stroke: var(--ink); stroke-width: 2.5; opacity: 0; }
+@keyframes axpop { from { opacity: 0; transform: scale(.85); } }
+@keyframes axdraw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+@keyframes axflow { to { stroke-dashoffset: -16; } }
+@media (prefers-reduced-motion: reduce) { .ax-svg *, .ax-svg.build * { animation: none !important; } }
+.ax-cap { color: var(--muted); font-weight: 700; font-size: .95rem; padding: 8px 10px 4px; }
+.ax-grid { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 860px) { .ax-grid { grid-template-columns: 1fr 1fr; } }
+.ax-eyebrow { font-weight: 800; color: var(--grape-d); font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; }
+.ax-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ax-steps button { border: 3px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 12px; font-weight: 800; font-size: .9rem; color: var(--muted); }
+.ax-steps button.done { border-color: #cdbfff; color: var(--grape-d); }
+.ax-steps button[aria-current] { border-color: var(--grape); background: var(--grape); color: #fff; }
+.ax-nav { display: flex; gap: 10px; flex-wrap: wrap; }
+.ax-nav .btn { flex: 1 1 120px; }
+.ax-log { display: grid; gap: 10px; max-height: 360px; overflow-y: auto; padding-right: 4px; scroll-behavior: smooth; }
+.msg { display: flex; gap: 10px; align-items: flex-start; animation: axin .25s ease both; }
+.msg .av { width: 38px; height: 38px; border-radius: 12px; background: rgba(255,255,255,.12); display: grid; place-items: center; font-size: 1.25rem; flex: none; }
+.msg .bub { background: rgba(255,255,255,.09); border-radius: 4px 16px 16px 16px; padding: 8px 12px; font-weight: 700; font-size: .95rem; min-width: 0; overflow-wrap: anywhere; }
+.msg .who { display: block; color: var(--sun); font-size: .8rem; font-weight: 800; }
+.msg.me { flex-direction: row-reverse; }
+.msg.me .bub { background: var(--grape); border-radius: 16px 4px 16px 16px; }
+.msg.sys .bub { background: rgba(255,201,60,.16); }
+@keyframes axin { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .msg { animation: none; } }
+.qchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.qchips button { border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: .9rem; background: rgba(255,255,255,.12); color: #fff; }
+.qchips button:hover { background: rgba(255,255,255,.22); }
+.ax-ask { display: flex; gap: 8px; }
+.ax-ask .in { padding: 10px 14px; font-size: 1rem; min-width: 0; }
+.ax-ask .btn { flex: none; }
 </style>
 
 <header class="top">
@@ -297,6 +363,24 @@ const UI = {
   you: D('Du (Demo)', 'You (demo)'),
   foot: D('School Hack · Klasse 9 Chemie · Berliner Lehrplan', 'School Hack · Grade 9 chemistry · Berlin curriculum'),
   langLabel: D('Sprache', 'Language'),
+  axOpen: D('🗺️ So funktioniert School Hack', '🗺️ How School Hack works'), axFootLink: D('So funktioniert’s', 'How it works'),
+  axPromo: D('Archify zeigt dir die App von innen: Technik und Business, Schritt für Schritt, mit Agenten, die alles erklären.', 'Archify shows you the app from the inside: technical and business, step by step, with agents that explain every part.'),
+  axTitle: D('So funktioniert School Hack', 'How School Hack works'),
+  axSub: D('Zwei Blickwinkel auf dieselbe App. Wähle einen Ablauf, tippe auf ein Teil oder frag Archify.', 'Two views of the same app. Pick a flow, tap any part, or ask Archify.'),
+  axTech: D('⚙️ Technik', '⚙️ Technical'), axBiz: D('💼 Business', '💼 Business'), axView: D('Ansicht', 'View'), axFlow: D('Ablauf', 'Flow'),
+  axStep: (i, n) => D(`Schritt ${i} von ${n}`, `Step ${i} of ${n}`),
+  axPrev: D('← Zurück', '← Back'), axNext: D('Weiter →', 'Next →'), axPlay: D('▶ Abspielen', '▶ Play'), axPause: D('⏸ Pause', '⏸ Pause'),
+  axPartT: D('Teil der Technik', 'Part of the system'), axPartB: D('Teil des Business', 'Part of the business'),
+  axChat: D('🤖 Archify-Agenten', '🤖 Archify agents'), axChatSub: D('Jedes Teil erklärt selbst, was es gerade tut.', 'Each part explains what it is doing.'),
+  axAsk: D('Frag Archify …', 'Ask Archify …'), axSend: D('Fragen', 'Ask'), axYou: D('Du', 'You'),
+  axSimT: D('▶ Eine Antwort simulieren', '▶ Simulate an answer'), axSimB: D('▶ Eine Schulwoche simulieren', '▶ Simulate a school week'),
+  axBack: D('← Zurück zur App', '← Back to the app'),
+  axCapT: D('Alles läuft in einer HTML-Datei im Browser. Die KI ist optional, formuliert nur Texte und bewertet nie.', 'Everything runs in one HTML file in the browser. AI is optional, only phrases text and never grades.'),
+  axCapB: D('Links lernen die Kinder, rechts plant die Lehrkraft. Die Schleife schließt sich, wenn gezielt geübt wird.', 'Students learn on the left, the teacher plans on the right. The loop closes when students practise the gap.'),
+  axHello: D('Hallo, ich bin Archify! Ich zeige dir, wie School Hack innen funktioniert. Spiel einen Ablauf ab, tippe auf ein Teil oder frag mich etwas.', 'Hi, I’m Archify! I show you how School Hack works inside. Play a flow, tap a part, or ask me something.'),
+  axHelp: D('Das weiß ich (noch) nicht. Frag mich nach Tipps, Bewertung, Daten, dem Lücken-Agenten, Bestehen, Wiederholen, dem Lehrplan oder der Python-Version.', 'I don’t know that one (yet). Ask me about hints, grading, data, the gap finder, passing, retries, the curriculum or the Python version.'),
+  axSimNote: D('Nur Simulation: nichts wird gespeichert.', 'Simulation only: nothing is saved.'),
+  axQs: [D('Wer bewertet?', 'Who grades?'), D('Wo sind meine Daten?', 'Where is my data?'), D('Wie kommt ein Tipp?', 'How does a hint work?'), D('Was hat die Lehrkraft davon?', 'What does the teacher get?'), D('Simulieren', 'Simulate')],
 };
 const t = k => L(UI[k]);
 
@@ -553,9 +637,11 @@ function header() {
     (session.role ? `<button class="linkbtn" id="out" type="button">${session.role === 'student' ? t('bye') : t('logout')}</button>` : '');
   document.querySelectorAll('.lang button').forEach(b => b.onclick = () => { if (lang === b.dataset.l) return; lang = b.dataset.l; store.set('sh_lang', lang); document.documentElement.lang = lang; current(); });
   const o = $('#out'); if (o) o.onclick = () => { session.role = null; quiz = null; viewLogin(); };
-  $('#foot').textContent = `${t('foot')} · ${VERSION}`;
+  $('#foot').innerHTML = `${t('foot')} · ${VERSION} · <button class="footlink" id="axFoot" type="button">🗺️ ${t('axFootLink')}</button>`;
+  $('#axFoot').onclick = () => viewArch();
 }
 function mount(html, view) {
+  axStop();
   current = view;
   Object.values(charts).forEach(c => c.destroy()); for (const k in charts) delete charts[k];
   $('#app').innerHTML = html; header();
@@ -581,7 +667,10 @@ function viewLogin() {
       <label class="f" for="pass">${t('pass')}<input class="in" id="pass" type="password" autocomplete="current-password"></label>
       <button class="btn wide" type="submit">${t('go')}</button>
       <p class="hint-demo">${t('demo')}: <b>admin</b> / <b>admin</b></p>
-    </form></section>`, viewLogin);
+    </form></section>
+    <div class="card ax-promo">${mascot('wow', 72)}<div class="txt"><h2 style="color:#fff">${t('axOpen')}</h2><p class="muted">${t('axPromo')}</p></div>
+      <div class="btns"><button class="btn sun sm" type="button" data-ax="tech">${t('axTech')}</button><button class="btn sm" type="button" data-ax="biz">${t('axBiz')}</button></div></div>`, viewLogin);
+  document.querySelectorAll('[data-ax]').forEach(b => b.onclick = () => { AXS.lens = b.dataset.ax; AXS.flow = null; viewArch(); });
   document.querySelectorAll('.role').forEach(b => b.onclick = () => { loginRole = b.dataset.r; document.querySelectorAll('.role').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   $('#loginForm').onsubmit = e => {
     e.preventDefault();
@@ -806,6 +895,17 @@ async function runAgent(d) {
   const wait = ms => new Promise(r => setTimeout(r, ms)), mark = (i, cls) => { const e = $('#st' + i); if (e) e.className = 'step ' + cls; };
   for (let i = 0; i < 4; i++) { mark(i, 'run'); await wait(300); mark(i, 'done'); }
   mark(4, 'run');
+  let { weak, acts, gl, summary } = analyse(d);
+  if (sample) { try {
+    const r = await sample(`You help a grade-9 chemistry teacher in Berlin. In ${lang === 'de' ? 'German' : 'English'}, write 2 short, friendly sentences on what matters most for the next lesson.\nGaps: ${JSON.stringify(weak.map(w => ({ skill: L(SKILLS[w.s].name), mastery: Math.round(w.mean * 100), cause: w.root && L(SKILLS[w.root].name) })))}\nPass rate: ${d.kpi.pass} %`, { modelTier: 'quick' });
+    if (r?.text?.trim()) summary = { ...summary, [lang]: r.text.trim() }; } catch (e) { if (e?.code === 'not_granted') sample = null; } }
+  mark(4, 'done');
+  agentResult = { k: tClass, summary, weak, acts, gl };
+  paintAgent(agentResult, false);
+  btn.disabled = false; btn.textContent = t('rerun');
+}
+// gap finder logic, shared by the teacher view and the Archify simulation
+function analyse(d) {
   const mean = s => d.st.reduce((a, x) => a + x.mastery[s], 0) / d.st.length;
   const rows = Object.keys(SKILLS).map(s => ({ s, mean: mean(s), err: d.skill[s].n ? d.skill[s].w / d.skill[s].n : 0, below: d.st.filter(x => x.mastery[s] < .6).length }));
   const by = Object.fromEntries(rows.map(r => [r.s, r]));
@@ -815,15 +915,8 @@ async function runAgent(d) {
   const gl = Object.entries(groups).sort((a, b) => b[1].length - a[1].length).slice(0, 3);
   const acts = weak.map(w => w.root ? (l => UI.actRoot(SKILLS[w.s].name[l], SKILLS[w.root].name[l], w.below)[l]) : (l => UI.actPlain(SKILLS[w.s].name[l])[l]));
   if (d.kpi.failed) acts.push(l => UI.actFail(d.kpi.failed)[l]);
-  let summary = weak.length ? (l => UI.sumGap(SKILLS[weak[0].s].name[l], Math.round(weak[0].mean * 100))[l] + (weak[0].root ? UI.sumRoot(SKILLS[weak[0].root].name[l])[l] : '') + UI.sumPass(d.kpi.pass)[l]) : (l => UI.noGaps[l]);
-  summary = both(summary);
-  if (sample) { try {
-    const r = await sample(`You help a grade-9 chemistry teacher in Berlin. In ${lang === 'de' ? 'German' : 'English'}, write 2 short, friendly sentences on what matters most for the next lesson.\nGaps: ${JSON.stringify(weak.map(w => ({ skill: L(SKILLS[w.s].name), mastery: Math.round(w.mean * 100), cause: w.root && L(SKILLS[w.root].name) })))}\nPass rate: ${d.kpi.pass} %`, { modelTier: 'quick' });
-    if (r?.text?.trim()) summary = { ...summary, [lang]: r.text.trim() }; } catch (e) { if (e?.code === 'not_granted') sample = null; } }
-  mark(4, 'done');
-  agentResult = { k: tClass, summary, weak, acts, gl };
-  paintAgent(agentResult, false);
-  btn.disabled = false; btn.textContent = t('rerun');
+  const summary = both(weak.length ? (l => UI.sumGap(SKILLS[weak[0].s].name[l], Math.round(weak[0].mean * 100))[l] + (weak[0].root ? UI.sumRoot(SKILLS[weak[0].root].name[l])[l] : '') + UI.sumPass(d.kpi.pass)[l]) : (l => UI.noGaps[l]));
+  return { weak, acts, gl, summary };
 }
 function paintAgent(a, withSteps) {
   const out = $('#agentOut'); out.hidden = false;
@@ -837,7 +930,413 @@ function paintAgent(a, withSteps) {
     <div><h3 style="color:#fff;margin-bottom:8px">${t('groupsT')}</h3><div class="gaps">${a.gl.map(([s, names]) => `<div class="gap"><b>${sname(s)} · ${names.length}</b><span style="color:var(--muted)">${names.map(esc).join(', ')}</span></div>`).join('')}</div></div>`;
 }
 
-viewLogin();
+// ---------- ARCHIFY: the app explained as two live diagrams ----------
+// Grid: 4 columns (node x = 35 + col·270, width 200), 4 rows (y = 72 + row·100, height 56).
+// Edge labels sit in the 70px gaps between columns (centres x = 270, 540, 810).
+const nd = (id, col, row, ico, tt, s, about, h = 56) => ({ id, x: 35 + col * 270, y: 72 + row * 100, h, ico, t: tt, s, about });
+const ed = (id, from, to, d, lx, ly, label, cls = '') => ({ id, from, to, d, lx, ly, label, cls });
+const st = (e, n, who, short, title, text, say) => ({ e, n, who, short, title, text, say });
+const RLP = D('Die Skills folgen dem Rahmenlehrplan Berlin-Brandenburg, Chemie Klasse 9: Ionen, Säuren und Laugen, Mol, Kohlenwasserstoffe.', 'The skills follow the Berlin-Brandenburg curriculum for grade 9 chemistry: ions, acids and alkalis, moles, hydrocarbons.');
+const ARCH = {
+  tech: {
+    aria: D('Technische Architektur: Schüler·in und Lehrkraft nutzen Fragen-Generator, Bewertung, Tipp-Helfer und Lücken-Agent. Daten bleiben im Browser, Claude ist optional.', 'Technical architecture: student and teacher use the question engine, grader, hint helper and gap finder. Data stays in the browser, Claude is optional.'),
+    caption: UI.axCapT, first: 'test',
+    zones: [{ x: 15, t: D('MENSCHEN', 'PEOPLE'), c: '#f1ecff' }, { x: 285, t: D('APP-LOGIK', 'APP LOGIC'), c: '#e3f1ff' }, { x: 555, t: D('DATEN & KI', 'DATA & AI'), c: '#ddf8ec' }, { x: 825, t: D('IM HINTERGRUND', 'BEHIND THE SCENES'), c: '#fff4cc' }],
+    nodes: [
+      nd('student', 0, 0, '🧒', D('Schüler·in', 'Student'), D('Quiz im Browser', 'quiz in the browser'), D('Lernt im Browser: Test starten, antworten, Tipps holen. Der Fortschritt bleibt auf diesem Gerät.', 'Learns in the browser: starts a test, answers, asks for hints. Progress stays on this device.'), 156),
+      nd('teacher', 0, 3, '👩‍🏫', D('Lehrkraft', 'Teacher'), D('Dashboard + Diagramme', 'dashboard + charts'), D('Sieht Punkte, Bestehensquote und die schwierigsten Themen der Klasse und startet den Lücken-Agenten.', 'Sees scores, pass rate and the hardest topics, and runs the gap finder.')),
+      nd('engine', 1, 0, '🧪', D('Fragen-Generator', 'Question engine'), D('15 Skills · 30 Fragen', 'builds 30 questions'), D('Erzeugt aus Vorlagen (T) neue Aufgaben mit Zufallswerten: jeder der 15 Skills zweimal, also 30 Fragen. Die Python-Version gewichtet schwache Skills stärker.', 'Builds fresh questions from templates (T) with random values: each of the 15 skills twice, so 30 questions. The Python version favours weak skills.')),
+      nd('grader', 1, 1, '✅', D('Bewertung', 'Grader'), D('im Code, nicht per KI', 'in code, not by AI'), D('Prüft jede Antwort im Code: Auswahl exakt, Zahlen mit 2 % Toleranz. Typische Fehler (Traps) bekommen eine eigene Erklärung.', 'Checks every answer in code: choices exactly, numbers within 2 %. Typical mistakes (traps) get their own explanation.')),
+      nd('tutor', 1, 2, '💡', D('Tipp-Helfer', 'Hint helper'), D('Atomi gibt Tipps', 'Atomi’s hints'), D('Erster Tipp: ein Denkanstoß ohne Lösung. Zweiter Tipp: der Lösungsweg.', 'First hint: a nudge without the answer. Second hint: the method.')),
+      nd('agent', 1, 3, '🤖', D('Lücken-Agent', 'Gap finder'), D('5 Schritte, erklärbar', '5 explainable steps'), D('Fünf Schritte: Daten laden, Schwächen finden, Ursachen im Skill-Graph suchen, Gruppen bilden, Tipps geben. Jeder Schritt ist nachvollziehbar.', 'Five steps: load data, find weak spots, trace causes in the skill graph, form groups, give tips. Every step can be checked.')),
+      nd('skills', 2, 0, '🕸️', D('Skill-Graph', 'Skill graph'), D('Themen, Vorwissen', 'topics + prerequisites'), D('15 Skills in 4 Themen. Jeder Skill kennt seine Voraussetzungen, z. B. braucht Konzentration die Stoffmenge.', '15 skills in 4 topics. Each skill knows its prerequisites, e.g. concentration needs amount of substance.')),
+      nd('store', 2, 1, '💾', D('Lernstand', 'Progress'), D('localStorage', 'localStorage'), D('Mastery pro Skill, Sterne, Serie und Testergebnisse. Richtig schließt 22 % der Lücke, falsch zieht 18 % ab. Gespeichert im localStorage.', 'Mastery per skill, stars, streak and test results. Right closes 22 % of the gap, wrong takes off 18 %. Saved in localStorage.')),
+      nd('claude', 2, 2, '✨', D('Claude (optional)', 'Claude (optional)'), D('formuliert nur Texte', 'only phrases text'), D('Nur wenn die Seite auf claude.ai läuft (oder in der Python-Version mit API-Key). Formuliert Tipps und das Fazit, bewertet aber nie.', 'Only when the page runs on claude.ai (or in the Python version with an API key). Phrases hints and the summary, never grades.')),
+      nd('klass', 2, 3, '📊', D('Klassendaten', 'Class data'), D('24 Demo-Kinder + du', '24 demo students + you'), D('24 erfundene Schüler·innen in 9a und 9b, plus dein letzter Test. Als Beispieldaten gekennzeichnet.', '24 made-up students in 9a and 9b, plus your last test. Marked as example data.')),
+      nd('rlp', 3, 0, '📘', D('Lehrplan Berlin', 'Berlin curriculum'), D('Chemie Klasse 9', 'chemistry, grade 9'), RLP),
+      nd('server', 3, 1, '🐍', D('Python-Version', 'Python version'), D('FastAPI + SQLite', 'FastAPI + SQLite'), D('backend-python/: FastAPI-Server mit SQLite, Konten für beide Rollen und gemeinsamen Klassendaten. Läuft auf Port 8000.', 'backend-python/: a FastAPI server with SQLite, accounts for both roles and shared class data. Runs on port 8000.')),
+      nd('fallback', 3, 2, '📦', D('Eingebaute Tipps', 'Built-in hints'), D('klappt immer, ohne KI', 'always work, no AI'), D('Ein fester Tipp pro Skill (TIPS) und die Erklärung jeder Aufgabe. Funktioniert immer, auch ganz ohne KI.', 'One fixed hint per skill (TIPS) plus each question’s explanation. Always works, even with no AI at all.')),
+    ],
+    edges: [
+      ed('start', 'student', 'engine', 'M235 92 H303', 270, 84, D('starten', 'start')),
+      ed('qs', 'engine', 'student', 'M305 116 H237', 270, 134, D('Fragen', 'questions')),
+      ed('ans', 'student', 'grader', 'M235 192 H303', 270, 184, D('Antwort', 'answer')),
+      ed('fb', 'grader', 'student', 'M305 214 H237', 270, 232, D('Feedback', 'feedback')),
+      ed('hint', 'student', 'tutor', 'M135 228 V300 H303', 270, 292, D('Tipp?', 'hint?')),
+      ed('uses', 'skills', 'engine', 'M575 100 H507', 540, 92, D('Skills', 'skills')),
+      ed('save', 'grader', 'store', 'M505 200 H573', 540, 192, D('speichert', 'saves')),
+      ed('ask', 'tutor', 'claude', 'M505 300 H573', 540, 292, D('fragt', 'asks')),
+      ed('off', 'claude', 'fallback', 'M775 300 H843', 810, 292, D('kein Claude?', 'no Claude?')),
+      ed('rlpE', 'rlp', 'skills', 'M845 100 H777', 810, 92, D('Basis', 'based on')),
+      ed('py', 'store', 'server', 'M775 200 H843', 810, 192, D('oder', 'or')),
+      ed('run', 'teacher', 'agent', 'M235 392 H303', 270, 384, D('Analyse', 'analyse')),
+      ed('back', 'agent', 'teacher', 'M305 414 H237', 270, 432, D('Lücken', 'gaps')),
+      ed('load', 'klass', 'agent', 'M575 412 H507', 540, 432, D('lädt', 'loads')),
+      ed('sum', 'agent', 'claude', 'M505 386 H528 V318 H573', 518, 352, D('Fazit', 'summary'), 'rot'),
+    ],
+    flows: {
+      test: { name: D('Ein Test', 'Taking a test'), steps: [
+        st(['start', 'uses'], ['student', 'engine', 'skills'], 'engine', D('Test bauen', 'Build the test'), D('Atomi baut deinen Test', 'Atomi builds your test'),
+          D('Der Fragen-Generator nimmt jeden der 15 Skills zweimal und füllt Vorlagen mit Zufallswerten. So entstehen 30 Fragen, und kein Test ist wie der andere.', 'The question engine takes each of the 15 skills twice and fills templates with random values. That makes 30 questions, and no two tests are the same.'),
+          D('Ich habe 30 neue Fragen gebaut, zwei pro Skill aus dem Skill-Graph.', 'I built 30 fresh questions, two per skill from the skill graph.')),
+        st(['qs'], ['engine', 'student'], 'student', D('Fragen zeigen', 'Show questions'), D('Eine Frage nach der anderen', 'One question at a time'),
+          D('Auswahlfragen mit vier Antworten oder Rechenaufgaben mit Zahlenfeld. Komma oder Punkt, beides geht.', 'Multiple choice with four options, or a calculation with a number field. Comma or point both work.'),
+          D('Ich sehe Frage 1 von 30 und tippe meine Antwort.', 'I see question 1 of 30 and type my answer.')),
+        st(['ans'], ['student', 'grader'], 'grader', D('Antwort prüfen', 'Check the answer'), D('Der Code bewertet, nicht die KI', 'Code grades, not AI'),
+          D('Auswahl muss genau stimmen, Zahlen dürfen 2 % abweichen. Erkennt der Code einen typischen Fehler, etwa „mal statt geteilt“, erklärt er genau diesen Fehler.', 'Choices must match exactly, numbers may be 2 % off. If the code spots a typical mistake, like multiplying instead of dividing, it explains that mistake.'),
+          D('Geprüft in Millisekunden, jedes Mal gleich fair. Typische Fehler erkenne ich.', 'Checked in milliseconds, equally fair every time. I recognise typical mistakes.')),
+        st(['fb'], ['grader', 'student'], 'grader', D('Feedback', 'Feedback'), D('Sofort-Feedback', 'Instant feedback'),
+          D('Richtig: +10 Sterne und die Serie wächst. Falsch: ein Hinweis, und die Frage kommt in der nächsten Runde wieder.', 'Right: +10 stars and the streak grows. Wrong: a pointer, and the question comes back next round.'),
+          D('Richtig, +10 ⭐! Falsche Fragen merke ich mir für die nächste Runde.', 'Correct, +10 ⭐! I keep wrong questions for the next round.')),
+        st(['save'], ['grader', 'store'], 'store', D('Speichern', 'Save progress'), D('Der Lernstand wächst mit', 'Progress grows with you'),
+          D('Jede Antwort ändert die Mastery des Skills: richtig schließt 22 % der Lücke bis 100 %, falsch zieht 18 % ab. Gespeichert im Browser, auf diesem Gerät.', 'Every answer moves that skill’s mastery: right closes 22 % of the gap to 100 %, wrong takes off 18 %. Saved in the browser on this device.'),
+          D('Neuer Lernstand gespeichert. Die Sterne pro Thema zeigen ihn an.', 'New progress saved. The stars per topic show it.')),
+      ] },
+      hint: { name: D('Tipp holen', 'Getting a hint'), steps: [
+        st(['hint'], ['student', 'tutor'], 'tutor', D('Tipp anfordern', 'Ask for a hint'), D('„Atomi, gib mir einen Tipp!“', '“Atomi, give me a hint!”'),
+          D('Der erste Tipp ist ein Denkanstoß ohne Lösung. Wer nochmal tippt, bekommt den Lösungsweg.', 'The first hint is a nudge without the answer. Tap again to get the method.'),
+          D('Ich gebe erst einen Denkanstoß, keine Lösung.', 'I start with a nudge, not the answer.')),
+        st(['ask'], ['tutor', 'claude'], 'claude', D('Claude fragen', 'Ask Claude'), D('Auf claude.ai formuliert Claude den Tipp', 'On claude.ai, Claude phrases the hint'),
+          D('Claude bekommt die Frage, die vom Code berechnete Lösung und den Lösungsweg, mit der Anweisung, die Lösung nicht zu verraten. Kein Name, kein Punktestand.', 'Claude gets the question, the answer the code computed and the method, and is told not to give the answer away. No name, no score.'),
+          D('Ich formuliere freundlich, in höchstens 2 Sätzen, mit einer Gegenfrage.', 'I phrase it kindly, in at most 2 sentences, with a guiding question.')),
+        st(['off'], ['claude', 'fallback'], 'fallback', D('Ohne Claude', 'Without Claude'), D('Ohne Claude: eingebaute Tipps', 'Without Claude: built-in hints'),
+          D('Lokal oder ohne Freigabe nimmt die App ihren festen Tipp pro Skill. Der Test funktioniert also immer, auch ganz ohne KI.', 'Locally, or without permission, the app uses its fixed hint per skill. So the test always works, even with no AI at all.'),
+          D('Kein Claude da? Kein Problem, ich habe für jeden Skill einen Tipp.', 'No Claude? No problem, I have a hint for every skill.')),
+      ] },
+      gaps: { name: D('Lücken finden', 'Finding gaps'), steps: [
+        st(['run'], ['teacher', 'agent'], 'teacher', D('Analyse starten', 'Run analysis'), D('Die Lehrkraft startet den Lücken-Agenten', 'The teacher runs the gap finder'),
+          D('Ein Klick im Dashboard, für alle oder nur für 9a oder 9b.', 'One click in the dashboard, for all classes or just 9a or 9b.'),
+          D('Wo hakt es in meiner Klasse?', 'Where is my class stuck?')),
+        st(['load'], ['klass', 'agent'], 'agent', D('Daten laden', 'Load data'), D('Klassendaten laden', 'Load class data'),
+          D('Mastery und Antworten pro Skill von 24 Demo-Schüler·innen, plus dein letzter Test, wenn es einen gibt.', 'Mastery and answers per skill for 24 demo students, plus your last test if there is one.'),
+          D('Schritt 1: Daten aller Kinder geladen.', 'Step 1: data for every student loaded.')),
+        st([], ['agent', 'skills'], 'agent', D('Ursachen suchen', 'Trace causes'), D('Schwächen finden, Ursachen suchen', 'Find weak spots, trace causes'),
+          D('Schwach ist ein Skill unter 60 % Mastery oder mit über 40 % Fehlern. Dann sucht der Agent im Skill-Graph eine Voraussetzung unter 65 %: dort liegt wahrscheinlich die Ursache.', 'A skill is weak below 60 % mastery or above 40 % wrong. The agent then looks in the skill graph for a prerequisite below 65 %: that is the likely cause.'),
+          D('Ich folge dem Skill-Graph rückwärts bis zur schwächsten Voraussetzung.', 'I follow the skill graph backwards to the weakest prerequisite.')),
+        st(['sum'], ['agent', 'claude'], 'claude', D('Fazit', 'Summary'), D('Ein Fazit in zwei Sätzen', 'A two-sentence summary'),
+          D('Wenn verfügbar, schreibt Claude das Fazit. Es bekommt nur Skill-Namen und Prozentwerte, keine Namen. Sonst schreibt der Code das Fazit selbst.', 'If available, Claude writes the summary. It gets only skill names and percentages, no student names. Otherwise the code writes it.'),
+          D('Ich sehe nur Prozentwerte pro Skill, keine Namen.', 'I only see percentages per skill, no names.')),
+        st(['back'], ['agent', 'teacher'], 'agent', D('Gruppen + Tipps', 'Groups + tips'), D('Gruppen und Tipps für die nächste Stunde', 'Groups and tips for the next lesson'),
+          D('Bis zu drei Lücken mit Ursache, Fördergruppen nach dem schwächsten Skill jedes Kindes und konkrete Schritte, z. B. „erst 10 Minuten Stoffmenge wiederholen“.', 'Up to three gaps with their cause, support groups by each student’s weakest skill, and concrete steps, e.g. “revise amount of substance for 10 minutes first”.'),
+          D('Fertig: Lücken, Ursachen, Gruppen und was du als Nächstes tun kannst.', 'Done: gaps, causes, groups and what to do next.')),
+      ] },
+      data: { name: D('Wo sind die Daten?', 'Where data lives'), steps: [
+        st(['save'], ['grader', 'store'], 'store', D('Im Browser', 'In the browser'), D('Der Lernstand bleibt im Browser', 'Progress stays in the browser'),
+          D('Die Website speichert Sterne, Mastery und Tests im localStorage dieses Geräts. Es gibt keinen Server, der Daten sammelt.', 'The website saves stars, mastery and tests in this device’s localStorage. There is no server collecting data.'),
+          D('Ich lebe nur auf diesem Gerät. Löschst du die Browserdaten, fängst du neu an.', 'I only live on this device. Clear the browser data and you start fresh.')),
+        st(['py'], ['store', 'server'], 'server', D('Python: SQLite', 'Python: SQLite'), D('Für echte Klassen: die Python-Version', 'For real classes: the Python version'),
+          D('backend-python/ speichert dasselbe in SQLite, mit Konten für Schüler·innen und Lehrkräfte und gemeinsamen Klassendaten.', 'backend-python/ stores the same data in SQLite, with student and teacher accounts and shared class data.'),
+          D('Starte mich mit run.bat, dann laufe ich auf localhost:8000.', 'Start me with run.bat and I run on localhost:8000.')),
+        st(['ask', 'sum'], ['tutor', 'agent', 'claude'], 'claude', D('Was Claude sieht', 'What Claude sees'), D('Claude bekommt nur, was der Text braucht', 'Claude only gets what the text needs'),
+          D('Für Tipps: Frage, Lösung, Lösungsweg. Für das Fazit: Skill-Namen und Prozentwerte. Keine Namen, keine einzelnen Ergebnisse.', 'For hints: question, answer, method. For the summary: skill names and percentages. No names, no individual results.'),
+          D('Ich bekomme nie einen Namen zu sehen.', 'I never see a name.')),
+        st(['rlpE', 'uses'], ['rlp', 'skills', 'engine'], 'skills', D('Aus dem Lehrplan', 'From the curriculum'), D('Inhalte aus dem Berliner Lehrplan', 'Content from the Berlin curriculum'),
+          D('Skills, Vorlagen und Erklärungen stehen direkt im Code (SKILLS, T, TIPS), zweisprachig. Neue Aufgaben kommen dort hinzu.', 'Skills, templates and explanations live in the code (SKILLS, T, TIPS), in two languages. New questions are added there.'),
+          D('15 Skills, 4 Themen, jeder mit seinen Voraussetzungen.', '15 skills, 4 topics, each with its prerequisites.')),
+      ] },
+    },
+  },
+  biz: {
+    aria: D('Business-Ablauf: Schüler·innen lernen und üben, die Lehrkraft findet Lücken und plant die nächste Stunde, die Schule bekommt Lehrplan-Treue, Datenschutz und einen einfachen Start.', 'Business flow: students learn and practise, the teacher finds gaps and plans the next lesson, the school gets curriculum fit, privacy and an easy start.'),
+    caption: UI.axCapB, first: 'student',
+    zones: [{ x: 15, t: D('SCHÜLER·IN', 'STUDENT'), c: '#f1ecff' }, { x: 285, t: D('ATOMI HILFT', 'ATOMI HELPS'), c: '#ffe5ef' }, { x: 555, t: D('LEHRKRAFT', 'TEACHER'), c: '#ddf8ec' }, { x: 825, t: D('SCHULE', 'SCHOOL'), c: '#fff4cc' }],
+    nodes: [
+      nd('login', 0, 0, '🔑', D('Anmelden', 'Sign in'), D('Demo: admin / admin', 'demo: admin / admin'), D('Eine Anmeldung für beide Rollen. In der Demo: admin / admin.', 'One sign-in for both roles. In the demo: admin / admin.')),
+      nd('stars', 0, 1, '⭐', D('Sterne pro Thema', 'Stars per topic'), D('zeigt, was sitzt', 'shows what is solid'), D('Bis zu drei Sterne pro Skill zeigen, was schon sitzt und was noch nicht.', 'Up to three stars per skill show what is solid and what is not yet.')),
+      nd('test', 0, 2, '📝', D('30-Fragen-Test', '30-question test'), D('neu bei jedem Start', 'new every time'), D('30 neue Fragen bei jedem Start, aus allen 15 Skills.', '30 fresh questions every time, from all 15 skills.')),
+      nd('result', 0, 3, '🏁', D('Ergebnis', 'Result'), D('ab 20 von 30 bestanden', 'pass at 20 of 30'), D('Bestanden ab 20 von 30 in der ersten Runde. Bei Erfolg gibt es Konfetti.', 'Passed with 20 of 30 in the first round. Success means confetti.')),
+      nd('progress', 1, 1, '📈', D('Lernstand', 'Progress'), D('jede Antwort zählt', 'every answer counts'), D('Jede Antwort verändert die Mastery des Skills. Das sehen Kind und Lehrkraft.', 'Every answer moves that skill’s mastery. Student and teacher both see it.')),
+      nd('help', 1, 2, '💡', D('Tipps von Atomi', 'Atomi’s hints'), D('ohne die Lösung', 'never the answer'), D('Atomi stellt eine Gegenfrage, statt die Lösung zu verraten. Beim zweiten Mal zeigt Atomi den Weg.', 'Atomi asks a guiding question instead of giving the answer. The second time, Atomi shows the method.')),
+      nd('again', 1, 3, '🔁', D('Nochmal üben', 'Practise again'), D('nur falsche Fragen', 'only the wrong ones'), D('Nur die falschen Fragen kommen wieder, Runde für Runde, bis alles sitzt. Ab Runde 2 mit Lösungsweg.', 'Only the wrong questions come back, round after round, until everything is right. From round 2 with the method.')),
+      nd('dash', 2, 0, '👩‍🏫', D('Dashboard', 'Class dashboard'), D('Punkte · Themen · Quote', 'scores · topics · pass'), D('Bestehensquote, Ø Punkte, Kinder unter 20, Punkte pro Kind und die schwierigsten Themen.', 'Pass rate, average points, students below 20, points per student and the hardest topics.')),
+      nd('gapf', 2, 1, '🤖', D('Lücken-Agent', 'Gap finder'), D('ein Klick', 'one click'), D('Findet die größten Lücken und ihre wahrscheinliche Ursache im Skill-Graph.', 'Finds the biggest gaps and their likely cause in the skill graph.')),
+      nd('groups', 2, 2, '👥', D('Fördergruppen', 'Support groups'), D('nach schwächstem Skill', 'by weakest skill'), D('Kinder mit demselben schwächsten Skill landen in einer Gruppe.', 'Students with the same weakest skill end up in one group.')),
+      nd('lesson', 2, 3, '🗓️', D('Nächste Stunde', 'Next lesson'), D('erst die Grundlagen', 'basics first'), D('Konkrete Schritte: erst die Voraussetzung wiederholen, ein Alltagsbeispiel, ein Wiederholungstest.', 'Concrete steps: revise the prerequisite first, an everyday example, a retest.')),
+      nd('rlp', 3, 0, '📘', D('Lehrplan Berlin', 'Berlin curriculum'), D('Chemie Klasse 9', 'chemistry, grade 9'), RLP),
+      nd('privacy', 3, 1, '🔒', D('Datenschutz', 'Privacy'), D('keine Namen an die KI', 'no names sent to AI'), D('Die Website speichert nur im Browser. An die KI gehen keine Namen.', 'The website stores data only in the browser. No names go to the AI.')),
+      nd('cost', 3, 2, '🧰', D('Einfach starten', 'Easy to start'), D('1 Datei, kein Server', 'one file, no server'), D('Eine HTML-Datei, kein Build, kein Server. Doppelklick reicht. Für echte Klassen gibt es die Python-Version.', 'One HTML file, no build step, no server. A double-click is enough. For real classes there is the Python version.')),
+      nd('more', 3, 3, '🧬', D('Mehr Fächer', 'More subjects'), D('Mathe · Bio · Physik', 'maths · bio · physics'), D('Mathe, Biologie und Physik sind im Menü schon angelegt und kommen als Nächstes.', 'Maths, biology and physics are already in the menu and come next.')),
+    ],
+    edges: [
+      ed('b1', 'login', 'stars', 'M135 128 V170', 145, 154, D('Chemie', 'chemistry'), 'st'),
+      ed('b2', 'stars', 'test', 'M135 228 V270', 145, 254, D('starten', 'start'), 'st'),
+      ed('b3', 'test', 'help', 'M235 296 H303', 270, 288, D('Tipp?', 'hint?')),
+      ed('b4', 'test', 'result', 'M135 328 V370', 145, 354, D('30 Antworten', '30 answers'), 'st'),
+      ed('b5', 'result', 'again', 'M235 400 H303', 270, 422, D('Fehler', 'mistakes')),
+      ed('b6', 'again', 'test', 'M305 384 H262 V318 H237', 252, 352, D('nochmal', 'again'), 'rot'),
+      ed('b7', 'test', 'progress', 'M235 280 H250 V200 H303', 280, 192, D('zählt', 'counts')),
+      ed('b8', 'progress', 'gapf', 'M505 200 H573', 540, 192, D('zeigt', 'shows')),
+      ed('b9', 'dash', 'gapf', 'M675 128 V170', 685, 154, D('1 Klick', '1 click'), 'st'),
+      ed('b10', 'gapf', 'groups', 'M675 228 V270', 685, 254, D('Gruppen', 'groups'), 'st'),
+      ed('b11', 'groups', 'lesson', 'M675 328 V370', 685, 354, D('plant', 'plans'), 'st'),
+      ed('b12', 'lesson', 'again', 'M575 400 H507', 540, 392, D('übt', 'practise')),
+      ed('b13', 'rlp', 'dash', 'M845 100 H777', 810, 92, D('Skills', 'skills')),
+      ed('b14', 'gapf', 'privacy', 'M775 200 H843', 810, 192, D('ohne Namen', 'no names')),
+    ],
+    flows: {
+      student: { name: D('Lernreise', 'Student journey'), steps: [
+        st(['b1'], ['login', 'stars'], 'login', D('Anmelden', 'Sign in'), D('Anmelden und Chemie wählen', 'Sign in and pick chemistry'),
+          D('Schüler·in wählen, anmelden, Chemie antippen. Die Sterne pro Thema zeigen sofort, wo man steht.', 'Pick Student, sign in, tap Chemistry. The stars per topic show at once where you stand.'),
+          D('Hallo! Welches Fach heute?', 'Hi! Which subject today?')),
+        st(['b2'], ['stars', 'test'], 'test', D('Test starten', 'Start a test'), D('Ein frischer 30-Fragen-Test', 'A fresh 30-question test'),
+          D('Jeder Start bringt neue Aufgaben. Antworten auswendig lernen hilft nicht, verstehen schon.', 'Every start brings new questions. Memorising answers does not help, understanding does.'),
+          D('30 neue Fragen, los geht’s!', '30 new questions, let’s go!')),
+        st(['b3'], ['test', 'help'], 'help', D('Tipp holen', 'Get a hint'), D('Hängen bleiben ist erlaubt', 'Getting stuck is allowed'),
+          D('Atomi hilft mit einem Denkanstoß statt der Lösung. So bleibt das Denken beim Kind.', 'Atomi helps with a nudge instead of the answer, so the thinking stays with the student.'),
+          D('Welche Teilchen bringt die Säure mit? Denk mal nach! 💡', 'Which particles does the acid bring? Have a think! 💡')),
+        st(['b7', 'b4'], ['test', 'progress', 'result'], 'result', D('Ergebnis', 'Result'), D('Ab 20 von 30 bestanden', 'Pass with 20 of 30'),
+          D('Jede Antwort zählt sofort für den Lernstand. Am Ende zeigt die Ergebnis-Seite die Punkte, die Grenze bei 20 und bei Erfolg Konfetti.', 'Every answer counts towards progress straight away. The result page shows the score, the pass mark at 20 and, on success, confetti.'),
+          D('Ab 20 Punkten: bestanden, und es regnet Konfetti! 🎉', 'From 20 points: passed, and it rains confetti! 🎉')),
+        st(['b5', 'b6'], ['result', 'again', 'test'], 'again', D('Fehler üben', 'Practise mistakes'), D('Nur die Fehler kommen wieder', 'Only mistakes come back'),
+          D('Falsche Fragen werden wiederholt, Runde für Runde, ab Runde 2 mit Lösungsweg, bis alles sitzt.', 'Wrong questions repeat, round after round, from round 2 with the method, until everything is right.'),
+          D('Nur die falschen Fragen nochmal, diesmal mit Lösungsweg.', 'Only the wrong questions again, this time with the method.')),
+      ] },
+      teacher: { name: D('Lehrkraft', 'Teacher journey'), steps: [
+        st([], ['dash'], 'dash', D('Dashboard', 'Dashboard'), D('Die Klasse auf einen Blick', 'The class at a glance'),
+          D('Bestehensquote, Ø Punkte, Kinder unter 20, Punkte pro Kind und „Wo hakt es?“ pro Thema. Filter für 9a und 9b.', 'Pass rate, average points, students below 20, points per student and “Where are they stuck?” per topic. Filter for 9a and 9b.'),
+          D('Alle Ergebnisse auf einer Seite, ohne Korrigieren.', 'All results on one page, no marking needed.')),
+        st(['b8', 'b9'], ['progress', 'dash', 'gapf'], 'gapf', D('Lücken finden', 'Find gaps'), D('Ein Klick findet die Lücken', 'One click finds the gaps'),
+          D('Der Lücken-Agent liest den Lernstand aller Kinder und findet die schwächsten Skills.', 'The gap finder reads every student’s progress and finds the weakest skills.'),
+          D('Ich prüfe alle 15 Skills für die ganze Klasse.', 'I check all 15 skills for the whole class.')),
+        st(['b10'], ['gapf', 'groups'], 'groups', D('Gruppen', 'Groups'), D('Ursachen und Fördergruppen', 'Causes and support groups'),
+          D('Zu jeder Lücke sucht der Agent die schwache Voraussetzung. Kinder mit demselben schwächsten Skill kommen in eine Gruppe.', 'For each gap the agent looks for the weak prerequisite. Students with the same weakest skill form one group.'),
+          D('Diese Kinder brauchen alle dasselbe.', 'These students all need the same thing.')),
+        st(['b11'], ['groups', 'lesson'], 'lesson', D('Stunde planen', 'Plan the lesson'), D('Die nächste Stunde steht', 'The next lesson is planned'),
+          D('Zum Beispiel: „Vor pH-Wert rechnen erst 10 Minuten Konzentration wiederholen.“ Wer unter 20 Punkten liegt, bekommt einen Wiederholungstest.', 'For example: “Before calculating pH, revise concentration for 10 minutes.” Students below 20 points get a retest.'),
+          D('Erst die Grundlage, dann das Thema.', 'Foundation first, then the topic.')),
+        st(['b12'], ['lesson', 'again'], 'again', D('Gezielt üben', 'Targeted practice'), D('Die Schleife schließt sich', 'The loop closes'),
+          D('Die Kinder üben genau das, was fehlt, und jede Antwort fließt wieder in den Lernstand.', 'Students practise exactly what is missing, and every answer feeds back into progress.'),
+          D('Wir üben genau die Lücke.', 'We practise exactly the gap.')),
+      ] },
+      value: { name: D('Wer hat was davon?', 'Who gains what'), steps: [
+        st(['b3', 'b5'], ['help', 'again'], 'help', D('Schüler·innen', 'Students'), D('Schüler·innen üben ohne Angst', 'Students practise without fear'),
+          D('Fehler sind Übung, keine Strafe: Tipps statt Lösungen, Sterne und Serien, und falsche Fragen kommen einfach wieder.', 'Mistakes are practice, not punishment: hints instead of answers, stars and streaks, and wrong questions simply come back.'),
+          D('Fehler sind okay. Wir üben sie einfach nochmal.', 'Mistakes are fine. We just practise them again.')),
+        st(['b8', 'b9'], ['progress', 'dash', 'gapf'], 'dash', D('Lehrkräfte', 'Teachers'), D('Lehrkräfte sehen Lücken in einem Klick', 'Teachers see gaps in one click'),
+          D('Kein Korrigieren von 30 Fragen mal 24 Kindern. Das Dashboard zeigt, wo es hakt, und der Agent schlägt die nächsten Schritte vor.', 'No marking 30 questions times 24 students. The dashboard shows where they are stuck, and the agent suggests next steps.'),
+          D('Ich spare mir das Korrigieren und sehe sofort, wo es hakt.', 'I skip the marking and see straight away where they are stuck.')),
+        st(['b13'], ['rlp', 'dash'], 'rlp', D('Schule', 'School'), D('Passt zum Lehrplan', 'Fits the curriculum'),
+          D('Die Skills folgen dem Berliner Rahmenlehrplan für Chemie Klasse 9, auf Deutsch und Englisch.', 'The skills follow the Berlin framework curriculum for grade 9 chemistry, in German and English.'),
+          D('Jeder Skill gehört zu einem Thema aus dem Lehrplan.', 'Every skill belongs to a topic from the curriculum.')),
+        st(['b14'], ['gapf', 'privacy'], 'privacy', D('Datenschutz', 'Privacy'), D('Datenschutz eingebaut', 'Privacy built in'),
+          D('Die Website speichert nur im Browser. Die KI ist optional, bewertet nie und sieht keine Namen.', 'The website stores data only in the browser. AI is optional, never grades and never sees names.'),
+          D('Namen bleiben im Klassenzimmer.', 'Names stay in the classroom.')),
+        st([], ['cost', 'more'], 'cost', D('Starten', 'Get started'), D('Leicht zu starten, leicht zu erweitern', 'Easy to start, easy to extend'),
+          D('Eine Datei öffnen genügt. Neue Fächer kommen als neue Skills und Vorlagen dazu.', 'Opening one file is enough. New subjects are added as new skills and templates.'),
+          D('Doppelklick auf index.html, fertig.', 'Double-click index.html, done.')),
+      ] },
+    },
+  },
+};
+
+const AXS = { lens: 'tech', flow: null, step: 0, sel: null, log: [], built: null, timer: null, raf: 0, run: 0, back: null };
+const axA = () => ARCH[AXS.lens];
+const axNode = id => axA().nodes.find(n => n.id === id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function axStop() { clearInterval(AXS.timer); AXS.timer = null; cancelAnimationFrame(AXS.raf); AXS.run++; }
+
+function axSvg() {
+  const A = axA(), arrow = (id, c) => `<marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="${c}"/></marker>`;
+  return `<svg class="ax-svg${AXS.built !== AXS.lens ? ' build' : ''}" id="axSvg" viewBox="0 0 1080 470" role="img" aria-label="${esc(L(A.aria))}">
+    <defs>${arrow('axArr', '#b9c8e2')}${arrow('axArrOn', '#6c4bf4')}</defs>
+    ${A.zones.map(z => `<g class="zone"><rect x="${z.x}" y="16" width="240" height="440" rx="22" fill="${z.c}"/><text x="${z.x + 20}" y="44">${esc(L(z.t))}</text></g>`).join('')}
+    ${A.edges.map((e, i) => `<g class="edge" data-edge="${e.id}" style="--i:${i}"><path d="${e.d}"/><text ${e.cls === 'st' ? 'class="st"' : ''} x="${e.lx}" y="${e.ly}"${e.cls === 'rot' ? ` transform="rotate(-90 ${e.lx} ${e.ly})"` : ''}>${esc(L(e.label))}</text></g>`).join('')}
+    ${A.nodes.map((n, i) => { const cy = n.y + n.h / 2; return `<g class="node" data-node="${n.id}" tabindex="0" role="button" aria-label="${esc(L(n.t))}" style="--i:${i}">
+      <rect x="${n.x}" y="${n.y}" width="200" height="${n.h}" rx="16"/><text class="ico" x="${n.x + 26}" y="${cy + 8}" text-anchor="middle">${n.ico}</text>
+      <text class="t" x="${n.x + 50}" y="${cy - 3}">${esc(L(n.t))}</text><text class="s" x="${n.x + 50}" y="${cy + 16}">${esc(L(n.s))}</text></g>`; }).join('')}
+    <circle class="packet" r="7" cx="-20" cy="-20"/></svg>`;
+}
+
+function viewArch() {
+  if (current !== viewArch) AXS.back = current;
+  const A = axA();
+  if (!A.flows[AXS.flow]) { AXS.flow = A.first; AXS.step = 0; }
+  if (!AXS.log.length) AXS.log.push({ ico: '🗺️', who: 'Archify', text: UI.axHello, cls: 'sys' });
+  mount(`<div class="stack">
+    <div class="row-between"><div class="hello">${mascot('wow', 72)}<div><h1>${t('axTitle')}</h1><p class="muted">${t('axSub')}</p></div></div>
+      <button class="btn ghost sm" id="axBack" type="button">${t('axBack')}</button></div>
+    <div class="ax-ctrl">
+      <div class="seg" role="group" aria-label="${t('axView')}">${['tech', 'biz'].map(l => `<button type="button" data-lens="${l}" aria-pressed="${AXS.lens === l}">${t(l === 'tech' ? 'axTech' : 'axBiz')}</button>`).join('')}</div>
+      <div class="seg wrap" role="group" aria-label="${t('axFlow')}" id="axFlows">${Object.entries(A.flows).map(([k, f]) => `<button type="button" data-flow="${k}" aria-pressed="${AXS.flow === k}">${esc(L(f.name))}</button>`).join('')}</div>
+      <button class="btn sun sm" id="axSim" type="button">${t(AXS.lens === 'tech' ? 'axSimT' : 'axSimB')}</button>
+    </div>
+    <div class="card ax-card"><div class="ax-scroll" id="axScroll">${axSvg()}</div><p class="ax-cap">${esc(L(A.caption))}</p></div>
+    <div class="ax-grid">
+      <div class="card stack" id="axPanel">
+        <span class="ax-eyebrow" id="axEyebrow"></span><h2 id="axTitle"></h2><p id="axText"></p>
+        <ol class="ax-steps" id="axSteps"></ol>
+        <div class="ax-nav"><button class="btn ghost sm" id="axPrev" type="button">${t('axPrev')}</button><button class="btn sm" id="axPlay" type="button">${t('axPlay')}</button><button class="btn ghost sm" id="axNext" type="button">${t('axNext')}</button></div>
+      </div>
+      <div class="card agent stack">
+        <div><h2 style="color:#fff">${t('axChat')}</h2><p class="muted">${t('axChatSub')}</p></div>
+        <div class="ax-log" id="axLog" aria-live="polite"></div>
+        <div class="qchips" role="group">${UI.axQs.map(L).map((q, i) => `<button type="button" data-q="${i}">${esc(q)}</button>`).join('')}</div>
+        <form class="ax-ask" id="axForm"><input class="in" id="axIn" autocomplete="off" placeholder="${t('axAsk')}" aria-label="${t('axAsk')}"><button class="btn sun sm" type="submit">${t('axSend')}</button></form>
+      </div>
+    </div></div>`, viewArch);
+  const svg = $('#axSvg');
+  svg.querySelectorAll('.edge path').forEach(p => p.style.setProperty('--len', Math.ceil(p.getTotalLength())));
+  if (AXS.built !== AXS.lens) { AXS.built = AXS.lens; setTimeout(() => svg.classList.remove('build'), 1600); }
+  $('#axBack').onclick = () => (AXS.back || viewLogin)();
+  document.querySelectorAll('[data-lens]').forEach(b => b.onclick = () => { if (AXS.lens !== b.dataset.lens) { AXS.lens = b.dataset.lens; AXS.flow = null; AXS.sel = null; viewArch(); axShow(0); } });
+  document.querySelectorAll('[data-flow]').forEach(b => b.onclick = () => axSetFlow(b.dataset.flow));
+  $('#axSim').onclick = axSim;
+  $('#axPrev').onclick = () => { axPause(); axShow(AXS.step - 1); };
+  $('#axNext').onclick = () => { axPause(); axShow(AXS.step + 1); };
+  $('#axPlay').onclick = axPlay;
+  $('#axSteps').onclick = e => { const b = e.target.closest('[data-step]'); if (b) { axPause(); axShow(+b.dataset.step); } };
+  svg.querySelectorAll('.node').forEach(g => {
+    g.onclick = () => axPick(g.dataset.node);
+    g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); axPick(g.dataset.node); } };
+    g.onmouseenter = g.onfocus = () => axHover(g.dataset.node);
+    g.onmouseleave = g.onblur = () => axHover(null);
+  });
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => axAsk(L(UI.axQs[+b.dataset.q])));
+  $('#axForm').onsubmit = e => { e.preventDefault(); const v = $('#axIn').value.trim(); if (v) { $('#axIn').value = ''; axAsk(v); } };
+  $('#axLog').innerHTML = AXS.log.map(axMsg).join(''); $('#axLog').scrollTop = 1e6;
+  axPaint();
+}
+
+function axMsg(m) {
+  return `<div class="msg ${m.cls || ''}"><span class="av" aria-hidden="true">${m.ico}</span><div class="bub"><span class="who">${esc(L(m.who))}</span>${esc(L(m.text))}</div></div>`;
+}
+function axSay(id, text, cls) {
+  const n = id && axNode(id), m = n ? { ico: n.ico, who: n.t, text } : { ico: cls === 'me' ? '🙋' : '🗺️', who: cls === 'me' ? UI.axYou : 'Archify', text, cls: cls || 'sys' };
+  AXS.log.push(m); if (AXS.log.length > 60) AXS.log.shift();
+  const log = $('#axLog'); if (log && current === viewArch) { log.insertAdjacentHTML('beforeend', axMsg(m)); log.scrollTop = log.scrollHeight; }
+}
+
+// paint the current flow step onto the diagram and the step panel
+function axPaint() {
+  const svg = $('#axSvg'); if (!svg) return;
+  const A = axA(), f = A.flows[AXS.flow], s = f.steps[AXS.step];
+  svg.querySelectorAll('.is-on, .is-now, .is-sel').forEach(el => el.classList.remove('is-on', 'is-now', 'is-sel'));
+  f.steps.slice(0, AXS.step + 1).forEach(x => x.e.forEach(id => svg.querySelector(`[data-edge="${id}"]`).classList.add('is-on')));
+  s.e.forEach(id => svg.querySelector(`[data-edge="${id}"]`).classList.add('is-now'));
+  s.n.forEach(id => svg.querySelector(`[data-node="${id}"]`).classList.add('is-on'));
+  if (AXS.sel) { const g = svg.querySelector(`[data-node="${AXS.sel}"]`); if (g) g.classList.add('is-sel'); }
+  document.querySelectorAll('[data-flow]').forEach(b => b.setAttribute('aria-pressed', b.dataset.flow === AXS.flow));
+  const part = AXS.sel && axNode(AXS.sel);
+  $('#axEyebrow').textContent = part ? t(AXS.lens === 'tech' ? 'axPartT' : 'axPartB') : `${L(f.name)} · ${L(UI.axStep(AXS.step + 1, f.steps.length))}`;
+  $('#axTitle').textContent = part ? `${part.ico} ${L(part.t)}` : L(s.title);
+  $('#axText').textContent = part ? L(part.about) : L(s.text);
+  $('#axSteps').innerHTML = f.steps.map((x, i) => `<li><button type="button" data-step="${i}" class="${i < AXS.step ? 'done' : ''}"${i === AXS.step && !part ? ' aria-current="step"' : ''}>${i + 1}. ${esc(L(x.short))}</button></li>`).join('');
+  $('#axPrev').disabled = AXS.step === 0; $('#axNext').disabled = AXS.step === f.steps.length - 1;
+  $('#axPlay').textContent = AXS.timer ? t('axPause') : t('axPlay');
+  // on narrow screens, scroll the diagram to the part that is working
+  const sc = $('#axScroll'), ids = part ? [part.id] : s.n;
+  if (sc.scrollWidth > sc.clientWidth + 4) { const k = svg.clientWidth / 1080, x = ids.reduce((a, id) => a + axNode(id).x + 100, 0) / ids.length; sc.scrollLeft = x * k - sc.clientWidth / 2; }
+}
+function axShow(i, quiet) {
+  const f = axA().flows[AXS.flow]; AXS.step = Math.max(0, Math.min(i, f.steps.length - 1)); AXS.sel = null;
+  const s = f.steps[AXS.step];
+  axPaint(); axPacket(s.e[0]);
+  if (!quiet) axSay(s.who, s.say);
+}
+function axSetFlow(k, quiet) { axPause(); AXS.flow = k; axSay(null, both(l => `— ${axA().flows[k].name[l]} —`)); axShow(0, quiet); }
+function axPick(id) { axPause(); AXS.sel = id; axPaint(); const n = axNode(id); axSay(id, n.about); }
+function axPause() { clearInterval(AXS.timer); AXS.timer = null; const p = $('#axPlay'); if (p) p.textContent = t('axPlay'); }
+function axPlay() {
+  if (AXS.timer) return axPause();
+  const n = axA().flows[AXS.flow].steps.length;
+  axShow(AXS.step >= n - 1 || AXS.sel ? 0 : AXS.step + 1);
+  AXS.timer = setInterval(() => { if (AXS.step >= n - 1) return axPause(); axShow(AXS.step + 1); }, 3000);
+  $('#axPlay').textContent = t('axPause');
+}
+function axHover(id) {
+  const svg = $('#axSvg'); if (!svg) return;
+  svg.querySelectorAll('.is-hl').forEach(el => el.classList.remove('is-hl'));
+  svg.classList.toggle('hovering', !!id); if (!id) return;
+  svg.querySelector(`[data-node="${id}"]`).classList.add('is-hl');
+  axA().edges.filter(e => e.from === id || e.to === id).forEach(e => {
+    svg.querySelector(`[data-edge="${e.id}"]`).classList.add('is-hl');
+    svg.querySelector(`[data-node="${e.from === id ? e.to : e.from}"]`).classList.add('is-hl');
+  });
+}
+// a sun-coloured dot travels along the edge that is working
+function axPacket(id) {
+  cancelAnimationFrame(AXS.raf);
+  const svg = $('#axSvg'), dot = svg && svg.querySelector('.packet');
+  if (!dot) return; dot.style.opacity = 0;
+  if (!id || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const p = svg.querySelector(`[data-edge="${id}"] path`), len = p.getTotalLength(), t0 = performance.now();
+  const frame = now => { const k = Math.min(1, (now - t0) / 1000), pt = p.getPointAtLength(len * (1 - (1 - k) ** 2));
+    dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y); dot.style.opacity = k < 1 ? 1 : 0; if (k < 1) AXS.raf = requestAnimationFrame(frame); };
+  AXS.raf = requestAnimationFrame(frame);
+}
+
+// questions are matched locally; nothing leaves the browser
+const AX_INTENTS = [
+  { re: /simul|probier|try|demo/, sim: true },
+  { re: /bewert|benot|grade|grading|marks?\b|korrig|fair/, go: ['tech', 'test', 2], a: D('Der Code bewertet jede Antwort, nicht die KI: Auswahl exakt, Zahlen mit 2 % Toleranz, typische Fehler mit eigener Erklärung.', 'Code grades every answer, not AI: choices exactly, numbers within 2 %, typical mistakes with their own explanation.') },
+  { re: /daten|data|speicher|stored|privacy|datenschutz|localstorage/, go: ['tech', 'data', 0], a: D('In der Website bleibt alles im localStorage deines Browsers. Die Python-Version nutzt SQLite. An Claude gehen nie Namen.', 'On the website everything stays in your browser’s localStorage. The Python version uses SQLite. Names never go to Claude.') },
+  { re: /tipp|hint|hilfe|help|stuck|hänge/, go: ['tech', 'hint', 0], a: D('Erst ein Denkanstoß, dann der Lösungsweg. Auf claude.ai formuliert Claude ihn, sonst nimmt die App ihre eingebauten Tipps.', 'First a nudge, then the method. On claude.ai Claude phrases it; otherwise the app uses its built-in hints.') },
+  { re: /claude|\bki\b|\bai\b|künstlich|llm|\bapi\b/, go: ['tech', 'data', 2], a: D('Claude ist optional: Es formuliert Tipps und das Fazit für die Lehrkraft. Bewertet wird immer im Code.', 'Claude is optional: it phrases hints and the teacher’s summary. Grading always happens in code.') },
+  { re: /python|server|fastapi|sqlite|backend|konto|account/, go: ['tech', 'data', 1], a: D('backend-python/ ist die Server-Version mit FastAPI und SQLite. Start mit run.bat, dann localhost:8000.', 'backend-python/ is the server version with FastAPI and SQLite. Start it with run.bat, then open localhost:8000.') },
+  { re: /lücke|gap|agent|ursache|cause/, go: ['tech', 'gaps', 0], a: D('Der Lücken-Agent arbeitet in 5 nachvollziehbaren Schritten: laden, Schwächen, Ursachen, Gruppen, Tipps.', 'The gap finder works in 5 checkable steps: load, weak spots, causes, groups, tips.') },
+  { re: /lehrkraft|lehrer|teacher|unterricht|lesson|dashboard/, go: ['biz', 'teacher', 0], a: D('Die Lehrkraft sieht die Klasse auf einen Blick, findet Lücken mit einem Klick und bekommt Gruppen und Tipps für die nächste Stunde.', 'The teacher sees the class at a glance, finds gaps in one click and gets groups and tips for the next lesson.') },
+  { re: /bestanden|bestehen|pass|punkte|score/, go: ['biz', 'student', 3], a: D(`Bestanden ist, wer in der ersten Runde mindestens ${PASS} von ${TOTAL} richtig hat.`, `You pass with at least ${PASS} of ${TOTAL} right in the first round.`) },
+  { re: /wiederhol|nochmal|again|retry|falsch|wrong|fehler|mistake/, go: ['biz', 'student', 4], a: D('Nur falsche Fragen kommen wieder, Runde für Runde, ab Runde 2 mit Lösungsweg.', 'Only wrong questions come back, round after round, from round 2 with the method.') },
+  { re: /lehrplan|curriculum|rlp|berlin/, go: ['biz', 'value', 2], a: RLP },
+  { re: /geld|money|preis|price|kosten|cost/, go: ['biz', 'value', 4], a: D('School Hack hat noch kein Preismodell. Die Website kostet nichts im Betrieb: eine Datei, kein Server.', 'School Hack has no pricing model yet. The website costs nothing to run: one file, no server.') },
+  { re: /frage|question|test|aufgabe/, go: ['tech', 'test', 0], a: D('Jeder Test hat 30 neue Fragen, zwei pro Skill, aus Vorlagen mit Zufallswerten.', 'Every test has 30 fresh questions, two per skill, from templates with random values.') },
+  { re: /wert|value|nutzen|benefit|warum|why|schule|school|business/, go: ['biz', 'value', 0], a: D('Kinder üben ohne Angst, Lehrkräfte sehen Lücken sofort, die Schule bekommt Lehrplan-Treue und Datenschutz.', 'Students practise without fear, teachers see gaps at once, and the school gets curriculum fit and privacy.') },
+  { re: /schüler|student|lernreise|journey|kind/, go: ['biz', 'student', 0], a: D('So läuft die Lernreise: anmelden, Test, Tipps, Ergebnis, Fehler üben.', 'Here is the student journey: sign in, test, hints, result, practise mistakes.') },
+];
+function axGo(lens, flow, step) {
+  axPause();
+  if (AXS.lens !== lens) { AXS.lens = lens; AXS.flow = flow; AXS.step = step; AXS.sel = null; viewArch(); }
+  else if (AXS.flow !== flow) { AXS.flow = flow; }
+  axShow(step);
+}
+function axAsk(q) {
+  axSay(null, q, 'me');
+  const s = q.toLowerCase(), hit = AX_INTENTS.find(r => r.re.test(s));
+  if (hit && hit.sim) return axSim();
+  if (hit) { axSay(null, hit.a); return axGo(...hit.go); }
+  for (const l of ['tech', 'biz']) { const n = ARCH[l].nodes.find(n => s.includes(n.t.de.toLowerCase()) || s.includes(n.t.en.toLowerCase())); if (n) { if (AXS.lens !== l) { AXS.lens = l; AXS.flow = null; viewArch(); } return axPick(n.id); } }
+  axSay(null, UI.axHelp);
+}
+
+// simulations reuse the real question engine, grader and gap finder
+async function axSim() {
+  axPause(); const run = ++AXS.run, ok = () => run === AXS.run && current === viewArch;
+  const step = async (flow, i, who, text) => { if (!ok()) return false; if (AXS.flow !== flow) { AXS.flow = flow; } axShow(i, true); axSay(who, text); await sleep(1700); return ok(); };
+  axSay(null, UI.axSimNote);
+  if (AXS.lens === 'tech') {
+    const s = pick(Object.keys(SKILLS)), q = T[s](), traps = Object.keys(q.traps), right = !traps.length || Math.random() < .5;
+    const given = right ? (q.kind === 'num' ? String(q.answer) : q.answer) : traps[0];
+    const shown = q.kind === 'num' ? `${fmt(given)} ${q.unit}` : L(q.options.find(o => K(o) === given) || given);
+    const r = grade(q, given), p = S.mastery[s] ?? .3, p2 = r.ok ? p + .22 * (1 - p) : p - .18 * p;
+    if (!await step('test', 0, 'engine', both(l => l === 'de' ? `Neue Frage zu „${SKILLS[s].name.de}“: ${q.prompt.de}` : `New question on “${SKILLS[s].name.en}”: ${q.prompt.en}`))) return;
+    if (!await step('test', 1, 'student', both(l => (l === 'de' ? 'Meine Antwort: ' : 'My answer: ') + shown))) return;
+    if (!await step('test', 2, 'grader', r.ok ? D('Richtig! Der Code hat es geprüft.', 'Correct! The code checked it.') : both(l => (l === 'de' ? 'Nicht ganz. ' : 'Not quite. ') + (r.msg ? r.msg[l] : q.explanation[l])))) return;
+    if (!await step('test', 3, 'grader', r.ok ? D('+10 ⭐ und die Serie wächst.', '+10 ⭐ and the streak grows.') : D('Diese Frage kommt in der nächsten Runde wieder.', 'This question comes back next round.'))) return;
+    await step('test', 4, 'store', both(l => `${SKILLS[s].name[l]}: ${Math.round(p * 100)} % → ${Math.round(p2 * 100)} %`));
+  } else {
+    const d = classData(''), a = analyse(d), w = a.weak[0], g = a.gl[0];
+    if (!await step('student', 1, 'test', both(l => l === 'de' ? `${d.kpi.n} Kinder schreiben den Test (Beispieldaten).` : `${d.kpi.n} students take the test (example data).`))) return;
+    if (!await step('student', 3, 'result', both(l => l === 'de' ? `${d.kpi.passed} von ${d.kpi.n} bestehen (${d.kpi.pass} %), Ø ${N.de(d.kpi.avg.toFixed(1))} Punkte.` : `${d.kpi.passed} of ${d.kpi.n} pass (${d.kpi.pass} %), avg. ${N.en(d.kpi.avg.toFixed(1))} points.`))) return;
+    if (!await step('teacher', 1, 'gapf', w ? both(l => UI.sumGap(SKILLS[w.s].name[l], Math.round(w.mean * 100))[l] + (w.root ? UI.sumRoot(SKILLS[w.root].name[l])[l] : '')) : UI.noGaps)) return;
+    if (g && !await step('teacher', 2, 'groups', both(l => l === 'de' ? `${a.gl.length} Fördergruppen. Die größte: „${SKILLS[g[0]].name.de}“ mit ${g[1].length} Kindern.` : `${a.gl.length} support groups. The biggest: “${SKILLS[g[0]].name.en}” with ${g[1].length} students.`))) return;
+    if (a.acts[0] && !await step('teacher', 3, 'lesson', both(a.acts[0]))) return;
+    await step('teacher', 4, 'again', D('Nächste Woche üben die Gruppen gezielt, und der Lernstand steigt.', 'Next week the groups practise their gap, and progress goes up.'));
+  }
+}
+
+// deep links: #archify/<tech|biz>/<flow>/<step>/<sim>/<de|en>, used by the README screenshots
+(function route() {
+  const seg = location.hash.slice(1).split('/');
+  if (seg[0] !== 'archify') return viewLogin();
+  for (const x of seg.slice(1)) {
+    if (x === 'tech' || x === 'biz') AXS.lens = x;
+    else if (x === 'de' || x === 'en') { lang = x; document.documentElement.lang = x; }
+    else if (/^\d+$/.test(x)) AXS.step = +x;
+  }
+  const f = seg.find(x => ARCH[AXS.lens].flows[x]); if (f) AXS.flow = f;
+  const s = AXS.step; viewArch(); axShow(s);
+  if (seg.includes('sim')) axSim();
+})();
 </script>
 
 </body>

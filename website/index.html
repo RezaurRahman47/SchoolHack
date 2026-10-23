@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>School Hack</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: one playful "lab notebook" column, big touch targets, one view at a time. Single bright look by design. */
+:root {
+  color-scheme: light;
+  --sky: #e9f4ff;        /* page ground */
+  --ink: #1d2550;        /* text */
+  --muted: #5b6390;
+  --card: #ffffff;
+  --grape: #6c4bf4;      /* primary */
+  --grape-d: #5133d6;
+  --sun: #ffc93c;        /* stars, highlights */
+  --mint: #22c58b;       /* correct / pass */
+  --mint-l: #ddf8ec;
+  --coral: #ff5d6c;      /* wrong / fail */
+  --coral-l: #ffe5e8;
+  --berry: #ff8fb3;
+  --line: #d7e3f4;
+  --font-display: "Fredoka", "Nunito", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--sky); color: var(--ink); font: 500 18px/1.5 var(--font-body);
+  background-image: radial-gradient(circle at 12% 8%, #fff6d6 0 120px, transparent 121px), radial-gradient(circle at 92% 30%, #f0e9ff 0 160px, transparent 161px); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--card); }
+.wrap { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; }
+h2 { font-size: 1.6rem; font-weight: 600; }
+p { margin: 0; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 4px solid var(--sun); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--card); border-bottom: 3px solid var(--line); }
+.top .wrap { padding-block: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; color: var(--grape); background: none; border: 0; padding: 0; }
+.brand svg { width: 40px; height: 40px; }
+.chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 800; background: var(--sky); }
+.pill.star { background: #fff4cc; color: #8a5a00; }
+.linkbtn { background: none; border: 2px solid var(--line); border-radius: 999px; padding: 6px 14px; font-weight: 800; color: var(--muted); }
+.linkbtn:hover { border-color: var(--grape); color: var(--grape); }
+
+/* generic */
+.card { background: var(--card); border-radius: 28px; padding: 24px; box-shadow: 0 6px 0 var(--line); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px; padding: 14px 28px; border: 0; border-radius: 20px;
+  font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; background: var(--grape); color: #fff; box-shadow: 0 6px 0 var(--grape-d); transition: transform .08s, box-shadow .08s; }
+.btn:hover { filter: brightness(1.05); }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--grape-d); }
+.btn.sun { background: var(--sun); color: var(--ink); box-shadow: 0 6px 0 #e0a400; }
+.btn.mint { background: var(--mint); box-shadow: 0 6px 0 #149a6a; }
+.btn.ghost { background: var(--card); color: var(--ink); box-shadow: 0 6px 0 var(--line); border: 3px solid var(--line); }
+.btn.wide { width: 100%; }
+.stack { display: grid; gap: 16px; }
+.muted { color: var(--muted); }
+
+/* mascot */
+.mascot { width: 120px; height: 120px; flex: none; }
+.mascot .orbit { transform-origin: 60px 60px; animation: spin 9s linear infinite; }
+.mascot .orbit.b { animation-duration: 13s; animation-direction: reverse; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.bounce { animation: bounce .6s ease; }
+@keyframes bounce { 30% { transform: translateY(-14px) scale(1.05); } 60% { transform: translateY(0); } }
+.shake { animation: shake .45s ease; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+@media (prefers-reduced-motion: reduce) { .mascot .orbit, .bounce, .shake { animation: none; } }
+.bubble { position: relative; background: var(--card); border-radius: 22px; padding: 14px 18px; font-weight: 700; box-shadow: 0 4px 0 var(--line); }
+.bubble::before { content: ""; position: absolute; left: -12px; top: 26px; border: 8px solid transparent; border-right: 12px solid var(--card); }
+
+/* login */
+.login { display: grid; gap: 24px; grid-template-columns: 1fr; align-items: center; padding-top: 12px; }
+@media (min-width: 820px) { .login { grid-template-columns: 1fr 1fr; } }
+.hello { display: flex; gap: 14px; align-items: center; }
+.roles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.role { border: 4px solid var(--line); background: var(--card); border-radius: 22px; padding: 16px 10px; text-align: center; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.role .ico { font-size: 2.6rem; display: block; line-height: 1.2; }
+.role[aria-pressed="true"] { border-color: var(--grape); background: #f1ecff; color: var(--grape-d); }
+label.f { display: grid; gap: 6px; font-weight: 800; }
+.in { width: 100%; border: 3px solid var(--line); border-radius: 18px; padding: 14px 16px; font-size: 1.2rem; background: #fbfdff; }
+.in:focus { border-color: var(--grape); outline: none; }
+.err { background: var(--coral-l); color: #b3172a; border-radius: 16px; padding: 10px 14px; font-weight: 800; }
+.hint-demo { text-align: center; color: var(--muted); }
+
+/* subjects */
+.grid2 { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 820px) { .grid2.four { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.subject { border: 0; text-align: left; border-radius: 28px; padding: 22px; min-height: 170px; display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); box-shadow: 0 6px 0 rgba(29,37,80,.12); }
+.subject .big { font-size: 3rem; line-height: 1; }
+.subject b { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; }
+.subject small { font-weight: 800; opacity: .75; }
+.subject.locked { opacity: .55; cursor: not-allowed; }
+
+/* chem home */
+.hero { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; background: var(--grape); color: #fff; box-shadow: 0 6px 0 var(--grape-d); }
+.hero .txt { flex: 1 1 260px; display: grid; gap: 10px; }
+.hero .muted { color: #e4dcff; }
+.topic { display: grid; gap: 12px; }
+.skill { display: grid; gap: 6px; }
+.skill .row { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+.meter { height: 16px; border-radius: 999px; background: var(--sky); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 999px; }
+.stars { color: var(--sun); letter-spacing: 2px; font-size: 1.1rem; white-space: nowrap; }
+
+/* quiz */
+.qtop { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; }
+.track { height: 20px; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 3px var(--line); overflow: hidden; }
+.track i { display: block; height: 100%; background: linear-gradient(90deg, var(--grape), var(--berry)); border-radius: 999px; transition: width .3s; }
+.qcard { display: grid; gap: 18px; }
+.qtag { justify-self: start; background: #f1ecff; color: var(--grape-d); border-radius: 999px; padding: 4px 12px; font-weight: 800; font-size: .9rem; }
+.qtext { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.4rem, 3.6vw, 1.9rem); line-height: 1.3; }
+.opts { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .opts { grid-template-columns: 1fr 1fr; } }
+.opt { display: flex; align-items: center; gap: 14px; min-height: 72px; border: 4px solid var(--line); background: var(--card); border-radius: 22px; padding: 12px 16px; text-align: left; font-size: 1.25rem; font-weight: 800; transition: transform .08s; }
+.opt:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--grape); }
+.opt .k { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-family: var(--font-display); flex: none; }
+.opt.ok { border-color: var(--mint); background: var(--mint-l); }
+.opt.no { border-color: var(--coral); background: var(--coral-l); }
+.opt:disabled { cursor: default; }
+.numrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.numrow .in { font-size: 1.6rem; max-width: 260px; }
+.unit { font-weight: 800; font-size: 1.3rem; color: var(--muted); }
+.fb { border-radius: 22px; padding: 16px 18px; font-weight: 800; display: flex; gap: 12px; align-items: flex-start; }
+.fb.ok { background: var(--mint-l); color: #0b6b48; }
+.fb.no { background: var(--coral-l); color: #a3142a; }
+.fb .em { font-size: 2rem; line-height: 1; }
+.tip { background: #fff4cc; border-radius: 20px; padding: 14px 16px; font-weight: 700; }
+.tipbtn { justify-self: start; background: none; border: 0; color: var(--grape-d); font-weight: 800; font-size: 1.1rem; padding: 6px 0; }
+.qfoot { display: flex; gap: 12px; flex-wrap: wrap; }
+.qfoot .btn { flex: 1 1 200px; }
+
+/* result */
+.score { font-family: var(--font-display); font-weight: 700; font-size: clamp(4rem, 14vw, 6.5rem); line-height: 1; }
+.center { text-align: center; justify-items: center; }
+.badge { display: inline-block; border-radius: 999px; padding: 8px 18px; font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; }
+.badge.ok { background: var(--mint-l); color: #0b6b48; }
+.badge.no { background: var(--coral-l); color: #a3142a; }
+.passbar { position: relative; width: 100%; height: 22px; border-radius: 999px; background: var(--sky); overflow: hidden; }
+.passbar i { display: block; height: 100%; }
+.passbar b { position: absolute; top: -4px; bottom: -4px; width: 4px; background: var(--ink); border-radius: 4px; }
+canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+
+/* teacher */
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kpi { text-align: center; padding: 18px 10px; }
+.kpi .v { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.9rem, 6vw, 2.8rem); line-height: 1.1; white-space: nowrap; }
+.kpi .l { color: var(--muted); font-weight: 800; }
+.charts { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .charts { grid-template-columns: 2fr 1fr; } }
+.chartbox { position: relative; height: 320px; }
+.chartbox.tall { height: 460px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-weight: 800; font-size: .95rem; }
+.legend span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; background: currentColor; }
+.seg { display: inline-flex; background: var(--card); border-radius: 999px; padding: 4px; box-shadow: inset 0 0 0 3px var(--line); }
+.seg button { border: 0; background: none; border-radius: 999px; padding: 8px 16px; font-weight: 800; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--grape); color: #fff; }
+.agent { background: var(--ink); color: #fff; box-shadow: 0 6px 0 #0d1333; }
+.agent .muted { color: #b9c0e8; }
+.steps { display: grid; gap: 8px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .steps { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.step { border-radius: 16px; padding: 10px 12px; background: rgba(255,255,255,.08); color: #b9c0e8; font-size: .9rem; font-weight: 700; }
+.step.run { background: rgba(255,201,60,.2); color: #fff; }
+.step.done { background: rgba(34,197,139,.22); color: #fff; }
+.gaps { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .gaps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.gap { background: var(--card); color: var(--ink); border-radius: 20px; padding: 14px; display: grid; gap: 4px; min-width: 0; }
+.gap .sev { justify-self: start; border-radius: 999px; padding: 2px 10px; font-weight: 800; font-size: .8rem; }
+.sumbox { background: #fff4cc; color: var(--ink); border-radius: 20px; padding: 14px 16px; font-weight: 700; }
+.acts { display: grid; gap: 8px; margin: 0; padding-left: 1.2em; }
+.example { font-size: .85rem; color: var(--muted); font-weight: 700; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lang { display: inline-flex; background: var(--sky); border-radius: 999px; padding: 3px; }
+.lang button { border: 0; background: none; border-radius: 999px; padding: 6px 12px; font-weight: 800; color: var(--muted); min-width: 44px; }
+.lang button[aria-pressed="true"] { background: var(--grape); color: #fff; }
+.brand span b { color: var(--sun); -webkit-text-stroke: 0; }
+.foot { text-align: center; color: var(--muted); font-weight: 700; font-size: .9rem; padding-block: 8px 24px; }
+.brand { white-space: nowrap; }
+.top .wrap { flex-wrap: nowrap; }
+.topics { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .topics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .brand { font-size: 1.1rem; gap: 6px; }
+  .brand svg { width: 32px !important; height: 32px !important; }
+  .chips { gap: 5px; flex-wrap: nowrap; }
+  .pill { padding: 5px 8px; font-size: .9rem; }
+  .lang button { padding: 5px 8px; min-width: 36px; font-size: .9rem; }
+  .linkbtn { padding: 5px 10px; font-size: .9rem; }
+}
+@media (max-width: 380px) { .brand span { display: none; } }
+.pill, .linkbtn, .lang button { white-space: nowrap; }
+@media (max-width: 520px) { .pill.role-pill { display: none; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <button class="brand" id="brand" type="button" aria-label="School Hack"></button>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+<main class="wrap" id="app" aria-live="polite"></main>
+<footer class="foot wrap" id="foot"></footer>
+<canvas id="confetti" hidden></canvas>
+
+<script>
+/* ============================================================
+   School Hack – Grade 9 chemistry (RLP Berlin-Brandenburg), DE + EN
+   Questions are generated and graded in code. Claude only gives hints.
+   ============================================================ */
+const PASS = 20, TOTAL = 30, VERSION = 'v1.0';
+
+// ---------- language ----------
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let lang = store.get('sh_lang') || ((navigator.language || 'de').startsWith('de') ? 'de' : 'en');
+const D = (de, en) => ({ de, en });                       // bilingual text
+const L = x => x && typeof x === 'object' && 'de' in x ? (x[lang] ?? x.de) : x;  // pick current language
+const K = x => x && typeof x === 'object' && 'de' in x ? x.de : x;              // canonical key
+const N = { de: x => String(+(+x).toFixed(3)).replace('.', ','), en: x => String(+(+x).toFixed(3)) };
+const fmt = x => N[lang](x);
+document.documentElement.lang = lang;
+
+const UI = {
+  hello: D('Hallo! Ich bin <b>Atomi</b>. Wollen wir zusammen lernen?', 'Hi! I’m <b>Atomi</b>. Shall we learn together?'),
+  heroTitle: D('Lernen macht Spaß!', 'Learning is fun!'),
+  heroSub: D('Klasse 9 · Berliner Lehrplan · mit KI-Tutor', 'Grade 9 · Berlin curriculum · with an AI tutor'),
+  who: D('Wer bist du?', 'Who are you?'),
+  student: D('Schüler·in', 'Student'), teacher: D('Lehrkraft', 'Teacher'),
+  user: D('Benutzername', 'Username'), pass: D('Passwort', 'Password'),
+  go: D('Los geht’s! 🚀', 'Let’s go! 🚀'), demo: D('Demo-Login', 'Demo login'),
+  loginErr: D('Hoppla! Name oder Passwort stimmt nicht. Tipp: admin / admin', 'Oops! Wrong name or password. Hint: admin / admin'),
+  bye: D('Tschüss', 'Bye'), logout: D('Abmelden', 'Log out'),
+  stars: D('Sterne', 'Stars'), streak: D('Richtige in Folge', 'Correct in a row'),
+  pickSubject: D('Welches Fach möchtest du heute üben?', 'Which subject do you want to practise today?'),
+  soon: D('Bald da', 'Coming soon'), start: D('Los geht’s!', 'Start!'),
+  chemTitle: D('Chemie-Test', 'Chemistry test'),
+  chemSub: D('30 Fragen · ab 20 richtig hast du bestanden · falsche Fragen kommen nochmal', '30 questions · 20 correct to pass · wrong ones come back'),
+  startTest: D('Test starten ▶', 'Start test ▶'),
+  lastTest: D('Letzter Test', 'Last test'), passedShort: D('✅ bestanden', '✅ passed'), keepGoing: D('💪 weiter üben', '💪 keep practising'),
+  starsTitle: D('Deine Sterne pro Thema', 'Your stars per topic'), backSubjects: D('← Fächer', '← Subjects'),
+  question: D('Frage', 'Question'), of: D('von', 'of'), pause: D('Pause', 'Pause'),
+  repeat: r => D(`Wiederholung – Runde ${r}. Du schaffst das!`, `Practice round ${r}. You can do it!`),
+  tipBtn: D('💡 Atomi, gib mir einen Tipp!', '💡 Atomi, give me a hint!'), thinking: D('Atomi denkt nach …', 'Atomi is thinking …'),
+  check: D('Prüfen', 'Check'), yourNum: D('Deine Zahl', 'Your number'), answer: D('Antwort', 'Answer'),
+  next: D('Weiter →', 'Next →'), finish: D('Fertig! 🏁', 'Done! 🏁'),
+  praise: D(['Super!', 'Klasse!', 'Genau richtig!', 'Stark!', 'Wow, top!'], ['Great!', 'Awesome!', 'Exactly right!', 'Nice one!', 'Wow, brilliant!']),
+  inRow: n => D(`${n} in Folge 🔥`, `${n} in a row 🔥`),
+  notQuite: D('Noch nicht ganz!', 'Not quite!'), lookAgain: D('Schau dir die Aufgabe nochmal genau an.', 'Read the question again carefully.'),
+  comesBack: D('Diese Frage kommt später nochmal.', 'This question will come back later.'), howTo: D('So geht’s', 'Here’s how'),
+  enterNumber: D('Bitte eine Zahl eingeben.', 'Please enter a number.'),
+  passed: D('Bestanden! 🎉', 'Passed! 🎉'), notPassed: D('Noch nicht bestanden – weiter so! 💪', 'Not passed yet – keep going! 💪'),
+  passLine: D(`Ab ${PASS} richtigen Antworten hast du bestanden.`, `You pass with ${PASS} correct answers.`),
+  allDone: D('Alles geschafft! 🏆', 'All done! 🏆'),
+  allDoneTxt: D('Du hast alle 30 Fragen richtig gelöst. Atomi ist stolz auf dich!', 'You solved all 30 questions. Atomi is proud of you!'),
+  roundDone: r => D(`Runde ${r} fertig!`, `Round ${r} done!`),
+  left: n => D(`${n} Frage${n === 1 ? '' : 'n'} üben wir noch einmal.`, `Let’s practise ${n} question${n === 1 ? '' : 's'} again.`),
+  repeatBtn: n => D(`${n} Frage${n === 1 ? '' : 'n'} wiederholen 🔁`, `Repeat ${n} question${n === 1 ? '' : 's'} 🔁`),
+  later: D('Später', 'Later'), backChem: D('Zurück zu Chemie', 'Back to chemistry'),
+  myClass: D('Meine Klasse', 'My class'),
+  example: me => D(`Beispieldaten: 24 erfundene Schüler·innen${me ? ' + dein letzter Test' : ''}`, `Example data: 24 made-up students${me ? ' + your last test' : ''}`),
+  all: D('Alle', 'All'), classLabel: D('Klasse', 'Class'),
+  kPass: D('bestanden', 'passed'), kAvg: D('Ø Punkte', 'avg. points'), kUnder: D('unter 20', 'below 20'),
+  scores: D('Punkte pro Kind', 'Points per student'), lPass: D('bestanden', 'passed'), lFail: D('nicht bestanden', 'not passed'),
+  pie: D('Bestanden?', 'Passed?'), yes: D('ja', 'yes'), no: D('nein', 'no'),
+  where: D('Wo hakt es?', 'Where are they stuck?'), whereSub: D('Richtig (grün) und falsch (rot) pro Thema – schwierigste oben', 'Correct (green) and wrong (red) per topic – hardest first'),
+  agentTitle: D('🤖 Lücken-Agent', '🤖 Gap finder'), agentSub: D('Findet Lücken in der Klasse und sagt dir, was du als Nächstes übst.', 'Finds gaps in the class and tells you what to practise next.'),
+  run: D('Analyse starten', 'Run analysis'), running: D('Läuft …', 'Running …'), rerun: D('Nochmal analysieren', 'Run again'),
+  steps: D(['Daten laden', 'Schwächen finden', 'Ursachen suchen', 'Gruppen bilden', 'Tipps geben'], ['Load data', 'Find weak spots', 'Trace causes', 'Form groups', 'Give tips']),
+  urgent: D('dringend', 'urgent'), important: D('wichtig', 'important'),
+  canDo: (p, n) => D(`${p} % können es · ${n} Kinder unter 60 %`, `${p} % can do it · ${n} students below 60 %`),
+  cause: D('Ursache', 'Cause'), whatToDo: D('Was du tun kannst', 'What you can do'), groupsT: D('Fördergruppen', 'Support groups'),
+  actRoot: (a, b, n) => D(`Vor „${a}“ erst 10 Minuten „${b}“ wiederholen (${n} Kinder unter 60 %).`, `Before “${a}”, spend 10 minutes revising “${b}” (${n} students below 60 %).`),
+  actPlain: a => D(`„${a}“ mit einem Alltagsbeispiel neu erklären, dann 5 Übungen.`, `Re-explain “${a}” with an everyday example, then 5 practice questions.`),
+  actFail: n => D(`${n} Kinder unter 20 Punkten: Wiederholungstest geben.`, `${n} students below 20 points: assign a retest.`),
+  sumGap: (a, p) => D(`Größte Lücke: „${a}“ (${p} %).`, `Biggest gap: “${a}” (${p} %).`),
+  sumRoot: b => D(` Die Ursache liegt wahrscheinlich bei „${b}“.`, ` The cause is probably “${b}”.`),
+  sumPass: p => D(` Bestanden haben ${p} %.`, ` ${p} % passed.`), noGaps: D('Keine großen Lücken gefunden.', 'No big gaps found.'),
+  chartsFail: D('Diagramme konnten nicht geladen werden.', 'Charts could not be loaded.'),
+  ptsTip: n => D(`${n} von 30 Punkten`, `${n} of 30 points`), line: D('Grenze 20', 'Pass mark 20'),
+  correct: D('richtig', 'correct'), wrong: D('falsch', 'wrong'), passedL: D('Bestanden', 'Passed'), failedL: D('Nicht bestanden', 'Not passed'),
+  you: D('Du (Demo)', 'You (demo)'),
+  foot: D('School Hack · Klasse 9 Chemie · Berliner Lehrplan', 'School Hack · Grade 9 chemistry · Berlin curriculum'),
+  langLabel: D('Sprache', 'Language'),
+};
+const t = k => L(UI[k]);
+
+// ---------- mascot ("Atomi", original character) ----------
+function mascot(mood = 'happy', size = 120) {
+  const mouth = { happy: 'M48 70 Q60 82 72 70', wow: 'M54 72 Q60 80 66 72 Q60 64 54 72', sad: 'M48 76 Q60 66 72 76' }[mood];
+  return `<svg class="mascot" style="width:${size}px;height:${size}px" viewBox="0 0 120 120" aria-hidden="true">
+    <g class="orbit"><ellipse cx="60" cy="60" rx="56" ry="20" fill="none" stroke="#6c4bf4" stroke-width="4"/><circle cx="116" cy="60" r="7" fill="#ff8fb3"/></g>
+    <g class="orbit b" transform="rotate(60 60 60)"><ellipse cx="60" cy="60" rx="56" ry="20" fill="none" stroke="#22c58b" stroke-width="4"/><circle cx="4" cy="60" r="7" fill="#ffc93c"/></g>
+    <circle cx="60" cy="60" r="32" fill="#ffc93c"/><circle cx="60" cy="60" r="32" fill="none" stroke="#e0a400" stroke-width="3"/>
+    <circle cx="49" cy="56" r="5" fill="#1d2550"/><circle cx="71" cy="56" r="5" fill="#1d2550"/>
+    <circle cx="51" cy="54" r="1.8" fill="#fff"/><circle cx="73" cy="54" r="1.8" fill="#fff"/>
+    <circle cx="42" cy="68" r="4" fill="#ff8fb3" opacity=".7"/><circle cx="78" cy="68" r="4" fill="#ff8fb3" opacity=".7"/>
+    <path d="${mouth}" fill="${mood === 'wow' ? '#1d2550' : 'none'}" stroke="#1d2550" stroke-width="3.5" stroke-linecap="round"/></svg>`;
+}
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const SUB = '₀₁₂₃₄₅₆₇₈₉', SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const sub = n => n === 1 ? '' : String(n).split('').map(d => SUB[d]).join('');
+const sup = n => String(n).split('').map(d => SUP[d]).join('');
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const gcd = (a, b) => b ? gcd(b, a % b) : a, lcm = (a, b) => a * b / gcd(a, b);
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; }; }
+const both = f => ({ de: f('de'), en: f('en') });   // build a bilingual string from a function of the language
+
+// ---------- skill graph ----------
+const SKILLS = {
+  ionen:          { name: D('Ionen-Ladung', 'Ion charges'), topic: 'base', pre: [] },
+  salzformel:     { name: D('Salz-Formeln', 'Salt formulas'), topic: 'base', pre: ['ionen'] },
+  ph_skala:       { name: D('pH-Skala', 'pH scale'), topic: 'acid', pre: [] },
+  indikator:      { name: D('Indikator-Farben', 'Indicator colours'), topic: 'acid', pre: ['ph_skala'] },
+  saeurebildung:  { name: D('Wie entsteht eine Säure?', 'How acids form'), topic: 'acid', pre: ['ionen'] },
+  laugenbildung:  { name: D('Wie entsteht eine Lauge?', 'How alkalis form'), topic: 'acid', pre: ['ionen'] },
+  saeure_metall:  { name: D('Säure + Metall / Kalk', 'Acid + metal / chalk'), topic: 'acid', pre: ['saeurebildung'] },
+  neutralisation: { name: D('Neutralisation', 'Neutralisation'), topic: 'acid', pre: ['salzformel', 'saeurebildung', 'laugenbildung'] },
+  ph_rechnen:     { name: D('pH-Wert rechnen', 'Calculating pH'), topic: 'acid', pre: ['konzentration', 'ph_skala'] },
+  molare_masse:   { name: D('Molare Masse', 'Molar mass'), topic: 'mol', pre: [] },
+  stoffmenge:     { name: D('Stoffmenge n = m / M', 'Amount n = m / M'), topic: 'mol', pre: ['molare_masse'] },
+  konzentration:  { name: D('Konzentration c = n / V', 'Concentration c = n / V'), topic: 'mol', pre: ['stoffmenge'] },
+  alkan_formel:   { name: D('Alkan-Formeln', 'Alkane formulas'), topic: 'hc', pre: [] },
+  alkan_name:     { name: D('Alkan-Namen', 'Alkane names'), topic: 'hc', pre: ['alkan_formel'] },
+  siedetrend:     { name: D('Siedepunkte', 'Boiling points'), topic: 'hc', pre: ['alkan_formel'] },
+};
+const TOPICS = [
+  { id: 'base', name: D('Grundlagen', 'Basics'), icon: '🧱', color: '#ffe1a8' },
+  { id: 'acid', name: D('Säuren & Laugen', 'Acids & alkalis'), icon: '🍋', color: '#ffd6e0' },
+  { id: 'mol', name: D('Mol & Rechnen', 'Moles & maths'), icon: '⚖️', color: '#d6ecff' },
+  { id: 'hc', name: D('Kohlenwasserstoffe', 'Hydrocarbons'), icon: '🔥', color: '#d9f7e8' },
+];
+const sname = k => L(SKILLS[k].name);
+
+// ---------- question templates (every text in DE + EN) ----------
+const MASS = { H: 1, C: 12, N: 14, O: 16, Na: 23, Mg: 24.3, Cl: 35.5, Ca: 40.1 };
+const massHint = l => Object.entries(MASS).map(([e, m]) => `${e} = ${N[l](m)}`).join(', ');
+const COMPOUNDS = [['H₂O', [['H', 2], ['O', 1]]], ['CO₂', [['C', 1], ['O', 2]]], ['NaCl', [['Na', 1], ['Cl', 1]]], ['NaOH', [['Na', 1], ['O', 1], ['H', 1]]],
+  ['CH₄', [['C', 1], ['H', 4]]], ['HCl', [['H', 1], ['Cl', 1]]], ['MgO', [['Mg', 1], ['O', 1]]], ['CaCO₃', [['Ca', 1], ['C', 1], ['O', 3]]], ['NH₃', [['N', 1], ['H', 3]]]];
+const molar = p => p.reduce((s, [e, n]) => s + MASS[e] * n, 0);
+const ALK = [D('Methan', 'Methane'), D('Ethan', 'Ethane'), D('Propan', 'Propane'), D('Butan', 'Butane'), D('Pentan', 'Pentane'),
+  D('Hexan', 'Hexane'), D('Heptan', 'Heptane'), D('Octan', 'Octane'), D('Nonan', 'Nonane'), D('Decan', 'Decane')];
+const BOIL = [-162, -89, -42, -1, 36, 69, 98, 126, 151, 174];
+const CAT = [['Na', 1, D('Natrium', 'sodium')], ['K', 1, D('Kalium', 'potassium')], ['Mg', 2, D('Magnesium', 'magnesium')], ['Ca', 2, D('Calcium', 'calcium')], ['Al', 3, D('Aluminium', 'aluminium')]];
+const AN = [['Cl', 1, D('chlorid', 'chloride')], ['O', 2, D('oxid', 'oxide')], ['S', 2, D('sulfid', 'sulfide')]];
+const ion = (s, c) => `${s}${Math.abs(c) === 1 ? '' : Math.abs(c)}${c > 0 ? '+' : '−'}`;
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function mc(skill, prompt, answer, wrong, explanation, traps = {}) {
+  const seen = new Set([K(answer)]), opts = [answer];
+  for (const w of wrong) if (!seen.has(K(w)) && opts.length < 4) { seen.add(K(w)); opts.push(w); }
+  return { skill, kind: 'mc', prompt, answer: K(answer), options: shuffle(opts), explanation, traps };
+}
+const nq = (skill, prompt, answer, unit, explanation, traps = {}) => ({ skill, kind: 'num', prompt, answer, unit, explanation, traps });
+
+const T = {
+  ionen() {
+    if (Math.random() < .6) { const [s, c, n] = pick(CAT);
+      return mc('ionen', D(`Welches Ion bildet ein ${n.de}-Atom (${s})?`, `Which ion does a ${n.en} atom (${s}) form?`), ion(s, c), [ion(s, -c), ion(s, c + 1), ion(s, c === 1 ? 2 : c - 1)],
+        D(`${n.de} gibt ${c} Außenelektron(en) ab und wird positiv.`, `${cap(n.en)} gives away ${c} outer electron(s) and becomes positive.`),
+        { [ion(s, -c)]: D('Metalle geben Elektronen ab. Deshalb ist ihr Ion positiv (+).', 'Metals give electrons away, so their ion is positive (+).') }); }
+    const [s, c] = pick(AN);
+    return mc('ionen', D(`Welches Ion bildet ein ${s}-Atom?`, `Which ion does a ${s} atom form?`), ion(s, -c), [ion(s, c), ion(s, -(c + 1)), ion(s, -(8 - c))],
+      D(`${s} nimmt ${c} Elektron(en) auf, bis die Außenschale voll ist.`, `${s} takes ${c} electron(s) until its outer shell is full.`),
+      { [ion(s, c)]: D('Nichtmetalle nehmen Elektronen auf. Ihr Ion ist negativ (−).', 'Non-metals take electrons, so their ion is negative (−).') });
+  },
+  salzformel() {
+    const [cs, cc, cn] = pick(CAT), [as, ac, an] = pick(AN), l = lcm(cc, ac), a = `${cs}${sub(l / cc)}${as}${sub(l / ac)}`;
+    const w1 = `${cs}${as}`, w2 = `${cs}${sub(ac)}${as}${sub(cc)}`, w3 = `${cs}${sub(cc)}${as}${sub(ac)}`, w4 = `${cs}₃${as}₂`;
+    return mc('salzformel', D(`Wie lautet die Formel von ${cn.de}${an.de}?`, `What is the formula of ${cn.en} ${an.en}?`), a, [w1, w2, w3, w4],
+      D(`${ion(cs, cc)} und ${ion(as, -ac)}: Die Ladungen müssen zusammen null ergeben (${l / cc} : ${l / ac}).`, `${ion(cs, cc)} and ${ion(as, -ac)}: the charges must add up to zero (${l / cc} : ${l / ac}).`),
+      { [w1]: D('Zähle die Ladungen: Plus und Minus müssen sich aufheben.', 'Count the charges: plus and minus must cancel out.'),
+        [w3]: D('Die Zahlen gehören über Kreuz zur anderen Ionensorte.', 'The numbers cross over to the other ion.') });
+  },
+  ph_skala() {
+    const ph = 1 + Math.floor(Math.random() * 13);
+    const thing = [D('Magensäure', 'Stomach acid'), D('Zitronensaft', 'Lemon juice'), D('Cola', 'Cola'), D('Orangensaft', 'Orange juice'), D('Kaffee', 'Coffee'), D('Milch', 'Milk'),
+      D('Reines Wasser', 'Pure water'), D('Meerwasser', 'Sea water'), D('Natron-Lösung', 'Baking soda solution'), D('Seifenlauge', 'Soapy water'), D('Ammoniak-Lösung', 'Ammonia solution'), D('Kalkwasser', 'Limewater'), D('Rohrreiniger', 'Drain cleaner')][ph - 1];
+    const SA = D('sauer', 'acidic'), NE = D('neutral', 'neutral'), BA = D('basisch', 'alkaline');
+    const a = ph < 7 ? SA : ph === 7 ? NE : BA;
+    return mc('ph_skala', D(`${thing.de} hat ungefähr pH ${ph}. Ist das sauer, neutral oder basisch?`, `${thing.en} has about pH ${ph}. Is it acidic, neutral or alkaline?`), a, [SA, NE, BA],
+      D('Unter 7 = sauer, genau 7 = neutral, über 7 = basisch.', 'Below 7 = acidic, exactly 7 = neutral, above 7 = alkaline.'),
+      { [ph < 7 ? 'basisch' : 'sauer']: D('Kleine pH-Zahl = sauer. Große pH-Zahl = basisch.', 'Small pH number = acidic. Big pH number = alkaline.') });
+  },
+  indikator() {
+    const COL = { rot: D('rot', 'red'), grün: D('grün', 'green'), bv: D('blau-violett', 'blue-purple'), pink: D('pink', 'pink'), farblos: D('farblos', 'colourless'), gg: D('grün-gelb', 'green-yellow'), orange: D('orange', 'orange') };
+    const IND = { u: D('Universalindikator', 'universal indicator'), p: D('Phenolphthalein', 'phenolphthalein'), r: D('Rotkohlsaft', 'red cabbage juice') };
+    const LSG = { s: D('saure', 'an acidic'), n: D('neutrale', 'a neutral'), b: D('basische', 'an alkaline') };
+    const [i, l, c] = pick([['u', 's', 'rot'], ['u', 'n', 'grün'], ['u', 'b', 'bv'], ['p', 'b', 'pink'], ['p', 's', 'farblos'], ['r', 's', 'rot'], ['r', 'b', 'gg']]);
+    return mc('indikator', D(`Welche Farbe zeigt ${IND[i].de} in einer ${LSG[l].de}n Lösung?`, `What colour does ${IND[i].en} turn in ${LSG[l].en} solution?`), COL[c],
+      shuffle(Object.keys(COL).filter(k => k !== c)).slice(0, 3).map(k => COL[k]),
+      D(`${cap(IND[i].de)} wird in ${LSG[l].de}r Lösung ${COL[c].de}.`, `${cap(IND[i].en)} turns ${COL[c].en} in ${LSG[l].en} solution.`));
+  },
+  saeurebildung() {
+    const O = [[D('Schwefeldioxid (SO₂)', 'Sulfur dioxide (SO₂)'), D('Schweflige Säure (H₂SO₃)', 'Sulfurous acid (H₂SO₃)')],
+               [D('Schwefeltrioxid (SO₃)', 'Sulfur trioxide (SO₃)'), D('Schwefelsäure (H₂SO₄)', 'Sulfuric acid (H₂SO₄)')],
+               [D('Kohlenstoffdioxid (CO₂)', 'Carbon dioxide (CO₂)'), D('Kohlensäure (H₂CO₃)', 'Carbonic acid (H₂CO₃)')]];
+    const [o, a] = pick(O), NaOH = D('Natronlauge (NaOH)', 'Sodium hydroxide (NaOH)');
+    return mc('saeurebildung', D(`${o.de} kommt in Wasser. Was entsteht?`, `${o.en} goes into water. What forms?`), a, [...O.map(x => x[1]), NaOH],
+      D('Nichtmetall-Oxid + Wasser → Säure.', 'Non-metal oxide + water → acid.'),
+      { [NaOH.de]: D('Nichtmetall-Oxide machen Säuren. Laugen kommen von Metall-Oxiden.', 'Non-metal oxides make acids. Alkalis come from metal oxides.') });
+  },
+  laugenbildung() {
+    const O = [[D('Natriumoxid (Na₂O)', 'Sodium oxide (Na₂O)'), D('Natronlauge (NaOH)', 'Sodium hydroxide (NaOH)')],
+               [D('Calciumoxid (CaO)', 'Calcium oxide (CaO)'), D('Kalkwasser (Ca(OH)₂)', 'Limewater (Ca(OH)₂)')],
+               [D('Kaliumoxid (K₂O)', 'Potassium oxide (K₂O)'), D('Kalilauge (KOH)', 'Potassium hydroxide (KOH)')]];
+    const [o, a] = pick(O), H2CO3 = D('Kohlensäure (H₂CO₃)', 'Carbonic acid (H₂CO₃)');
+    return mc('laugenbildung', D(`${o.de} kommt in Wasser. Was entsteht?`, `${o.en} goes into water. What forms?`), a, [...O.map(x => x[1]), H2CO3],
+      D('Metall-Oxid + Wasser → Lauge (Hydroxid).', 'Metal oxide + water → alkali (hydroxide).'),
+      { [H2CO3.de]: D('Metall-Oxide machen Laugen, keine Säuren.', 'Metal oxides make alkalis, not acids.') });
+  },
+  saeure_metall() {
+    const H = D('Wasserstoff', 'Hydrogen'), O = D('Sauerstoff', 'Oxygen'), C = D('Kohlenstoffdioxid', 'Carbon dioxide'), Cl = D('Chlor', 'Chlorine'), Nn = D('Stickstoff', 'Nitrogen');
+    if (Math.random() < .5) { const m = pick([D('Zink', 'Zinc'), D('Magnesium', 'Magnesium'), D('Eisen', 'Iron')]);
+      return mc('saeure_metall', D(`${m.de} kommt in Salzsäure. Welches Gas blubbert?`, `${m.en} goes into hydrochloric acid. Which gas bubbles out?`), H, [O, C, Cl],
+        D('Metall + Säure → Salz + Wasserstoff. Test: Knallgasprobe (es ploppt!).', 'Metal + acid → salt + hydrogen. Test: the squeaky pop test!'),
+        { [O.de]: D('Das Gas kommt aus den H⁺-Teilchen der Säure.', 'The gas comes from the H⁺ particles in the acid.') }); }
+    const c = pick([D('Kalk', 'chalk'), D('Natron', 'baking soda'), D('eine Eierschale', 'an eggshell')]);
+    return mc('saeure_metall', D(`Essig tropft auf ${c.de}. Welches Gas sprudelt?`, `Vinegar drips onto ${c.en}. Which gas fizzes out?`), C, [H, O, Nn],
+      D('Carbonat + Säure → CO₂. Test: Kalkwasser wird trüb.', 'Carbonate + acid → CO₂. Test: limewater turns cloudy.'),
+      { [H.de]: D('Wasserstoff kommt bei Metallen. Kalk gibt CO₂ ab.', 'Hydrogen comes from metals. Chalk gives off CO₂.') });
+  },
+  neutralisation() {
+    const [an, ani] = pick([[D('Salzsäure', 'Hydrochloric acid'), D('chlorid', 'chloride')], [D('Schwefelsäure', 'Sulfuric acid'), D('sulfat', 'sulfate')], [D('Salpetersäure', 'Nitric acid'), D('nitrat', 'nitrate')]]);
+    const [bn, cat] = pick([[D('Natronlauge', 'sodium hydroxide'), D('Natrium', 'Sodium')], [D('Kalilauge', 'potassium hydroxide'), D('Kalium', 'Potassium')], [D('Kalkwasser', 'limewater'), D('Calcium', 'Calcium')]]);
+    const ok = D(`${cat.de}${ani.de} + Wasser`, `${cat.en} ${ani.en} + water`);
+    const w1 = D(`${cat.de}${ani.de} + Wasserstoff`, `${cat.en} ${ani.en} + hydrogen`), w2 = D(`${cat.de}hydroxid + Wasser`, `${cat.en} hydroxide + water`), w3 = D(`${cat.de}oxid + Wasser`, `${cat.en} oxide + water`);
+    return mc('neutralisation', D(`${an.de} + ${bn.de}: Was entsteht?`, `${an.en} + ${bn.en}: what forms?`), ok, [w1, w2, w3],
+      D('Säure + Lauge → Salz + Wasser.', 'Acid + alkali → salt + water.'),
+      { [w1.de]: D('Bei der Neutralisation entsteht Wasser, kein Gas.', 'Neutralisation makes water, not a gas.'),
+        [w2.de]: D('Das Hydroxid ist schon in der Lauge – es reagiert weg.', 'The hydroxide is already in the alkali – it gets used up.'),
+        [w3.de]: D('Das Salz bekommt seinen Namen von der Säure.', 'The salt is named after the acid.') });
+  },
+  molare_masse() {
+    const [f, p] = pick(COMPOUNDS), M = molar(p), naive = p.reduce((s, [e]) => s + MASS[e], 0);
+    return nq('molare_masse', both(l => l === 'de' ? `Wie groß ist die molare Masse von ${f}? (${massHint(l)})` : `What is the molar mass of ${f}? (${massHint(l)})`), M, 'g/mol',
+      both(l => p.map(([e, n]) => `${n}·${N[l](MASS[e])}`).join(' + ') + ` = ${N[l](M)} g/mol`),
+      naive !== M ? { [naive]: D('Die kleine Zahl zählt mit: H₂ heißt 2 H-Atome!', 'The small number counts: H₂ means 2 H atoms!') } : {});
+  },
+  stoffmenge() {
+    const [f, p] = pick(COMPOUNDS), M = molar(p), n = pick([.5, 1, 1.5, 2, 2.5, 3, 4]), m = +(n * M).toFixed(2);
+    return nq('stoffmenge', both(l => l === 'de' ? `Du hast ${N.de(m)} g ${f} (M = ${N.de(M)} g/mol). Wie viel mol sind das?` : `You have ${N.en(m)} g of ${f} (M = ${N.en(M)} g/mol). How many moles is that?`), n, 'mol',
+      both(l => `n = m : M = ${N[l](m)} : ${N[l](M)} = ${N[l](n)} mol`),
+      { [+(m * M).toFixed(2)]: D('Mal statt geteilt! Es heißt n = m : M.', 'You multiplied! It’s n = m ÷ M.'),
+        [+(M / m).toFixed(3)]: D('Umgedreht! Masse oben, molare Masse unten.', 'Upside down! Mass on top, molar mass below.') });
+  },
+  konzentration() {
+    const n = pick([.1, .2, .25, .5, 1]), V = pick([.25, .5, 2]), ml = V * 1000;
+    return nq('konzentration', both(l => l === 'de' ? `${N.de(n)} mol Salz werden zu ${ml} mL Lösung. Wie groß ist c in mol/L?` : `${N.en(n)} mol of salt make ${ml} mL of solution. What is c in mol/L?`), n / V, 'mol/L',
+      both(l => `${ml} mL = ${N[l](V)} L → c = n : V = ${N[l](n)} : ${N[l](V)} = ${N[l](n / V)} mol/L`),
+      { [+(n / ml).toFixed(5)]: D('Erst mL in L umrechnen (1000 mL = 1 L).', 'Convert mL to L first (1000 mL = 1 L).'),
+        [+(n * V).toFixed(3)]: D('Mal statt geteilt! c = n : V.', 'You multiplied! c = n ÷ V.') });
+  },
+  ph_rechnen() {
+    const x = 1 + Math.floor(Math.random() * 5);
+    return nq('ph_rechnen', D(`In einer Säure ist c(H₃O⁺) = 10⁻${sup(x)} mol/L. Welcher pH-Wert?`, `In an acid, c(H₃O⁺) = 10⁻${sup(x)} mol/L. What is the pH?`), x, '',
+      D(`pH = die Hochzahl ohne Minus → ${x}`, `pH = the power without the minus → ${x}`),
+      { [-x]: D('Der pH-Wert ist hier positiv – lass das Minus weg.', 'The pH is positive here – drop the minus.'),
+        [14 - x]: D('Das wäre der pOH. Gefragt ist der pH.', 'That would be the pOH. The question asks for pH.') });
+  },
+  alkan_formel() {
+    const i = 1 + Math.floor(Math.random() * 10), a = `C${sub(i)}H${sub(2 * i + 2)}`;
+    const w1 = `C${sub(i)}H${sub(2 * i)}`, w2 = `C${sub(i + 1)}H${sub(2 * i + 4)}`, w3 = i > 1 ? `C${sub(i)}H${sub(2 * i - 2)}` : 'CH₂';
+    return mc('alkan_formel', D(`Wie lautet die Formel von ${ALK[i - 1].de}?`, `What is the formula of ${ALK[i - 1].en}?`), a, [w1, w2, w3],
+      D(`Alkane: CₙH₂ₙ₊₂, hier n = ${i}.`, `Alkanes: CₙH₂ₙ₊₂, here n = ${i}.`),
+      { [w1]: D('Das ist ein Alken. Alkane haben 2n + 2 H-Atome.', 'That’s an alkene. Alkanes have 2n + 2 H atoms.'),
+        [w2]: D('Ein C-Atom zu viel. Zähle die Vorsilbe nach.', 'One C atom too many. Check the prefix.'),
+        [w3]: D('Das ist ein Alkin. Alkane: CₙH₂ₙ₊₂.', 'That’s an alkyne. Alkanes: CₙH₂ₙ₊₂.') });
+  },
+  alkan_name() {
+    const i = 1 + Math.floor(Math.random() * 10), others = shuffle(ALK.filter((_, k) => k !== i - 1)).slice(0, 3);
+    return mc('alkan_name', D(`Wie heißt das Alkan C${sub(i)}H${sub(2 * i + 2)}?`, `What is the name of the alkane C${sub(i)}H${sub(2 * i + 2)}?`), ALK[i - 1], others,
+      D(`${i} C-Atome → ${ALK[i - 1].de}.`, `${i} C atoms → ${ALK[i - 1].en}.`));
+  },
+  siedetrend() {
+    const [a, b] = shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, 2), hi = BOIL[a] > BOIL[b] ? ALK[a] : ALK[b], same = D('Beide gleich', 'Both the same');
+    return mc('siedetrend', D(`Wer siedet später (bei höherer Temperatur): ${ALK[a].de} oder ${ALK[b].de}?`, `Which boils at a higher temperature: ${ALK[a].en} or ${ALK[b].en}?`), hi, [ALK[a], ALK[b], same],
+      D('Längere Kette → mehr Anziehung (Van-der-Waals) → höherer Siedepunkt.', 'Longer chain → more attraction (van der Waals) → higher boiling point.'),
+      { [same.de]: D('Längere Ketten halten stärker zusammen.', 'Longer chains stick together more strongly.') });
+  },
+};
+const TIPS = {
+  ionen: D('Metalle geben Elektronen ab, Nichtmetalle nehmen welche auf.', 'Metals give electrons away, non-metals take them.'),
+  salzformel: D('Plus- und Minus-Ladungen müssen zusammen null ergeben.', 'Plus and minus charges must add up to zero.'),
+  ph_skala: D('Die Mitte ist 7. Darunter sauer, darüber basisch.', 'The middle is 7. Below is acidic, above is alkaline.'),
+  indikator: D('Denk an die Farbskala am Indikator-Papier.', 'Think of the colour chart on indicator paper.'),
+  saeurebildung: D('Ist es ein Metall- oder ein Nichtmetall-Oxid?', 'Is it a metal oxide or a non-metal oxide?'),
+  laugenbildung: D('Ist es ein Metall- oder ein Nichtmetall-Oxid?', 'Is it a metal oxide or a non-metal oxide?'),
+  saeure_metall: D('Welche Teilchen bringt die Säure mit?', 'Which particles does the acid bring?'),
+  neutralisation: D('Säure + Lauge ergibt immer ein Salz und …?', 'Acid + alkali always makes a salt and …?'),
+  molare_masse: D('Zähle jedes Atom so oft, wie die kleine Zahl sagt.', 'Count each atom as often as the small number says.'),
+  stoffmenge: D('Teile die Masse durch die molare Masse.', 'Divide the mass by the molar mass.'),
+  konzentration: D('Erst mL in L umrechnen, dann teilen.', 'Convert mL to L first, then divide.'),
+  ph_rechnen: D('Schau auf die Hochzahl bei der 10.', 'Look at the power of 10.'),
+  alkan_formel: D('Alkane: doppelt so viele H wie C, plus 2.', 'Alkanes: twice as many H as C, plus 2.'),
+  alkan_name: D('Meth = 1, Eth = 2, Prop = 3, But = 4, Pent = 5 …', 'Meth = 1, Eth = 2, Prop = 3, But = 4, Pent = 5 …'),
+  siedetrend: D('Längere Ketten halten fester zusammen.', 'Longer chains hold together more strongly.'),
+};
+
+function buildTest() {
+  const ids = Object.keys(SKILLS), plan = shuffle([...ids, ...ids]), seen = new Set(), qs = [];
+  plan.forEach((s, i) => { let q; for (let k = 0; k < 12; k++) { q = T[s](); if (!seen.has(K(q.prompt))) break; } seen.add(K(q.prompt)); q.id = 'q' + i; qs.push(q); });
+  return qs;
+}
+const toNum = s => { const v = parseFloat(String(s).trim().replace(',', '.').replace('−', '-')); return isNaN(v) ? null : v; };
+function grade(q, given) {
+  if (q.kind === 'num') {
+    const g = toNum(given); if (g === null) return { ok: false, msg: UI.enterNumber };
+    if (Math.abs(g - q.answer) <= Math.max(Math.abs(q.answer) * .02, .01)) return { ok: true };
+    for (const [tv, m] of Object.entries(q.traps)) if (Math.abs(g - +tv) <= Math.max(Math.abs(+tv) * .02, .01)) return { ok: false, msg: m };
+    return { ok: false, msg: null };
+  }
+  return given === q.answer ? { ok: true } : { ok: false, msg: q.traps[given] || null };
+}
+
+// ---------- state ----------
+const fresh = () => ({ stars: 0, streak: 0, mastery: Object.fromEntries(Object.keys(SKILLS).map(k => [k, .3])), tests: [] });
+let S = store.get('sh_state_v1') || fresh();
+const save = () => store.set('sh_state_v1', S);
+let session = { role: null }, quiz = null, current = () => viewLogin();
+const charts = {};
+const updMastery = (skill, ok) => { const p = S.mastery[skill] ?? .3; S.mastery[skill] = ok ? p + .22 * (1 - p) : p - .18 * p; };
+let sample = null;
+(async () => { try { sample = await window.claude?.use?.('sample'); } catch { sample = null; } })();
+
+// ---------- header / footer ----------
+function header() {
+  $('#brand').innerHTML = `${mascot('happy', 40)}<span>School <b>Hack</b></span>`;
+  $('#brand').onclick = () => session.role === 'student' ? viewHome() : session.role === 'teacher' ? viewTeacher() : viewLogin();
+  const langBtns = `<div class="lang" role="group" aria-label="${t('langLabel')}"><button type="button" data-l="de" aria-pressed="${lang === 'de'}">DE</button><button type="button" data-l="en" aria-pressed="${lang === 'en'}">EN</button></div>`;
+  $('#chips').innerHTML = (session.role === 'student'
+    ? `<span class="pill star num" title="${t('stars')}">⭐ ${S.stars}</span><span class="pill num" title="${t('streak')}">🔥 ${S.streak}</span>`
+    : session.role === 'teacher' ? `<span class="pill role-pill">👩‍🏫 ${t('teacher')}</span>` : '') + langBtns +
+    (session.role ? `<button class="linkbtn" id="out" type="button">${session.role === 'student' ? t('bye') : t('logout')}</button>` : '');
+  document.querySelectorAll('.lang button').forEach(b => b.onclick = () => { if (lang === b.dataset.l) return; lang = b.dataset.l; store.set('sh_lang', lang); document.documentElement.lang = lang; current(); });
+  const o = $('#out'); if (o) o.onclick = () => { session.role = null; quiz = null; viewLogin(); };
+  $('#foot').textContent = `${t('foot')} · ${VERSION}`;
+}
+function mount(html, view) {
+  current = view;
+  Object.values(charts).forEach(c => c.destroy()); for (const k in charts) delete charts[k];
+  $('#app').innerHTML = html; header();
+}
+
+// ---------- LOGIN ----------
+let loginRole = 'student', loginErr = false;
+function viewLogin() {
+  mount(`<section class="login">
+    <div class="stack">
+      <div class="hello">${mascot('happy', 120)}<div class="bubble">${t('hello')}</div></div>
+      <h1>${t('heroTitle')}</h1>
+      <p class="muted">${t('heroSub')}</p>
+    </div>
+    <form class="card stack" id="loginForm" novalidate>
+      <h2>${t('who')}</h2>
+      <div class="roles" role="group" aria-label="${t('who')}">
+        <button type="button" class="role" data-r="student" aria-pressed="${loginRole === 'student'}"><span class="ico">🧒</span>${t('student')}</button>
+        <button type="button" class="role" data-r="teacher" aria-pressed="${loginRole === 'teacher'}"><span class="ico">👩‍🏫</span>${t('teacher')}</button>
+      </div>
+      ${loginErr ? `<div class="err">${t('loginErr')}</div>` : ''}
+      <label class="f" for="user">${t('user')}<input class="in" id="user" autocomplete="username"></label>
+      <label class="f" for="pass">${t('pass')}<input class="in" id="pass" type="password" autocomplete="current-password"></label>
+      <button class="btn wide" type="submit">${t('go')}</button>
+      <p class="hint-demo">${t('demo')}: <b>admin</b> / <b>admin</b></p>
+    </form></section>`, viewLogin);
+  document.querySelectorAll('.role').forEach(b => b.onclick = () => { loginRole = b.dataset.r; document.querySelectorAll('.role').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  $('#loginForm').onsubmit = e => {
+    e.preventDefault();
+    if ($('#user').value.trim() === 'admin' && $('#pass').value === 'admin') { loginErr = false; session.role = loginRole; loginRole === 'teacher' ? viewTeacher() : viewHome(); }
+    else { loginErr = true; viewLogin(); }
+  };
+}
+
+// ---------- STUDENT: subjects ----------
+function viewHome() {
+  const subj = [['⚗️', D('Chemie', 'Chemistry'), '#ffc93c', true], ['🔢', D('Mathe', 'Maths'), '#bfe3ff', false], ['🧬', D('Biologie', 'Biology'), '#c9f5df', false], ['🧲', D('Physik', 'Physics'), '#ffd6e0', false]];
+  mount(`<div class="stack">
+    <div class="hello">${mascot('happy', 96)}<div class="bubble">${t('pickSubject')}</div></div>
+    <div class="grid2 four">${subj.map(([i, n, c, on]) => `<button type="button" class="subject ${on ? '' : 'locked'}" style="background:${c}" ${on ? 'data-go="chem"' : 'disabled'}>
+      <span class="big">${i}</span><span><b>${L(n)}</b><br><small>${on ? t('start') : '🔒 ' + t('soon')}</small></span></button>`).join('')}</div></div>`, viewHome);
+  document.querySelector('[data-go="chem"]').onclick = viewChem;
+}
+
+// ---------- STUDENT: chemistry home ----------
+const starsFor = p => { const n = p < .45 ? 1 : p < .7 ? 2 : 3; return '★'.repeat(n) + '☆'.repeat(3 - n); };
+const colorFor = p => p < .45 ? 'var(--coral)' : p < .7 ? 'var(--sun)' : 'var(--mint)';
+function viewChem() {
+  const last = S.tests[S.tests.length - 1];
+  mount(`<div class="stack">
+    <div class="card hero">${mascot('wow', 110)}<div class="txt"><h1>${t('chemTitle')}</h1>
+      <p class="muted">${t('chemSub')}</p>
+      <div><button class="btn sun" id="start" type="button">${t('startTest')}</button></div></div></div>
+    ${last ? `<div class="card row-between"><span>${t('lastTest')}: <b class="num">${last.first}/30</b> ${last.first >= PASS ? t('passedShort') : t('keepGoing')}</span><span class="muted num">${new Date(last.ts).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB')}</span></div>` : ''}
+    <h2>${t('starsTitle')}</h2>
+    <div class="topics">${TOPICS.map(tp => `<div class="card topic" style="box-shadow:0 6px 0 ${tp.color}">
+      <h3 style="font-size:1.3rem">${tp.icon} ${L(tp.name)}</h3>
+      ${Object.entries(SKILLS).filter(([, s]) => s.topic === tp.id).map(([k, s]) => { const p = S.mastery[k]; return `<div class="skill">
+        <div class="row"><span>${L(s.name)}</span><span class="stars" aria-label="${Math.round(p * 100)} %">${starsFor(p)}</span></div>
+        <div class="meter"><i style="width:${Math.round(p * 100)}%;background:${colorFor(p)}"></i></div></div>`; }).join('')}
+    </div>`).join('')}</div>
+    <div><button class="btn ghost" id="back" type="button">${t('backSubjects')}</button></div></div>`, viewChem);
+  $('#start').onclick = startQuiz; $('#back').onclick = viewHome;
+}
+
+// ---------- STUDENT: quiz ----------
+const KEYS = ['A', 'B', 'C', 'D'], KCOL = ['#6c4bf4', '#ff8fb3', '#22c58b', '#ffb020'];
+function startQuiz() {
+  const qs = buildTest();
+  quiz = { qs, round: 1, queue: qs.map(q => q.id), idx: 0, wrong: [], first: 0, cur: null, hintN: 0, tip: null };
+  viewQuestion();
+}
+function viewQuestion() {
+  const q = quiz.qs.find(x => x.id === quiz.queue[quiz.idx]), n = quiz.queue.length;
+  mount(`<div class="stack">
+    ${quiz.round > 1 ? `<div class="fb no" style="background:#fff4cc;color:var(--ink)"><span class="em">🔁</span><span>${L(UI.repeat(quiz.round))}</span></div>` : ''}
+    <div class="qtop"><span>${t('question')} <span class="num">${quiz.idx + 1}</span> ${t('of')} <span class="num">${n}</span></span><button class="linkbtn" id="pause" type="button">${t('pause')}</button></div>
+    <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${quiz.idx}"><i style="width:${100 * quiz.idx / n}%"></i></div>
+    <div class="card qcard" id="qc">
+      <span class="qtag">${sname(q.skill)}</span>
+      <p class="qtext">${esc(L(q.prompt))}</p>
+      ${q.kind === 'mc'
+        ? `<div class="opts">${q.options.map((o, i) => `<button type="button" class="opt" data-v="${esc(K(o))}"><span class="k" style="background:${KCOL[i]}">${KEYS[i]}</span><span>${esc(L(o))}</span></button>`).join('')}</div>`
+        : `<form class="numrow" id="numform"><input class="in num" id="numin" inputmode="decimal" autocomplete="off" placeholder="${t('yourNum')}" aria-label="${t('answer')}">${q.unit ? `<span class="unit">${q.unit}</span>` : ''}<button class="btn" type="submit">${t('check')}</button></form>`}
+      <button class="tipbtn" id="tipbtn" type="button">${t('tipBtn')}</button>
+      <div id="tip" class="tip" hidden></div>
+      <div id="fb" hidden></div>
+    </div>
+    <div class="qfoot"><button class="btn mint" id="next" type="button" hidden></button></div></div>`, viewQuestion);
+  $('#pause').onclick = viewChem;
+  if (q.kind === 'mc') document.querySelectorAll('.opt').forEach(b => b.onclick = () => answer(q, b.dataset.v));
+  else { $('#numform').onsubmit = e => { e.preventDefault(); if ($('#numin').value.trim()) answer(q, $('#numin').value); }; }
+  $('#tipbtn').onclick = () => tip(q);
+  $('#next').onclick = nextQuestion;
+  if (quiz.tip && quiz.tip.qid === q.id) { $('#tip').hidden = false; $('#tip').textContent = '💡 ' + L(quiz.tip.text); }
+  if (quiz.cur && quiz.cur.qid === q.id) paint(q, quiz.cur, false);
+  else if (q.kind === 'num') $('#numin').focus();
+}
+function answer(q, given) {
+  if (quiz.cur && quiz.cur.qid === q.id) return;
+  const r = grade(q, given);
+  updMastery(q.skill, r.ok);
+  if (quiz.round === 1 && r.ok) quiz.first++;
+  if (!r.ok) quiz.wrong.push(q.id);
+  if (r.ok) { S.stars += 10; S.streak++; } else S.streak = 0;
+  save();
+  quiz.cur = { qid: q.id, given, ok: r.ok, msg: r.msg, praise: Math.floor(Math.random() * 5), streak: S.streak };
+  header(); paint(q, quiz.cur, true);
+}
+function paint(q, c, animate) {
+  if (q.kind === 'mc') document.querySelectorAll('.opt').forEach(b => { b.disabled = true; if (c.ok && b.dataset.v === q.answer) b.classList.add('ok'); if (!c.ok && b.dataset.v === c.given) b.classList.add('no'); });
+  else { const i = $('#numin'); i.value = c.given; i.disabled = true; $('#numform button').disabled = true; }
+  const fb = $('#fb'); fb.hidden = false;
+  if (c.ok) fb.innerHTML = `<div class="fb ok"><span class="em">🎉</span><span>${L(UI.praise)[c.praise]} +10 ⭐${c.streak >= 3 ? ` · ${L(UI.inRow(c.streak))}` : ''}</span></div>`;
+  else {
+    const why = c.msg ? L(c.msg) : (quiz.round > 1 ? '' : t('lookAgain'));
+    const more = quiz.round > 1 ? `${t('howTo')}: ${L(q.explanation)}` : t('comesBack');
+    fb.innerHTML = `<div class="fb no"><span class="em">🤔</span><span>${t('notQuite')} ${esc(why)}<br><span style="font-weight:700">${esc(more)}</span></span></div>`;
+  }
+  if (animate) $('#qc').classList.add(c.ok ? 'bounce' : 'shake');
+  $('#tipbtn').hidden = true;
+  const nx = $('#next'); nx.hidden = false; nx.textContent = quiz.idx === quiz.queue.length - 1 ? t('finish') : t('next'); if (animate) nx.focus();
+}
+async function tip(q) {
+  quiz.hintN = (quiz.tip && quiz.tip.qid === q.id ? quiz.tip.n : 0) + 1;
+  const box = $('#tip'); box.hidden = false; box.textContent = t('thinking');
+  let text = quiz.hintN >= 2 ? both(l => `${l === 'de' ? 'So geht’s' : 'Here’s how'}: ${q.explanation[l]}`) : TIPS[q.skill];
+  if (sample) {
+    try {
+      const want = lang === 'de' ? 'Deutsch' : 'English';
+      const r = await sample(`You are "Atomi", a friendly chemistry tutor for 14-year-old students in Berlin (grade 9). Reply in ${want}, warm and simple, at most 2 short sentences, one emoji is fine. ${quiz.hintN >= 2 ? 'You may explain the method.' : 'Do NOT reveal the answer.'} Ask one guiding question.\nQuestion: ${L(q.prompt)}\nCorrect answer (computed by the app, for you only): ${q.kind === 'num' ? fmt(q.answer) + ' ' + q.unit : L(q.options.find(o => K(o) === q.answer))}\nMethod: ${L(q.explanation)}\nHint number: ${quiz.hintN}`, { modelTier: 'quick', cache: false });
+      if (r?.text?.trim()) text = r.text.trim();
+    } catch (e) { if (e?.code === 'not_granted') sample = null; }
+  }
+  quiz.tip = { qid: q.id, text, n: quiz.hintN };
+  if (current === viewQuestion && $('#tip')) $('#tip').textContent = '💡 ' + L(text);
+}
+function nextQuestion() {
+  quiz.cur = null; quiz.tip = null;
+  if (quiz.idx < quiz.queue.length - 1) { quiz.idx++; viewQuestion(); window.scrollTo({ top: 0 }); return; }
+  if (quiz.round === 1) { S.tests.push({ ts: Date.now(), first: quiz.first }); save(); }
+  quiz.fresh = true; viewRoundResult();
+}
+function viewRoundResult() {
+  const left = quiz.wrong.length, first = quiz.first, passed = first >= PASS, allDone = left === 0;
+  mount(`<div class="stack center">
+    <div class="card stack center" style="width:100%">
+      ${mascot(passed || allDone ? 'wow' : 'happy', 130)}
+      ${quiz.round === 1
+        ? `<div class="score num" style="color:${passed ? 'var(--mint)' : 'var(--coral)'}">${first}<span style="font-size:.4em;color:var(--muted)">/30</span></div>
+           <span class="badge ${passed ? 'ok' : 'no'}">${passed ? t('passed') : t('notPassed')}</span>
+           <div class="passbar" aria-hidden="true"><i style="width:${100 * first / TOTAL}%;background:${passed ? 'var(--mint)' : 'var(--coral)'}"></i><b style="left:${100 * PASS / TOTAL}%"></b></div>
+           <p class="muted">${t('passLine')}</p>`
+        : `<h1>${allDone ? t('allDone') : L(UI.roundDone(quiz.round))}</h1>`}
+      <p style="font-weight:800">${allDone ? t('allDoneTxt') : L(UI.left(left))}</p>
+    </div>
+    ${allDone ? `<button class="btn mint wide" id="home" type="button">${t('backChem')}</button>`
+      : `<button class="btn wide" id="again" type="button">${L(UI.repeatBtn(left))}</button><button class="btn ghost wide" id="home" type="button">${t('later')}</button>`}
+  </div>`, viewRoundResult);
+  if (quiz.fresh && ((passed && quiz.round === 1) || allDone)) confetti();
+  quiz.fresh = false;
+  $('#home').onclick = viewChem;
+  const a = $('#again'); if (a) a.onclick = () => { quiz.round++; quiz.queue = quiz.wrong; quiz.wrong = []; quiz.idx = 0; viewQuestion(); window.scrollTo({ top: 0 }); };
+  window.scrollTo({ top: 0 });
+}
+function confetti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = $('#confetti'); c.hidden = false; const x = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const P = Array.from({ length: 140 }, () => ({ x: Math.random() * c.width, y: -20 - Math.random() * c.height * .5, r: 5 + Math.random() * 6, vy: 2 + Math.random() * 3, vx: -1.5 + Math.random() * 3, a: Math.random() * 6, col: pick(['#6c4bf4', '#ffc93c', '#22c58b', '#ff8fb3', '#5cc8ff']) }));
+  let n = 0; (function f() { x.clearRect(0, 0, c.width, c.height);
+    P.forEach(p => { p.y += p.vy; p.x += p.vx; p.a += .1; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.col; x.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * .6); x.restore(); });
+    if (++n < 200) requestAnimationFrame(f); else { x.clearRect(0, 0, c.width, c.height); c.hidden = true; } })();
+}
+
+// ---------- TEACHER ----------
+const NAMES = ['Lena', 'Jonas', 'Mia', 'Elias', 'Emilia', 'Noah', 'Hannah', 'Paul', 'Lea', 'Ben', 'Sophie', 'Finn', 'Amira', 'Luca', 'Zeynep', 'Leon', 'Clara', 'Yusuf', 'Marie', 'Tim', 'Aylin', 'Felix', 'Nora', 'Can'];
+const HARD = { konzentration: -.28, ph_rechnen: -.32, stoffmenge: -.18, neutralisation: -.22, salzformel: -.15, ph_skala: .18, indikator: .12, alkan_formel: .08 };
+function demoClass() {
+  const r = mulberry(9), rows = [];
+  NAMES.forEach((fn, i) => {
+    const ability = .5 + r() * .45, m = {}, sk = {};
+    for (const s in SKILLS) { const p = Math.min(.97, Math.max(.05, ability + (HARD[s] || 0) + (r() - .5) * .24)); m[s] = p; let c = 0; for (let k = 0; k < 12; k++) if (r() < p) c++; sk[s] = [c, 12]; }
+    let score = 0; for (const s in SKILLS) for (let k = 0; k < 2; k++) if (r() < Math.min(.98, m[s] + .1)) score++;
+    rows.push({ name: `${fn} ${'ABCDEFGHIKLMNOPRSTUVWZYJ'[i]}.`, klasse: i % 2 ? '9b' : '9a', score, mastery: m, sk });
+  });
+  const last = S.tests[S.tests.length - 1];
+  if (last) rows.push({ name: t('you'), klasse: '9b', score: last.first, mastery: { ...S.mastery }, sk: null, me: true });
+  return rows;
+}
+function classData(k) {
+  const all = demoClass(), st = k ? all.filter(s => s.klasse === k) : all, passed = st.filter(s => s.score >= PASS).length;
+  const skill = {}; for (const s in SKILLS) { let c = 0, n = 0; st.forEach(x => { if (x.sk) { c += x.sk[s][0]; n += x.sk[s][1]; } }); skill[s] = { c, w: n - c, n }; }
+  return { st, skill, kpi: { n: st.length, pass: Math.round(100 * passed / st.length), passed, failed: st.length - passed, avg: st.reduce((a, s) => a + s.score, 0) / st.length } };
+}
+let tClass = '', agentResult = null;
+function viewTeacher() {
+  const d = classData(tClass);
+  mount(`<div class="stack">
+    <div class="row-between"><div class="hello">${mascot('happy', 72)}<div><h1>${t('myClass')}</h1><p class="example">${L(UI.example(S.tests.length > 0))}</p></div></div>
+      <div class="seg" role="group" aria-label="${t('classLabel')}">${['', '9a', '9b'].map(k => `<button type="button" data-k="${k}" aria-pressed="${tClass === k}">${k || t('all')}</button>`).join('')}</div></div>
+    <div class="kpis">
+      <div class="card kpi"><div class="v num" style="color:${d.kpi.pass >= 70 ? 'var(--mint)' : 'var(--coral)'}">${d.kpi.pass}%</div><div class="l">${t('kPass')}</div></div>
+      <div class="card kpi"><div class="v num">${fmt(d.kpi.avg.toFixed(1))}</div><div class="l">${t('kAvg')}</div></div>
+      <div class="card kpi"><div class="v num" style="color:var(--coral)">${d.kpi.failed}</div><div class="l">${t('kUnder')}</div></div>
+    </div>
+    <div class="charts">
+      <div class="card stack"><div class="row-between"><h2>${t('scores')}</h2><div class="legend"><span style="color:var(--mint)">${t('lPass')}</span><span style="color:var(--coral)">${t('lFail')}</span></div></div>
+        <div class="chartbox"><canvas id="cScore" aria-label="${t('scores')}"></canvas></div></div>
+      <div class="card stack"><h2>${t('pie')}</h2><div class="chartbox"><canvas id="cPie" aria-label="${t('pie')}"></canvas></div>
+        <p class="center num" style="font-weight:800"><span style="color:var(--mint)">${d.kpi.passed} ${t('yes')}</span> · <span style="color:var(--coral)">${d.kpi.failed} ${t('no')}</span></p></div>
+    </div>
+    <div class="card stack"><h2>${t('where')}</h2><p class="muted">${t('whereSub')}</p>
+      <div class="chartbox tall"><canvas id="cSkill" aria-label="${t('where')}"></canvas></div></div>
+    <div class="card agent stack">
+      <div class="row-between"><div><h2 style="color:#fff">${t('agentTitle')}</h2><p class="muted">${t('agentSub')}</p></div>
+        <button class="btn sun" id="runAgent" type="button">${agentResult && agentResult.k === tClass ? t('rerun') : t('run')}</button></div>
+      <div id="agentOut" class="stack" hidden></div>
+    </div></div>`, viewTeacher);
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { tClass = b.dataset.k; viewTeacher(); });
+  $('#runAgent').onclick = () => runAgent(d);
+  drawCharts(d);
+  if (agentResult && agentResult.k === tClass) paintAgent(agentResult, true);
+}
+function drawCharts(d) {
+  if (!window.Chart) { document.querySelectorAll('.chartbox').forEach(b => b.innerHTML = `<p class="muted">${t('chartsFail')}</p>`); return; }
+  Chart.defaults.font.family = 'Nunito, system-ui, sans-serif'; Chart.defaults.font.size = 14; Chart.defaults.font.weight = '700'; Chart.defaults.color = '#5b6390';
+  const G = '#22c58b', R = '#ff5d6c', INK = '#1d2550', st = [...d.st].sort((a, b) => b.score - a.score);
+  const line = { id: 'line', afterDatasetsDraw(c) { const y = c.scales.y.getPixelForValue(PASS), { left, right } = c.chartArea, x = c.ctx;
+    x.save(); x.strokeStyle = INK; x.setLineDash([6, 5]); x.lineWidth = 2; x.beginPath(); x.moveTo(left, y); x.lineTo(right, y); x.stroke();
+    x.fillStyle = INK; x.font = '800 12px Nunito, sans-serif'; x.fillText(t('line'), left + 6, y - 6); x.restore(); } };
+  charts.s = new Chart($('#cScore'), { type: 'bar', plugins: [line],
+    data: { labels: st.map(s => s.name), datasets: [{ data: st.map(s => s.score), backgroundColor: st.map(s => s.me ? '#6c4bf4' : s.score >= PASS ? G : R), borderRadius: 8, maxBarThickness: 28 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => L(UI.ptsTip(c.raw)) } } },
+      scales: { y: { min: 0, max: 30, ticks: { stepSize: 5 }, grid: { color: '#e6eef9' } }, x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 70, font: { size: 11 } } } } } });
+  charts.p = new Chart($('#cPie'), { type: 'doughnut', data: { labels: [t('passedL'), t('failedL')], datasets: [{ data: [d.kpi.passed, d.kpi.failed], backgroundColor: [G, R], borderColor: '#fff', borderWidth: 4 }] },
+    options: { maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false } } } });
+  const sk = Object.entries(d.skill).filter(([, v]) => v.n).sort((a, b) => b[1].w / b[1].n - a[1].w / a[1].n);
+  charts.k = new Chart($('#cSkill'), { type: 'bar', data: { labels: sk.map(([k]) => sname(k)), datasets: [
+      { label: t('correct'), data: sk.map(([, v]) => Math.round(100 * v.c / v.n)), backgroundColor: G, borderRadius: 6 },
+      { label: t('wrong'), data: sk.map(([, v]) => Math.round(100 * v.w / v.n)), backgroundColor: R, borderRadius: 6 }] },
+    options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} %` } } },
+      scales: { x: { stacked: true, max: 100, ticks: { callback: v => v + ' %' }, grid: { color: '#e6eef9' } }, y: { stacked: true, grid: { display: false } } } } });
+}
+async function runAgent(d) {
+  const btn = $('#runAgent'), out = $('#agentOut'); btn.disabled = true; btn.textContent = t('running'); out.hidden = false;
+  out.innerHTML = `<div class="steps">${L(UI.steps).map((s, i) => `<div class="step" id="st${i}">${i + 1}. ${s}</div>`).join('')}</div>`;
+  const wait = ms => new Promise(r => setTimeout(r, ms)), mark = (i, cls) => { const e = $('#st' + i); if (e) e.className = 'step ' + cls; };
+  for (let i = 0; i < 4; i++) { mark(i, 'run'); await wait(300); mark(i, 'done'); }
+  mark(4, 'run');
+  const mean = s => d.st.reduce((a, x) => a + x.mastery[s], 0) / d.st.length;
+  const rows = Object.keys(SKILLS).map(s => ({ s, mean: mean(s), err: d.skill[s].n ? d.skill[s].w / d.skill[s].n : 0, below: d.st.filter(x => x.mastery[s] < .6).length }));
+  const by = Object.fromEntries(rows.map(r => [r.s, r]));
+  const weak = rows.filter(r => r.mean < .6 || r.err > .4).sort((a, b) => a.mean - b.mean).slice(0, 3);
+  weak.forEach(w => { w.root = SKILLS[w.s].pre.filter(p => by[p].mean < .65).sort((a, b) => by[a].mean - by[b].mean)[0] || null; });
+  const groups = {}; d.st.forEach(x => { const worst = Object.keys(x.mastery).sort((a, b) => x.mastery[a] - x.mastery[b])[0]; if (x.mastery[worst] < .6) (groups[worst] ||= []).push(x.name); });
+  const gl = Object.entries(groups).sort((a, b) => b[1].length - a[1].length).slice(0, 3);
+  const acts = weak.map(w => w.root ? (l => UI.actRoot(SKILLS[w.s].name[l], SKILLS[w.root].name[l], w.below)[l]) : (l => UI.actPlain(SKILLS[w.s].name[l])[l]));
+  if (d.kpi.failed) acts.push(l => UI.actFail(d.kpi.failed)[l]);
+  let summary = weak.length ? (l => UI.sumGap(SKILLS[weak[0].s].name[l], Math.round(weak[0].mean * 100))[l] + (weak[0].root ? UI.sumRoot(SKILLS[weak[0].root].name[l])[l] : '') + UI.sumPass(d.kpi.pass)[l]) : (l => UI.noGaps[l]);
+  summary = both(summary);
+  if (sample) { try {
+    const r = await sample(`You help a grade-9 chemistry teacher in Berlin. In ${lang === 'de' ? 'German' : 'English'}, write 2 short, friendly sentences on what matters most for the next lesson.\nGaps: ${JSON.stringify(weak.map(w => ({ skill: L(SKILLS[w.s].name), mastery: Math.round(w.mean * 100), cause: w.root && L(SKILLS[w.root].name) })))}\nPass rate: ${d.kpi.pass} %`, { modelTier: 'quick' });
+    if (r?.text?.trim()) summary = { ...summary, [lang]: r.text.trim() }; } catch (e) { if (e?.code === 'not_granted') sample = null; } }
+  mark(4, 'done');
+  agentResult = { k: tClass, summary, weak, acts, gl };
+  paintAgent(agentResult, false);
+  btn.disabled = false; btn.textContent = t('rerun');
+}
+function paintAgent(a, withSteps) {
+  const out = $('#agentOut'); out.hidden = false;
+  const stepsHtml = `<div class="steps">${L(UI.steps).map((s, i) => `<div class="step done" id="st${i}">${i + 1}. ${s}</div>`).join('')}</div>`;
+  out.innerHTML = (withSteps ? stepsHtml : out.querySelector('.steps')?.outerHTML || stepsHtml) + `
+    <div class="sumbox">💬 ${esc(L(a.summary))}</div>
+    <div class="gaps">${a.weak.map(w => `<div class="gap"><span class="sev" style="background:${w.mean < .45 ? 'var(--coral-l)' : '#fff4cc'};color:${w.mean < .45 ? '#a3142a' : '#8a5a00'}">${w.mean < .45 ? t('urgent') : t('important')}</span>
+      <b style="font-family:var(--font-display);font-size:1.15rem">${sname(w.s)}</b><span class="num">${L(UI.canDo(Math.round(w.mean * 100), w.below))}</span>
+      ${w.root ? `<span>↳ ${t('cause')}: <b>${sname(w.root)}</b></span>` : ''}</div>`).join('')}</div>
+    <div><h3 style="color:#fff;margin-bottom:8px">${t('whatToDo')}</h3><ul class="acts">${a.acts.map(f => `<li>${esc(f(lang))}</li>`).join('')}</ul></div>
+    <div><h3 style="color:#fff;margin-bottom:8px">${t('groupsT')}</h3><div class="gaps">${a.gl.map(([s, names]) => `<div class="gap"><b>${sname(s)} · ${names.length}</b><span style="color:var(--muted)">${names.map(esc).join(', ')}</span></div>`).join('')}</div></div>`;
+}
+
+viewLogin();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}School Hack{% endblock %}</title>
+  <meta name="theme-color" content="#0f1b2d">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="/static/tailwind.css">
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+  <header class="bg-ink-900 text-white sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-display font-semibold text-lg">
+        <img src="/static/icon.svg" class="w-7 h-7" alt="">School Hack<span class="hidden sm:inline text-reagent-400">Berlin</span>
+      </a>
+      <nav class="flex items-center gap-0 sm:gap-1 text-[13px] sm:text-sm">
+        {% if role == 'student' %}
+          <a href="/student" class="navlink">Fächer</a>
+          <a href="/student/chemie" class="navlink">Chemie</a>
+        {% elif role == 'teacher' %}
+          <a href="/teacher" class="navlink">Dashboard</a>
+        {% endif %}
+        {% if role %}
+          <span class="hidden sm:inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
+            {{ 'Lehrkraft' if role == 'teacher' else 'Schüler·in' }}</span>
+          <a href="/logout" class="navlink">Abmelden</a>
+        {% else %}
+          <a href="/login/student" class="navlink">Schüler·innen</a>
+          <a href="/login/teacher" class="navlink">Lehrkräfte</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  <main class="flex-1">{% block content %}{% endblock %}</main>
+  <footer class="text-xs text-slate-500 text-center py-6 px-4">
+    School Hack · Klasse 9 · v1
+  </footer>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

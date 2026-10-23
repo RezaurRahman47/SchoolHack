@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Lehrkraft' if who == 'teacher' else 'Schüler·in' }} – Login{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-12">
+  <div class="flex rounded-xl bg-slate-200 p-1 mb-6 text-sm font-semibold">
+    <a href="/login/student" class="flex-1 text-center py-2 rounded-lg {{ 'bg-white shadow text-ink-900' if who=='student' else 'text-slate-600' }}">Schüler·innen</a>
+    <a href="/login/teacher" class="flex-1 text-center py-2 rounded-lg {{ 'bg-white shadow text-ink-900' if who=='teacher' else 'text-slate-600' }}">Lehrkräfte</a>
+  </div>
+  <div class="card p-6 sm:p-8">
+    <div class="w-12 h-12 rounded-xl grid place-items-center text-2xl {{ 'bg-ink-900 text-white' if who=='teacher' else 'bg-reagent-500/15' }}">
+      {{ '📊' if who=='teacher' else '🧪' }}</div>
+    <h1 class="font-display text-2xl font-bold text-ink-900 mt-4">
+      {{ 'Lehrkraft-Portal' if who=='teacher' else 'Schüler·innen-Portal' }}</h1>
+    {% if error %}<div class="mt-4 text-sm bg-red-50 text-fail border border-red-200 rounded-lg px-3 py-2">{{ error }}</div>{% endif %}
+    <form method="post" class="mt-6 space-y-4">
+      <label class="block"><span class="font-semibold">Benutzername</span>
+        <input name="username" class="input mt-1" autocomplete="username" required autofocus></label>
+      <label class="block"><span class="font-semibold">Passwort</span>
+        <input name="password" type="password" class="input mt-1" autocomplete="current-password" required></label>
+      <button class="btn {{ 'btn-dark' if who=='teacher' else 'btn-primary' }} w-full">Anmelden</button>
+    </form>
+    <p class="text-slate-500 mt-4 text-center">Demo: admin / admin</p>
+  </div>
+</div>
+{% endblock %}

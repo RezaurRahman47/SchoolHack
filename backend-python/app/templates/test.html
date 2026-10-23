@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Test – School Hack{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6">
+  {% if round > 1 %}
+  <div class="rounded-xl bg-amber-50 border-2 border-amber-200 p-4 text-lg font-semibold text-ink-900 mb-4">
+    Wiederholung: noch {{ questions|length }} Frage(n)</div>
+  {% endif %}
+
+  <div class="flex justify-between items-center text-lg">
+    <span class="font-display font-bold text-ink-900">Frage <span id="cur">1</span> / {{ questions|length }}</span>
+    <a href="/student/chemie" class="text-slate-500">Pause</a>
+  </div>
+  <div class="h-3 bg-slate-200 rounded-full overflow-hidden mt-2"><div id="bar" class="h-full bg-reagent-500 transition-all" style="width:0"></div></div>
+
+  <form method="post" id="testform" class="mt-6">
+    {% for q in questions %}
+    <div class="qcard {{ '' if loop.first else 'hidden' }}" data-qid="{{ q.id }}">
+      <p class="font-display text-2xl sm:text-3xl font-bold text-ink-900 leading-snug">{{ q.prompt }}</p>
+      {% if prev.get(q.id) %}
+      <div class="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+        <div class="text-fail font-semibold">Letztes Mal: {{ prev[q.id].given or '–' }}</div>
+        {% if prev[q.id].feedback %}<div class="text-slate-700 mt-1">{{ prev[q.id].feedback }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if q.kind == 'mc' %}
+      <div class="grid gap-3 mt-6">
+        {% for o in q.options %}
+        <label class="opt"><input type="radio" name="{{ q.id }}" value="{{ o }}" class="w-5 h-5 accent-teal-600"><span>{{ o }}</span></label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="flex items-center gap-3 mt-6">
+        <input name="{{ q.id }}" inputmode="decimal" autocomplete="off" class="input num text-2xl" placeholder="Antwort">
+        {% if q.unit %}<span class="text-xl text-slate-600 shrink-0">{{ q.unit }}</span>{% endif %}
+      </div>
+      {% endif %}
+      <button type="button" class="hintbtn mt-6 text-lg text-reagent-600 font-semibold">💬 Tipp</button>
+      <div class="hint hidden mt-3 text-lg bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-ink-900"></div>
+    </div>
+    {% endfor %}
+
+    <div class="flex gap-3 mt-8 pb-10">
+      <button type="button" id="back" class="btn btn-ghost">←</button>
+      <button type="button" id="next" class="btn btn-primary flex-1 text-xl">Weiter</button>
+      <button type="submit" id="done" class="btn btn-dark flex-1 text-xl hidden">Abgeben</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const form = document.getElementById('testform'), cards = [...document.querySelectorAll('.qcard')];
+const total = cards.length; let i = 0;
+const val = c => { const id = c.dataset.qid; const r = form.querySelector(`[name="${id}"]:checked`);
+  const t = form.querySelector(`input[name="${id}"]:not([type=radio])`); return r ? r.value : (t ? t.value.trim() : ''); };
+function show() {
+  cards.forEach((c, k) => c.classList.toggle('hidden', k !== i));
+  document.getElementById('cur').textContent = i + 1;
+  document.getElementById('bar').style.width = (100 * (i + 1) / total) + '%';
+  document.getElementById('back').style.visibility = i ? 'visible' : 'hidden';
+  document.getElementById('next').classList.toggle('hidden', i === total - 1);
+  document.getElementById('done').classList.toggle('hidden', i !== total - 1);
+  const inp = cards[i].querySelector('input:not([type=radio])'); if (inp) inp.focus();
+  window.scrollTo({ top: 0 });
+}
+document.getElementById('next').onclick = () => { if (i < total - 1) { i++; show(); } };
+document.getElementById('back').onclick = () => { if (i > 0) { i--; show(); } };
+form.addEventListener('keydown', e => { if (e.key === 'Enter' && i < total - 1) { e.preventDefault(); i++; show(); } });
+form.addEventListener('submit', e => {
+  const open = cards.filter(c => !val(c)).length;
+  if (open && !confirm(`${open} Frage(n) ohne Antwort. Trotzdem abgeben?`)) e.preventDefault();
+});
+const attempts = {};
+document.querySelectorAll('.hintbtn').forEach(b => b.addEventListener('click', async () => {
+  const card = b.closest('.qcard'), id = card.dataset.qid, box = card.querySelector('.hint');
+  attempts[id] = (attempts[id] || 0) + 1;
+  box.classList.remove('hidden'); box.textContent = '…';
+  try {
+    const r = await fetch('/api/hint', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ test_id: {{ test.id }}, qid: id, given: val(card), attempt: attempts[id] }) });
+    box.textContent = (await r.json()).hint || 'Kein Tipp verfügbar.';
+  } catch { box.textContent = 'Keine Verbindung.'; }
+  b.textContent = '💬 Noch ein Tipp';
+}));
+show();
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink-900">Wähle ein Fach</h1>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+    {% for s in subjects %}
+      {% if s.active %}
+      <a href="/student/{{ s.slug }}" class="card p-5 hover:border-reagent-500 hover:shadow-md transition group">
+        <div class="text-5xl">{{ s.icon }}</div>
+        <div class="font-display font-bold text-xl text-ink-900 mt-3 group-hover:text-reagent-600">{{ s.name }}</div>
+        <div class="text-sm text-slate-500">{{ s.desc }}</div>
+        <span class="chip bg-green-100 text-pass mt-3">Verfügbar</span>
+      </a>
+      {% else %}
+      <div class="card p-5 opacity-60">
+        <div class="text-5xl">{{ s.icon }}</div>
+        <div class="font-display font-bold text-xl text-ink-900 mt-3">{{ s.name }}</div>
+        <div class="text-sm text-slate-500">{{ s.desc }}</div>
+        <span class="chip bg-slate-100 text-slate-500 mt-3">Bald</span>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

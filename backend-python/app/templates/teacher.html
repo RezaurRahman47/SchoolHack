@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Lehrkraft-Dashboard – School Hack{% endblock %}
+{% block head %}<script src="/static/chart.umd.min.js"></script>{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-6">
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+    <div>
+      <h1 class="font-display text-4xl font-bold text-ink-900">Meine Klasse</h1>
+    </div>
+    <div class="flex rounded-xl bg-slate-200 p-1 text-sm font-semibold" id="classTabs">
+      <button data-k="" class="px-4 py-1.5 rounded-lg bg-white shadow">Alle</button>
+      <button data-k="9a" class="px-4 py-1.5 rounded-lg text-slate-600">9a</button>
+      <button data-k="9b" class="px-4 py-1.5 rounded-lg text-slate-600">9b</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-3 gap-3 mt-5">
+    <div class="card p-5 text-center"><div class="font-display text-3xl sm:text-5xl font-bold num whitespace-nowrap" id="k_pass">–</div><div class="text-slate-600 mt-1">bestanden</div></div>
+    <div class="card p-5 text-center"><div class="font-display text-3xl sm:text-5xl font-bold num whitespace-nowrap text-ink-900" id="k_avg">–</div><div class="text-slate-600 mt-1">Ø Punkte</div></div>
+    <div class="card p-5 text-center"><div class="font-display text-3xl sm:text-5xl font-bold num whitespace-nowrap text-fail" id="k_risk">–</div><div class="text-slate-600 mt-1">unter 20</div></div>
+  </div>
+
+  <!-- Scores + doughnut -->
+  <div class="grid lg:grid-cols-3 gap-4 mt-4">
+    <div class="card p-4 lg:col-span-2">
+      <div class="flex justify-between items-baseline"><h2 class="font-display font-bold text-xl text-ink-900">Punkte je Schüler·in</h2>
+        <div class="flex gap-3 text-xs"><span class="text-pass font-semibold">■ bestanden</span><span class="text-fail font-semibold">■ nicht bestanden</span></div></div>
+      <div class="h-80 mt-2"><canvas id="scoreChart"></canvas></div>
+    </div>
+    <div class="card p-4">
+      <h2 class="font-display font-bold text-xl text-ink-900">Bestanden?</h2>
+      <div class="h-56 mt-2 relative"><canvas id="pieChart"></canvas>
+        <div class="absolute inset-0 grid place-items-center pointer-events-none"><div class="text-center"><div class="font-display text-3xl font-bold num" id="pieCenter"></div><div class="text-xs text-slate-500">bestanden</div></div></div></div>
+      <div class="flex justify-center gap-4 text-sm mt-3"><span class="num"><b class="text-pass" id="p_ok"></b> bestanden</span><span class="num"><b class="text-fail" id="p_no"></b> nicht</span></div>
+    </div>
+  </div>
+
+  <!-- Skills -->
+  <div class="card p-5 mt-4">
+    <h2 class="font-display font-bold text-xl text-ink-900">Wo hakt es? <span class="font-normal text-slate-500 text-base">richtig vs. falsch je Thema</span></h2>
+    <div class="h-[28rem] mt-3"><canvas id="skillChart"></canvas></div>
+  </div>
+
+  <!-- Gap-finder agent -->
+  <div class="card mt-4 overflow-hidden">
+    <div class="bg-ink-900 text-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div><div class="flex items-center gap-2"><span class="text-xl">🤖</span><h2 class="font-display font-bold text-2xl">Lücken-Agent</h2>
+        <span class="chip bg-white/10 text-reagent-400">{{ 'Claude' if llm else 'Regelbasiert' }}</span></div>
+        <p class="text-slate-300">Findet Lücken und sagt dir, was du als Nächstes üben solltest.</p></div>
+      <button id="runAgent" class="btn btn-primary shrink-0 text-xl">Analyse starten</button>
+    </div>
+    <div id="agentOut" class="p-4 sm:p-5 hidden">
+      <ol id="trace" class="grid sm:grid-cols-5 gap-2 text-xs"></ol>
+      <div id="agentBody" class="hidden mt-5 space-y-5">
+        <div class="rounded-xl bg-teal-50 border border-teal-100 p-4 text-ink-900" id="agentSummary"></div>
+        <div><h3 class="font-display font-semibold text-ink-900 mb-2">Gefundene Lücken</h3><div id="gaps" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div></div>
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div><h3 class="font-display font-semibold text-ink-900 mb-2">Empfohlene Maßnahmen</h3><ul id="actions" class="space-y-2 text-sm"></ul></div>
+          <div><h3 class="font-display font-semibold text-ink-900 mb-2">Fördergruppen</h3><div id="groups" class="space-y-2 text-sm"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const PASS = {{ pass_mark }}, GREEN = '#16a34a', RED = '#dc2626', INK = '#0f1b2d', TEAL = '#14b8a6';
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif'; Chart.defaults.font.size = 14; Chart.defaults.color = '#64748b';
+Chart.defaults.plugins.legend.display = false;
+const charts = {};
+const thresholdLine = { id: 'threshold', afterDatasetsDraw(c, _, o) {
+  if (!o.value) return; const y = c.scales.y.getPixelForValue(o.value), {left, right} = c.chartArea, x = c.ctx;
+  x.save(); x.strokeStyle = INK; x.setLineDash([5,4]); x.lineWidth = 1.5; x.beginPath(); x.moveTo(left, y); x.lineTo(right, y); x.stroke();
+  x.fillStyle = INK; x.font = '600 11px Inter'; x.fillText(`Bestehensgrenze ${o.value}`, left + 6, y - 6); x.restore(); } };
+function mk(id, cfg) { charts[id]?.destroy(); charts[id] = new Chart(document.getElementById(id), cfg); }
+const heatColor = p => p < .45 ? `rgba(220,38,38,${.25 + (.45-p)})` : p < .7 ? `rgba(245,158,11,${.25 + (p-.45)})` : `rgba(22,163,74,${.2 + (p-.7)*1.6})`;
+
+async function load(k='') {
+  const d = await (await fetch('/api/teacher/overview' + (k ? `?klasse=${k}` : ''))).json();
+  const K = d.kpi;
+  const pr = document.getElementById('k_pass'); pr.textContent = K.pass_rate + '%'; pr.style.color = K.pass_rate >= 70 ? GREEN : RED;
+  document.getElementById('k_avg').textContent = K.avg_score.toString().replace('.', ',');
+  document.getElementById('k_risk').textContent = K.at_risk;
+
+  const st = d.students.filter(s => s.score !== null).sort((a,b) => b.score - a.score);
+  mk('scoreChart', { type: 'bar', plugins: [thresholdLine],
+    data: { labels: st.map(s => s.name), datasets: [{ data: st.map(s => s.score), backgroundColor: st.map(s => s.passed ? GREEN : RED), borderRadius: 4, maxBarThickness: 26 }] },
+    options: { maintainAspectRatio: false, plugins: { threshold: { value: PASS }, tooltip: { callbacks: { label: c => `${c.raw}/30 Punkte` } } },
+      scales: { y: { min: 0, max: 30, ticks: { stepSize: 5 }, grid: { color: '#eef2f7' } }, x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 60, font: { size: 12 } } } } } });
+
+  document.getElementById('pieCenter').textContent = K.pass_rate + ' %';
+  document.getElementById('p_ok').textContent = K.passed; document.getElementById('p_no').textContent = K.failed;
+  mk('pieChart', { type: 'doughnut', data: { labels: ['Bestanden','Nicht bestanden'], datasets: [{ data: [K.passed, K.failed], backgroundColor: [GREEN, RED], borderWidth: 2, borderColor: '#fff' }] },
+    options: { maintainAspectRatio: false, cutout: '70%' } });
+
+  const sk = Object.entries(d.skill_stats).map(([id, v]) => ({ name: d.skills[id], c: v.correct, w: v.wrong, n: v.correct + v.wrong }))
+    .filter(s => s.n).sort((a,b) => (b.w/b.n) - (a.w/a.n));
+  mk('skillChart', { type: 'bar', data: { labels: sk.map(s => s.name), datasets: [
+      { label: 'richtig', data: sk.map(s => Math.round(100*s.c/s.n)), backgroundColor: GREEN, borderRadius: 3 },
+      { label: 'falsch', data: sk.map(s => Math.round(100*s.w/s.n)), backgroundColor: RED, borderRadius: 3 }] },
+    options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} %` } } },
+      scales: { x: { stacked: true, max: 100, ticks: { callback: v => v + ' %' }, grid: { color: '#eef2f7' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 14 } } } } } });
+
+}
+
+let current = '';
+document.querySelectorAll('#classTabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#classTabs button').forEach(x => x.className = 'px-4 py-1.5 rounded-lg text-slate-600');
+  b.className = 'px-4 py-1.5 rounded-lg bg-white shadow'; current = b.dataset.k; load(current);
+}));
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('runAgent').addEventListener('click', async (e) => {
+  const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Analysiere …';
+  const out = document.getElementById('agentOut'), tr = document.getElementById('trace'), body = document.getElementById('agentBody');
+  out.classList.remove('hidden'); body.classList.add('hidden');
+  const steps = ['Klassendaten laden','Schwächen erkennen','Ursachen im Skill-Graph suchen','Fördergruppen bilden','Maßnahmen empfehlen'];
+  tr.innerHTML = steps.map((s, i) => `<li id="st${i}" class="rounded-lg border border-slate-200 p-2 text-slate-400"><div class="font-semibold">${i+1}. ${s}</div><div class="det mt-1">wartet …</div></li>`).join('');
+  const res = fetch('/api/agent' + (current ? `?klasse=${current}` : ''), { method: 'POST' }).then(r => r.json());
+  for (let i = 0; i < steps.length; i++) { await new Promise(r => setTimeout(r, 350));
+    const li = document.getElementById('st'+i); li.className = 'rounded-lg border border-teal-200 bg-teal-50 p-2 text-ink-900'; li.querySelector('.det').textContent = 'läuft …'; }
+  const d = await res;
+  d.trace.forEach((t, i) => { const li = document.getElementById('st'+i); if (!li) return;
+    li.className = 'rounded-lg border border-green-200 bg-green-50 p-2 text-ink-900'; li.querySelector('.det').textContent = '✓ ' + t.detail; });
+  document.getElementById('agentSummary').innerHTML = `<div class="text-xs font-semibold text-reagent-600 mb-1">ZUSAMMENFASSUNG</div>${esc(d.summary)}`;
+  document.getElementById('gaps').innerHTML = d.gaps.map(g => `<div class="rounded-xl border ${g.severity==='hoch'?'border-red-200 bg-red-50':'border-amber-200 bg-amber-50'} p-3">
+      <div class="flex justify-between gap-2"><span class="font-semibold text-ink-900 text-sm">${esc(g.name)}</span><span class="chip ${g.severity==='hoch'?'bg-red-100 text-fail':'bg-amber-100 text-amber-700'}">${g.severity}</span></div>
+      <div class="text-xs text-slate-500">${esc(g.topic)}</div>
+      <div class="text-sm mt-2 num"><b>${g.mastery} %</b> Beherrschung · ${g.error_rate} % Fehler · ${g.students_below} unter 60 %</div>
+      ${g.root_cause ? `<div class="text-xs mt-2 text-ink-800">↳ Ursache: <b>${esc(g.root_cause)}</b></div>` : ''}</div>`).join('');
+  document.getElementById('actions').innerHTML = d.actions.map(a => `<li class="flex gap-2"><span class="text-reagent-600">▸</span><span>${esc(a)}</span></li>`).join('');
+  document.getElementById('groups').innerHTML = d.groups.map(g => `<div class="rounded-lg border border-slate-200 p-3"><div class="font-semibold text-ink-900">${esc(g.skill)} <span class="text-slate-400 font-normal">· ${g.students.length}</span></div><div class="text-slate-600 text-xs mt-1">${g.students.map(esc).join(', ')}</div></div>`).join('');
+  body.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Erneut analysieren';
+});
+load();
+</script>
+{% endblock %}

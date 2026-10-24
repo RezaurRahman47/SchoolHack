@@ -48,7 +48,7 @@ Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite data
 The textbook RAG index is committed, so a clone works **without the PDF**:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/RezaurRahman47/SchoolHack.git
 cd SchoolHack
 ./setup.sh                 # Python >= 3.10; creates both venvs
 # add your own key to vectorstore/.env
@@ -56,6 +56,10 @@ cd SchoolHack
 ```
 
 Open <http://localhost:8000> → `admin` / `admin`. SQLite is seeded automatically.
+
+**Windows:** `setup.sh` and `run_demo.sh` are macOS/Linux only. Use the native
+PowerShell commands in [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), or run
+the same scripts inside WSL.
 
 - First `setup.sh` downloads the two local models (~3.8 GB, one time). For the
   demo, copy `~/.cache/huggingface/hub/models--google--embeddinggemma-2` and

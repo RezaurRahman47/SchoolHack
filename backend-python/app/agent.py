@@ -8,7 +8,7 @@ Every step is returned as a trace so the dashboard can show the workflow.
 from __future__ import annotations
 
 from . import db, llm
-from .questions import SKILLS
+from .questions import SKILLS, VISIBLE_SKILLS
 
 WEAK = 0.6
 
@@ -18,11 +18,11 @@ def run(klasse: str | None = None) -> dict:
     data = db.class_overview(klasse)
     students = [s for s in data["students"] if s["mastery"]]
     trace.append({"step": "Klassendaten laden",
-                  "detail": f"{len(students)} Schüler·innen, {data['kpi']['tests']} Tests, {len(SKILLS)} Skills"})
+                  "detail": f"{len(students)} Schüler·innen, {data['kpi']['tests']} Tests, {len(VISIBLE_SKILLS)} Skills"})
 
     # 2. weak skills: class mean mastery + error rate on first attempts
     skill_rows = []
-    for s, meta in SKILLS.items():
+    for s, meta in VISIBLE_SKILLS.items():
         vals = [st["mastery"].get(s, 0.3) for st in students]
         mean = sum(vals) / max(len(vals), 1)
         st = data["skill_stats"][s]
@@ -40,7 +40,7 @@ def run(klasse: str | None = None) -> dict:
     by = {r["skill"]: r for r in skill_rows}
     gaps = []
     for r in weak[:5]:
-        weak_pre = [p for p in SKILLS[r["skill"]]["pre"] if by[p]["mean"] < WEAK + 0.05]
+        weak_pre = [p for p in VISIBLE_SKILLS[r["skill"]]["pre"] if by[p]["mean"] < WEAK + 0.05]
         root = min(weak_pre, key=lambda p: by[p]["mean"]) if weak_pre else None
         gaps.append({
             "skill": r["skill"], "name": r["name"], "topic": r["topic"],

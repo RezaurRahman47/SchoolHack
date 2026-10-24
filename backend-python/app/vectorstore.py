@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 RAG_BASE = os.getenv("RAG_BASE", "http://localhost:8080/api").rstrip("/")
 RAG_ORIGIN = RAG_BASE[:-4] if RAG_BASE.endswith("/api") else RAG_BASE
 TIMEOUT = 20  # first v2 query loads the embedding + reranker models
+CHAT_TIMEOUT = 45  # answer model + optional image check can exceed the search timeout
 GENERATE_TIMEOUT = 180  # LLM generators (quiz / flashcards / statements) are slow
 
 
@@ -156,17 +157,40 @@ def rag_context_for_skill(skill_name: str, n_text: int = 4, n_images: int = 2) -
 
 def rag_chat(question: str, topic: str = "", core_principle: str = "") -> dict | None:
     """Ask the RAG chat endpoint. Returns the full response dict or None."""
-    payload = {"question": question}
+    payload = {"question": question[:1000]}
     if topic:
-        payload["topic"] = topic
+        payload["topic"] = topic[:200]
     if core_principle:
-        payload["core_principle"] = core_principle
-    result = _post("/chat", payload)
+        payload["core_principle"] = core_principle[:1200]
+    result = _post("/chat", payload, timeout=CHAT_TIMEOUT)
     # The RAG server returns image URLs pointing at :8080; rewrite them through
     # this server so phones on the LAN can load them too.
-    if result:
+    if isinstance(result, dict):
         for img in result.get("images", []) or []:
-            img["url"] = proxy_image_url(img.get("url") or img.get("filename") or "")
+            if isinstance(img, dict):
+                img["url"] = proxy_image_url(img.get("url") or img.get("filename") or "")
+    return result if isinstance(result, dict) else None
+
+
+def tutor_chat(message: str, history: list[dict], subject: str = "",
+               chemistry_skills: list[dict] | None = None) -> dict | None:
+    """Ask the general science tutor on the RAG server."""
+    result = _post("/tutor/chat", {
+        "message": message[:1000],
+        "history": history[-10:],
+        "subject": subject,
+        "chemistry_skills": chemistry_skills or [],
+    }, timeout=CHAT_TIMEOUT)
+    return result if isinstance(result, dict) else None
+
+
+def science_question(subject: str, topic: str) -> dict | None:
+    """Generate one validated question for a non-chemistry science subject."""
+    clean_topic = " ".join(str(topic or "").split())[:200]
+    result = _post("/science-question", {"subject": subject, "topic": clean_topic},
+                   timeout=GENERATE_TIMEOUT)
+    if not isinstance(result, dict) or result.get("error"):
+        return None
     return result
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import random
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request, Response
@@ -14,7 +15,10 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import agent, db, llm, subtopics_data, vectorstore
-from .questions import PASS_MARK, SKILLS, TOPICS, build_test, grade
+from .chat_text import clean_answer, clean_topic, is_refusal, is_soft_refusal
+from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
+                        SUBTOPIC_TITLES, SUBTOPIC_COVERS, SUBTOPIC_ORDER,
+                        CURRICULUM_UNITS, build_test, generate, grade)
 
 BASE = Path(__file__).resolve().parent
 app = FastAPI(title="School Hack")
@@ -60,10 +64,25 @@ def render(request: Request, name: str, **ctx):
 # ---------------------------------------------------------------------------
 # learning overview on the student home page (own progress only)
 # ---------------------------------------------------------------------------
-GRAPH_TOPICS = ["Grundlagen", "Stoffmenge und Mol", "Säuren und Laugen", "Kohlenwasserstoffe"]
+GRAPH_TOPICS = VISIBLE_TOPICS
 GRAPH_TOPIC_SHORT = {
-    "Grundlagen": "Grundlagen", "Stoffmenge und Mol": "Stoffmenge & Mol",
-    "Säuren und Laugen": "Säuren & Laugen", "Kohlenwasserstoffe": "Kohlenwasserstoffe",
+    "Stoffmenge und Mol": "Stoffmenge & Mol",
+    "Säuren und Laugen": "Säuren & Laugen",
+    "Kohlenwasserstoffe": "Kohlenwasserstoffe",
+    "Alkohole": "Alkohole",
+    "Organische Säuren": "Organische Säuren",
+    "Ester": "Ester",
+}
+
+# Official Berlin-Brandenburg curriculum labels (Chemie 9/10).
+# The chemistry page renders these above the skills of each topic.
+TOPIC_META = {
+    unit["topic"]: {
+        "code": unit["code"],
+        "official": unit["title"],
+        "sub": unit.get("sub", ""),
+    }
+    for unit in CURRICULUM_UNITS
 }
 RADAR_POS = {"chemie": "top", "mathematik": "right", "biologie": "bottom", "physik": "left"}
 RADAR_ANGLES = {"chemie": -90, "mathematik": 0, "biologie": 90, "physik": 180}
@@ -89,10 +108,10 @@ def _radar_point(angle: float, radius: float) -> tuple[float, float]:
 
 def _learning_network(mastery: dict[str, float]) -> dict:
     """Build the diamond radar of all four subjects (own progress only)."""
-    values = [max(0.0, min(1.0, mastery.get(s, 0.3))) for s in SKILLS]
+    values = [max(0.0, min(1.0, mastery.get(s, 0.3))) for s in VISIBLE_SKILLS]
     topic_rows = []
     for topic in GRAPH_TOPICS:
-        ids = [s for s in SKILLS if SKILLS[s]["topic"] == topic]
+        ids = [s for s in VISIBLE_SKILLS if VISIBLE_SKILLS[s]["topic"] == topic]
         ps = [max(0.0, min(1.0, mastery.get(s, 0.3))) for s in ids]
         pc = round(100 * sum(ps) / len(ps))
         topic_rows.append({
@@ -135,7 +154,7 @@ def _learning_network(mastery: dict[str, float]) -> dict:
         "w": RADAR_W, "h": RADAR_H, "cx": RADAR_CX, "cy": RADAR_CY,
         "rings": rings, "axes": axes, "overall": overall,
         "secure": sum(1 for p in values if p >= 0.7),
-        "total": len(SKILLS),
+        "total": len(VISIBLE_SKILLS),
     }
 
 
@@ -202,10 +221,174 @@ def chemie(request: Request):
         return r
     sid = db.student_id()
     m = db.get_mastery(sid)
-    nodes = [{"id": k, "name": v["name"], "topic": v["topic"], "pre": v["pre"], "p": round(m.get(k, 0.3), 2)}
-             for k, v in SKILLS.items()]
-    return render(request, "chemie.html", nodes=nodes, topics=TOPICS, tests=db.student_tests(sid),
-                  pass_mark=PASS_MARK)
+    nodes = [{"id": k, "name": SUBTOPIC_TITLES.get(k, v["name"]),
+              "covers": SUBTOPIC_COVERS.get(k, []),
+              "topic": v["topic"], "pre": v["pre"], "p": round(m.get(k, 0.3), 2)}
+             for k, v in VISIBLE_SKILLS.items()]
+    nodes.sort(key=lambda n: SUBTOPIC_ORDER.get(n["id"], len(SUBTOPIC_ORDER)))
+    return render(request, "chemie.html", nodes=nodes, topics=VISIBLE_TOPICS, topic_meta=TOPIC_META,
+                  tests=db.student_tests(sid), pass_mark=PASS_MARK)
+
+
+# ---------------------------------------------------------------------------
+# AI tutor (general science, conversation history, optional practice questions)
+# ---------------------------------------------------------------------------
+TUTOR_SUBJECTS = {"science", "chemie", "biologie", "physik", "mathematik"}
+TUTOR_SUBJECT_LABELS = {
+    "science": "Alle Naturwissenschaften",
+    "chemie": "Chemie",
+    "biologie": "Biologie",
+    "physik": "Physik",
+    "mathematik": "Mathematik",
+}
+_TUTOR_ALIASES = {
+    "chemistry": "chemie", "bio": "biologie", "biology": "biologie",
+    "physics": "physik", "mathe": "mathematik", "math": "mathematik",
+}
+_QUIZ_WORDS = (
+    "test", "quiz", "übe", "übung", "aufgabe", "abfrage", "abfragen",
+    "prüfe", "prüf", "frag mich", "stelle mir", "practice",
+    "noch eine", "nächste frage",
+)
+_SUBJECT_WORDS = {
+    "biologie": ("bio", "zelle", "dna", "gen", "photosynthese", "enzym", "evolution",
+                 "pflanze", "tier", "virus", "bakter", "mensch", "organ", "nerv", "blut"),
+    "physik": ("physik", "kraft", "energie", "strom", "spannung", "licht", "newton",
+               "geschwindigkeit", "elektron", "magnet", "wärme", "druck", "schall", "optik"),
+    "mathematik": ("mathe", "mathematik", "gleichung", "ableitung", "funktion", "geometrie",
+                   "prozent", "wahrscheinlichkeit", "rechne", "zahl"),
+}
+
+
+def _tutor_sid(request: Request) -> int:
+    user = request.session.get("user", "admin")
+    try:
+        return db.student_id(user)
+    except Exception:
+        return 1
+
+
+def _normalise_tutor_subject(value: object) -> str:
+    text = str(value or "").strip().lower()
+    text = _TUTOR_ALIASES.get(text, text)
+    return text if text in TUTOR_SUBJECTS else ""
+
+
+def _tutor_subject(value: object) -> str:
+    subject = _normalise_tutor_subject(value)
+    return subject or "science"
+
+
+def _wants_quiz(message: str) -> bool:
+    low = message.lower()
+    return any(word in low for word in _QUIZ_WORDS)
+
+
+def _detect_subject(message: str) -> str:
+    low = message.lower()
+    for subject, words in _SUBJECT_WORDS.items():
+        if any(word in low for word in words):
+            return subject
+    return "chemie"
+
+
+def _pick_chemistry_skill(sid: int, requested: object, topic: str, message: str,
+                          fallback: bool = False) -> str | None:
+    requested = str(requested or "").strip()
+    if requested in SKILLS:
+        return requested
+    requested_low = requested.lower()
+    if requested_low:
+        for skill, info in SKILLS.items():
+            if requested_low in {skill.lower(), info["name"].lower()}:
+                return skill
+
+    text = f"{topic} {message}".lower()
+    best, best_score = "", 0
+    for skill, info in SKILLS.items():
+        hay = f"{skill} {info['name']} {info['topic']}".lower()
+        tokens = {t for t in re.findall(r"[a-zäöüß0-9]+", hay) if len(t) > 2}
+        score = sum(1 for token in tokens if token in text)
+        if score > best_score:
+            best, best_score = skill, score
+    if best and best_score >= 2:
+        return best
+    if fallback:
+        mastery = db.get_mastery(sid)
+        return min(VISIBLE_SKILLS, key=lambda skill: mastery.get(skill, 0.3))
+    return None
+
+
+def _title_from(message: str) -> str:
+    text = " ".join(str(message or "").split())
+    if not text:
+        return "Neue Unterhaltung"
+    return text[:48] + ("…" if len(text) > 48 else "")
+
+
+def _tutor_question(q, subject: str) -> dict:
+    data = q.to_dict()
+    data["subject"] = subject
+    data["topic"] = q.skill
+    data["origin"] = "engine"
+    data["hint"] = "Lies die Frage genau und überlege, welche Formel oder Regel passt."
+    data["explanation"] = clean_answer(q.explanation or "", max_sentences=3, max_words=100)
+    return data
+
+
+def _valid_ai_question(data: object, subject: str, topic: str) -> dict | None:
+    if not isinstance(data, dict):
+        return None
+    kind = str(data.get("kind") or "").lower()
+    prompt = str(data.get("prompt") or "").strip()
+    answer = str(data.get("answer") or "").strip()
+    if kind not in {"mc", "num"} or not prompt or not answer:
+        return None
+    options = data.get("options") if isinstance(data.get("options"), list) else []
+    options = [str(o).strip() for o in options if str(o).strip()]
+    if kind == "mc":
+        options = list(dict.fromkeys(options))[:4]
+        if len(options) < 2 or answer not in options:
+            return None
+        random.shuffle(options)
+    else:
+        options = []
+        try:
+            float(answer.replace(",", ".").replace("−", "-"))
+        except ValueError:
+            return None
+    try:
+        tolerance = min(0.2, max(0.0, float(data.get("tolerance") or 0.02)))
+    except (TypeError, ValueError):
+        tolerance = 0.02
+    return {
+        "id": f"tutor-{random.randrange(10**9)}",
+        "kind": kind,
+        "prompt": prompt[:500],
+        "options": options,
+        "answer": answer[:120],
+        "unit": str(data.get("unit") or "").strip()[:20],
+        "tolerance": tolerance,
+        "explanation": clean_answer(str(data.get("explanation") or ""), max_sentences=3, max_words=100),
+        "hint": str(data.get("hint") or "").strip()[:300] or
+                "Lies die Frage genau und überlege, welcher Schritt zuerst kommt.",
+        "skill": subject,
+        "subject": subject,
+        "topic": topic[:200],
+        "origin": "ai",
+        "traps": {},
+    }
+
+
+@app.get("/student/tutor", response_class=HTMLResponse)
+def student_tutor(request: Request):
+    if (r := need(request, "student")):
+        return r
+    sid = _tutor_sid(request)
+    return render(request, "tutor.html",
+                  conversations=db.list_tutor_conversations(sid),
+                  initial_subject=_tutor_subject(request.query_params.get("subject")),
+                  tutor_labels=TUTOR_SUBJECT_LABELS)
 
 
 @app.post("/student/test/new")
@@ -246,7 +429,7 @@ def take_test(request: Request, tid: int):
             if a["round"] == rnd - 1:
                 q = next(q for q in test["questions"] if q["id"] == a["qid"])
                 prev[a["qid"]] = {"given": a["given"], "feedback": grade(q, a["given"])[1]}
-    return render(request, "test.html", test=test, round=rnd, questions=qs, prev=prev, skills=SKILLS)
+    return render(request, "test.html", test=test, round=rnd, questions=qs, prev=prev, skills=VISIBLE_SKILLS)
 
 
 @app.post("/student/test/{tid}")
@@ -360,9 +543,7 @@ def get_subtopic(request: Request, skill: str):
     """Get core knowledge flashcards, practice exercises, and chat history for a subtopic."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
-    if skill not in SKILLS:
-        return JSONResponse({"error": "unknown skill"}, 404)
-
+    skill_info = SKILLS.get(skill, {"name": skill, "topic": "Chemie"})
     data = subtopics_data.get_subtopic_data(skill) or {}
     user = request.session.get("user", "admin")
     try:
@@ -373,8 +554,8 @@ def get_subtopic(request: Request, skill: str):
     history = db.get_chat_history(sid, skill)
     return {
         "skill": skill,
-        "name": SKILLS[skill]["name"],
-        "topic": SKILLS[skill]["topic"],
+        "name": SUBTOPIC_TITLES.get(skill) or skill_info.get("name", skill),
+        "topic": skill_info.get("topic", "Chemie"),
         "core_principle": data.get("core_principle", ""),
         "flashcards": data.get("flashcards", []),
         "practice": data.get("practice", {"true_false": [], "sentence_choice": [], "sentence_split": []}),
@@ -382,19 +563,38 @@ def get_subtopic(request: Request, skill: str):
     }
 
 
+MAX_CHAT_CHARS = 600
+
+
 @app.post("/api/subtopic/chat")
 async def subtopic_chat(request: Request):
     """Save student question, query RAG vectorstore, persist conversation, and return answer."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
-    body = await request.json()
-    skill = body.get("skill", "").strip()
-    msg = body.get("message", "").strip()
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Ungültige Anfrage."}, 400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Ungültige Anfrage."}, 400)
+
+    skill = clean_topic(body.get("skill"), fallback="", max_len=80)
+    msg = str(body.get("message") or "").strip()
     if not skill or not msg:
         return JSONResponse({"error": "skill and message required"}, 400)
+    if len(msg) > MAX_CHAT_CHARS:
+        return JSONResponse({"error": f"Die Frage ist zu lang (max. {MAX_CHAT_CHARS} Zeichen)."}, 400)
 
-    skill_info = SKILLS.get(skill, {"name": skill, "topic": ""})
-    skill_name = skill_info["name"]
+    skill_info = SKILLS.get(skill, {})
+    # The chemistry page uses its own curriculum ids (e.g. "ph_wert"), so it
+    # sends the human-readable title too. Clean it instead of trusting raw
+    # prompt text; it is only a topic hint, never the question itself.
+    page_title = clean_topic(body.get("skill_name"), fallback="")
+    skill_name = clean_topic(
+        page_title or SUBTOPIC_TITLES.get(skill) or skill_info.get("name") or skill,
+        fallback=skill, max_len=200,
+    )
+
     user = request.session.get("user", "admin")
     try:
         sid = db.student_id(user)
@@ -408,21 +608,49 @@ async def subtopic_chat(request: Request):
     #    The skill name is passed as a topic hint, never concatenated into the
     #    search query (that used to pollute the embedding).
     sub_info = subtopics_data.get_subtopic_data(skill) or {}
-    core = sub_info.get("core_principle", "")
+    # The page keeps its core principle in the browser (subtopics_data is
+    # intentionally empty now); accept it as a grounded fallback.
+    core = clean_topic(body.get("core_principle"), fallback="", max_len=1200)
+    if not core:
+        core = str(sub_info.get("core_principle") or "")[:1200]
     chat_resp = await run_in_threadpool(vectorstore.rag_chat, msg, skill_name, core)
 
-    answer = None
+    answer = ""
     sources: list[dict] = []
     images: list[dict] = []
-    if isinstance(chat_resp, dict) and chat_resp.get("answer"):
-        answer = chat_resp["answer"]
-        sources = chat_resp.get("sources", []) or []
-        images = [i for i in (chat_resp.get("images") or [])
-                  if isinstance(i, dict) and i.get("url")]
+    if isinstance(chat_resp, dict) and isinstance(chat_resp.get("answer"), str):
+        answer = clean_answer(chat_resp["answer"])
+        if answer and not is_refusal(answer):
+            if is_soft_refusal(answer):
+                # Safety/generic refusal: keep the text, but no sources/images.
+                sources, images = [], []
+            else:
+                raw_sources = chat_resp.get("sources") or []
+                raw_images = chat_resp.get("images") or []
+                sources = ([s for s in raw_sources if isinstance(s, dict)]
+                           if isinstance(raw_sources, list) else [])
+                images = ([i for i in raw_images if isinstance(i, dict) and i.get("url")]
+                          if isinstance(raw_images, list) else [])
+        else:
+            # Never show "that is not in this book section" to a student.
+            answer = ""
 
     if not answer:
-        answer = (f"Kerninformation zu {skill_name}:\n{core}" if core else
-                  "Das steht in diesem Buchabschnitt nicht. Frag mich gern genauer.")
+        sources, images = [], []
+        fallback_prompt = (f"Lernabschnitt (nur Hinweis): {skill_name}\n"
+                           + (f"Merksatz: {core}\n" if core else "")
+                           + f"Frage: {msg}")
+        fallback = await run_in_threadpool(llm.ask, llm.CHAT_SYSTEM, fallback_prompt, 240)
+        answer = clean_answer(fallback or "")
+        if is_refusal(answer):
+            answer = ""
+
+    if not answer and core:
+        answer = clean_answer(f"Merksatz: {core}")
+
+    if not answer:
+        answer = ("Der Chemie-Tutor ist gerade nicht erreichbar. "
+                  "Bitte versuche es in einem Moment noch einmal.")
 
     # 4. Save assistant answer in DB
     db.save_chat_message(sid, skill, "assistant", answer, sources, images)
@@ -439,8 +667,14 @@ async def subtopic_chat_clear(request: Request):
     """Clear chat history for a skill."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
-    body = await request.json()
-    skill = body.get("skill", "").strip()
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Ungültige Anfrage."}, 400)
+    skill = clean_topic(body.get("skill") if isinstance(body, dict) else None,
+                        fallback="", max_len=80)
+    if not skill:
+        return JSONResponse({"error": "skill required"}, 400)
     user = request.session.get("user", "admin")
     try:
         sid = db.student_id(user)
@@ -448,6 +682,215 @@ async def subtopic_chat_clear(request: Request):
         sid = 1
     db.clear_chat_history(sid, skill)
     return {"ok": True}
+
+
+MAX_TUTOR_CHARS = 1000
+
+
+@app.get("/api/tutor/conversations")
+def tutor_conversations(request: Request):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    return {"conversations": db.list_tutor_conversations(_tutor_sid(request))}
+
+
+@app.post("/api/tutor/conversations")
+async def tutor_conversation_new(request: Request):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    subject = _tutor_subject((body or {}).get("subject"))
+    cid = db.create_tutor_conversation(_tutor_sid(request), subject, "Neue Unterhaltung")
+    return {"id": cid, "subject": subject, "title": "Neue Unterhaltung"}
+
+
+@app.post("/api/tutor/conversations/reorder")
+async def tutor_conversations_reorder(request: Request):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    raw_ids = body.get("ids") if isinstance(body, dict) else None
+    if not isinstance(raw_ids, list):
+        return JSONResponse({"error": "ids required"}, 400)
+    ids: list[int] = []
+    for value in raw_ids[:200]:
+        try:
+            ids.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    db.reorder_tutor_conversations(_tutor_sid(request), ids)
+    return {"ok": True}
+
+
+@app.get("/api/tutor/conversations/{cid}")
+def tutor_conversation_get(request: Request, cid: int):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    conversation = db.get_tutor_conversation(cid, _tutor_sid(request))
+    if not conversation:
+        return JSONResponse({"error": "not found"}, 404)
+    return conversation
+
+
+@app.patch("/api/tutor/conversations/{cid}")
+async def tutor_conversation_update(request: Request, cid: int):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    subject = _normalise_tutor_subject(body.get("subject") if isinstance(body, dict) else "")
+    if not subject:
+        return JSONResponse({"error": "invalid subject"}, 400)
+    sid = _tutor_sid(request)
+    conversation = db.get_tutor_conversation(cid, sid)
+    if not conversation:
+        return JSONResponse({"error": "not found"}, 404)
+    db.update_tutor_conversation(cid, sid, subject=subject)
+    return {"ok": True, "id": cid, "subject": subject}
+
+
+@app.delete("/api/tutor/conversations/{cid}")
+def tutor_conversation_delete(request: Request, cid: int):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    db.delete_tutor_conversation(cid, _tutor_sid(request))
+    return {"ok": True}
+
+
+@app.post("/api/tutor/chat")
+async def tutor_chat(request: Request):
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Ungültige Anfrage."}, 400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Ungültige Anfrage."}, 400)
+
+    message = str(body.get("message") or "").strip()
+    if not message:
+        return JSONResponse({"error": "message required"}, 400)
+    if len(message) > MAX_TUTOR_CHARS:
+        return JSONResponse({"error": f"Die Frage ist zu lang (max. {MAX_TUTOR_CHARS} Zeichen)."}, 400)
+
+    subject = _tutor_subject(body.get("subject"))
+    sid = _tutor_sid(request)
+    cid = body.get("conversation_id")
+    is_new = not cid
+    conversation = None
+    if cid:
+        try:
+            cid = int(cid)
+        except (TypeError, ValueError):
+            return JSONResponse({"error": "invalid conversation"}, 400)
+        conversation = db.get_tutor_conversation(cid, sid)
+        if not conversation:
+            return JSONResponse({"error": "not found"}, 404)
+
+    if is_new:
+        cid = db.create_tutor_conversation(sid, subject, _title_from(message))
+
+    history = db.get_tutor_messages(cid, sid, limit=12)
+    model_history = []
+    for item in history:
+        content = str(item.get("message") or "").strip()
+        if item.get("question"):
+            content += f"\n[Übungsfrage: {item['question'].get('prompt', '')}]"
+        model_history.append({"role": item["role"], "content": content})
+
+    db.add_tutor_message(cid, "user", message)
+
+    chemistry_skills = [{"id": skill, "name": info["name"], "topic": info["topic"]}
+                        for skill, info in SKILLS.items()]
+    response = await run_in_threadpool(
+        vectorstore.tutor_chat, message, model_history,
+        subject if subject != "science" else "", chemistry_skills,
+    )
+
+    answer = ""
+    quiz_request = None
+    sources: list[dict] = []
+    images: list[dict] = []
+    if isinstance(response, dict):
+        answer = clean_answer(str(response.get("answer") or ""))
+        quiz_request = response.get("quiz") if isinstance(response.get("quiz"), dict) else None
+        raw_sources = response.get("sources") or []
+        raw_images = response.get("images") or []
+        sources = ([s for s in raw_sources if isinstance(s, dict)]
+                   if isinstance(raw_sources, list) else [])
+        images = ([i for i in raw_images if isinstance(i, dict) and i.get("url")]
+                  if isinstance(raw_images, list) else [])
+
+    wants_quiz = _wants_quiz(message)
+    quiz_subject = subject
+    quiz_topic = message
+    quiz_skill = ""
+    if quiz_request:
+        requested_subject = _normalise_tutor_subject(quiz_request.get("subject"))
+        if requested_subject and requested_subject != "science":
+            quiz_subject = requested_subject
+        if quiz_request.get("topic"):
+            quiz_topic = str(quiz_request["topic"])[:200]
+        if quiz_request.get("skill"):
+            quiz_skill = str(quiz_request["skill"])[:80]
+    if wants_quiz and quiz_subject == "science":
+        quiz_subject = _detect_subject(message)
+
+    question = None
+    if quiz_request or wants_quiz:
+        if quiz_subject == "chemie":
+            skill = _pick_chemistry_skill(sid, quiz_skill, quiz_topic, message,
+                                          fallback=wants_quiz)
+            if skill:
+                engine_question = generate(skill, random.Random(), f"tutor-{random.randrange(10**9)}")
+                question = _tutor_question(engine_question, "chemie")
+        elif quiz_subject in {"biologie", "physik", "mathematik"}:
+            generated = await run_in_threadpool(
+                vectorstore.science_question, quiz_subject, quiz_topic
+            )
+            question = _valid_ai_question(generated, quiz_subject, quiz_topic)
+
+    if question is None and (quiz_request or wants_quiz) and not is_soft_refusal(answer):
+        # Do not leave a promise of a question card that could not be created.
+        answer = re.sub(
+            r"(?i)\s*(?:hier ist (?:eine|deine) (?:kurze )?übungsfrage[^.!?]*[.!?]?|"
+            r"ich (?:erstelle|stelle) dir (?:eine|die) (?:kurze )?(?:übungsfrage|aufgabe)[^.!?]*[.!?]?)\s*",
+            " ", answer,
+        ).strip()
+        if not answer:
+            answer = "Dazu habe ich gerade keine sichere Übungsfrage. Frag mich gern nach einer Erklärung."
+
+    if is_refusal(answer):
+        answer, question = "", None
+    if is_soft_refusal(answer):
+        sources, images, question = [], [], None
+    if not answer:
+        answer = ("Hier ist eine Übungsfrage." if question else
+                  "Der KI-Tutor ist gerade nicht erreichbar. Bitte versuche es in einem Moment noch einmal.")
+
+    db.add_tutor_message(cid, "assistant", answer, question, sources, images)
+    db.update_tutor_conversation(cid, sid, subject=subject,
+                                 title=_title_from(message) if is_new else None)
+    conversation = db.get_tutor_conversation(cid, sid)
+
+    return {
+        "conversation_id": cid,
+        "title": conversation["title"] if conversation else _title_from(message),
+        "subject": subject,
+        "answer": answer,
+        "question": question,
+        "sources": sources,
+        "images": images[:1],
+    }
 
 
 class GenerateRequest(BaseModel):
@@ -515,7 +958,7 @@ def subtopic_explore(request: Request, req: GenerateRequest):
 def teacher(request: Request):
     if (r := need(request, "teacher")):
         return r
-    return render(request, "teacher.html", skills=SKILLS, pass_mark=PASS_MARK)
+    return render(request, "teacher.html", skills=VISIBLE_SKILLS, pass_mark=PASS_MARK)
 
 
 @app.get("/api/teacher/overview")
@@ -523,7 +966,7 @@ def overview(request: Request, klasse: str | None = None):
     if role(request) != "teacher":
         return JSONResponse({"error": "login"}, 401)
     data = db.class_overview(klasse or None)
-    data["skills"] = {k: v["name"] for k, v in SKILLS.items()}
+    data["skills"] = {k: v["name"] for k, v in VISIBLE_SKILLS.items()}
     data["pass_mark"] = PASS_MARK
     return data
 

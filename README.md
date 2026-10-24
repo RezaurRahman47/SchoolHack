@@ -73,7 +73,7 @@ the same scripts inside WSL.
 
 | | For students 🧒 | For teachers 👩‍🏫 |
 |---|---|---|
-| **Practice** | 30 fresh questions each time across 15 skills, pass at **20 / 30** | Pass rate, average points and students below 20 at a glance |
+| **Practice** | 30 fresh questions each time across 25 skills, pass at **20 / 30** | Pass rate, average points and students below 20 at a glance |
 | **Help** | Atomi's hints: a nudge first, the method second, never just the answer | 🤖 Gap finder: weak skills, likely causes, support groups, next steps |
 | **Feedback** | Instant ⭐, streaks, and an explanation for typical mistakes | "Where are they stuck?" chart, hardest topics first |
 | **Learning** | Only wrong questions come back, round after round | Filter by class (9a / 9b) |
@@ -387,8 +387,8 @@ Open <http://localhost:8000> in the Windows browser; WSL2 forwards localhost.
 The vector store itself is fast (ChromaDB query + BM25 < 50 ms). The local
 embedding + reranker models are the variable part; the answer model and the
 final image check call OpenRouter, so **internet is required** for generated
-answers. Without a valid key the app still runs, but the chat falls back to each
-skill’s built-in core principle.
+answers. Without a valid key the app still runs; the AI tutor then shows a short
+"tutor unavailable" message instead of inventing an answer.
 
 ### Demo checklist
 

@@ -116,6 +116,7 @@ async function sendChat() {
     const question = input.value.trim();
     if (!question || state.isLoading) return;
 
+    state.isLoading = true;
     input.value = '';
     input.style.height = 'auto';
 
@@ -135,18 +136,19 @@ async function sendChat() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question }),
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
-        // Remove thinking
-        removeThinkingMessage(thinkingId);
+        const answer = typeof data.answer === 'string' ? data.answer.trim() : '';
 
         // Add bot response
-        addChatMessage(data.answer, 'bot', data.sources, data.images);
+        addChatMessage(answer || 'Keine Antwort erhalten.', 'bot', data.sources, data.images);
 
     } catch (e) {
-        removeThinkingMessage(thinkingId);
-        addChatMessage('Fehler beim Senden der Frage. Ist der Server gestartet?', 'bot');
+        addChatMessage('Der Chemie-Tutor ist gerade nicht erreichbar. Bitte versuche es in einem Moment noch einmal.', 'bot');
         showToast('Fehler bei der Verbindung zum Server', 'error');
+    } finally {
+        removeThinkingMessage(thinkingId);
+        state.isLoading = false;
     }
 }
 
@@ -161,7 +163,7 @@ function addChatMessage(text, sender, sources = [], images = []) {
     let sourcesHtml = '';
     if (sources && sources.length > 0) {
         const tags = sources.map(s =>
-            `<span class="source-tag">📄 Seite ${s.page}${s.chapter ? ' — ' + escapeHtml(s.chapter) : ''}</span>`
+            `<span class="source-tag">📄 Seite ${escapeHtml(String(s.page ?? ''))}${s.chapter ? ' — ' + escapeHtml(s.chapter) : ''}</span>`
         ).join('');
         sourcesHtml = `<div class="msg-sources">${tags}</div>`;
     }
@@ -170,18 +172,22 @@ function addChatMessage(text, sender, sources = [], images = []) {
     let imagesHtml = '';
     if (images && images.length > 0) {
         const imgCards = images.map((img, i) => {
-            const caption = img.caption
-                ? escapeHtml(img.caption)
+            const captionRaw = img.caption
+                ? String(img.caption)
                 : `Abbildung aus dem Schulbuch (Seite ${img.page})`;
-            const relevancePct = Math.round((img.relevance || 0) * 100);
+            const captionHtml = escapeHtml(captionRaw);
+            const captionAttr = captionHtml.replace(/"/g, '&quot;');
+            const captionJs = escapeAttr(captionRaw);
+            const urlHtml = escapeHtml(img.url || '').replace(/"/g, '&quot;');
+            const urlJs = escapeAttr(img.url || '');
             return `
-                <div class="msg-image-card" onclick="openImageLightbox('${escapeHtml(img.url)}', '${caption}')"
+                <div class="msg-image-card" onclick="openImageLightbox('${urlJs}', '${captionJs}')"
                      title="Klicken zum Vergrößern">
-                    <img src="${escapeHtml(img.url)}" alt="${caption}" loading="lazy"
+                    <img src="${urlHtml}" alt="${captionAttr}" loading="lazy"
                          onerror="this.closest('.msg-image-card').style.display='none'" />
                     <div class="msg-image-caption">
-                        <span>📷 ${caption}</span>
-                        <span class="img-relevance">S. ${img.page}</span>
+                        <span>📷 ${captionHtml}</span>
+                        <span class="img-relevance">S. ${escapeHtml(String(img.page || ''))}</span>
                     </div>
                 </div>`;
         }).join('');
@@ -661,7 +667,12 @@ function escapeHtml(text) {
 }
 
 function escapeAttr(text) {
-    return (text || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    return String(text || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n');
 }
 
 function formatMarkdown(text) {

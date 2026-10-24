@@ -25,8 +25,8 @@ def main() -> None:
     print("• bge-reranker-v2-m3 ...")
     CrossEncoder("BAAI/bge-reranker-v2-m3", device="cpu", max_length=512)
 
-    cache = Path.home() / ".cache" / "huggingface" / "hub"
-    print(f"✓ models cached in {cache}")
+    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+    print(f"✓ models cached in {hf_home / 'hub'}")
     print(f"  done in {time.time() - t0:.1f}s")
 
 

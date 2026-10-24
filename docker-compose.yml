@@ -1,0 +1,72 @@
+name: schoolhack
+
+# The app talks to the RAG service by its Compose service name, not localhost.
+# Secrets are read from .env / vectorstore/.env / backend-python/.env at runtime
+# and are never copied into the images.
+
+services:
+  rag:
+    build:
+      context: .
+      target: rag
+    image: schoolhack-rag:local
+    env_file:
+      - path: .env
+        required: false
+      - path: vectorstore/.env
+        required: false
+    environment:
+      HF_HOME: /models/huggingface
+      PORT: "8080"
+      # CPU-friendly defaults. Override in .env if the machine is fast.
+      RAG_RERANK_CANDIDATES: "${RAG_RERANK_CANDIDATES:-8}"
+      RAG_IMAGE_RERANK: "${RAG_IMAGE_RERANK:-4}"
+      RAG_IMAGE_VLM_CHECK: "${RAG_IMAGE_VLM_CHECK:-0}"
+      RAG_CHAT_CACHE: "${RAG_CHAT_CACHE:-256}"
+    volumes:
+      - hf_models:/models
+    ports:
+      # Local-only, useful for http://localhost:8080/api/status.
+      - "127.0.0.1:${RAG_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/status', timeout=5)"]
+      interval: 15s
+      timeout: 8s
+      retries: 20
+      # First run may download ~3.8 GB of models before uvicorn starts.
+      start_period: 900s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      target: app
+    image: schoolhack-app:local
+    env_file:
+      - path: .env
+        required: false
+      - path: backend-python/.env
+        required: false
+    environment:
+      RAG_BASE: http://rag:8080/api
+    volumes:
+      # SQLite (progress, tutor conversations) survives compose down/up.
+      - app_data:/app/data
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      rag:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/login/student', timeout=5)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  # ~3.8 GB of Hugging Face models. Kept across restarts and rebuilds.
+  hf_models:
+  # Seeded SQLite database with student progress and chat history.
+  app_data:

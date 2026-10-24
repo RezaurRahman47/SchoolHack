@@ -1,6 +1,7 @@
 """School Hack – FastAPI app (teacher + student portals)."""
 from __future__ import annotations
 
+import math
 import random
 from pathlib import Path
 
@@ -15,7 +16,10 @@ from .questions import PASS_MARK, SKILLS, TOPICS, build_test, grade
 
 BASE = Path(__file__).resolve().parent
 app = FastAPI(title="School Hack")
-app.add_middleware(SessionMiddleware, secret_key="chemtutor-hackathon-demo", max_age=60 * 60 * 12)
+# Keep the signed login cookie stable across page navigation and app restarts.
+# The demo session lasts 30 days; use a private environment secret for production.
+app.add_middleware(SessionMiddleware, secret_key="chemtutor-hackathon-demo", max_age=60 * 60 * 24 * 30,
+                   same_site="lax")
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
 
@@ -46,7 +50,91 @@ def need(request: Request, r: str):
 
 
 def render(request: Request, name: str, **ctx):
-    return tpl.TemplateResponse(request, name, {"role": role(request), "llm": llm.available(), **ctx})
+    return tpl.TemplateResponse(request, name, {
+        "role": role(request), "user": request.session.get("user"), "llm": llm.available(), **ctx
+    })
+
+
+# ---------------------------------------------------------------------------
+# learning overview on the student home page (own progress only)
+# ---------------------------------------------------------------------------
+GRAPH_TOPICS = ["Grundlagen", "Stoffmenge und Mol", "Säuren und Laugen", "Kohlenwasserstoffe"]
+GRAPH_TOPIC_SHORT = {
+    "Grundlagen": "Grundlagen", "Stoffmenge und Mol": "Stoffmenge & Mol",
+    "Säuren und Laugen": "Säuren & Laugen", "Kohlenwasserstoffe": "Kohlenwasserstoffe",
+}
+RADAR_POS = {"chemie": "top", "mathematik": "right", "biologie": "bottom", "physik": "left"}
+RADAR_ANGLES = {"chemie": -90, "mathematik": 0, "biologie": 90, "physik": 180}
+RADAR_W = RADAR_H = 640
+RADAR_CX = RADAR_CY = 320
+RADAR_R = 250
+RADAR_RINGS = (0.2, 0.4, 0.6, 0.8, 1.0)
+RADAR_SWEEP = 26
+
+
+def _tone(p: float) -> tuple[str, str, str]:
+    if p < 0.45:
+        return "#fef2f2", "#fecaca", "#dc2626"
+    if p < 0.7:
+        return "#fffbeb", "#fde68a", "#d97706"
+    return "#f0fdf4", "#bbf7d0", "#16a34a"
+
+
+def _radar_point(angle: float, radius: float) -> tuple[float, float]:
+    a = math.radians(angle)
+    return round(RADAR_CX + radius * math.cos(a), 1), round(RADAR_CY + radius * math.sin(a), 1)
+
+
+def _learning_network(mastery: dict[str, float]) -> dict:
+    """Build the diamond radar of all four subjects (own progress only)."""
+    values = [max(0.0, min(1.0, mastery.get(s, 0.3))) for s in SKILLS]
+    topic_rows = []
+    for topic in GRAPH_TOPICS:
+        ids = [s for s in SKILLS if SKILLS[s]["topic"] == topic]
+        ps = [max(0.0, min(1.0, mastery.get(s, 0.3))) for s in ids]
+        pc = round(100 * sum(ps) / len(ps))
+        topic_rows.append({
+            "name": topic, "short": GRAPH_TOPIC_SHORT[topic], "pc": pc,
+            "color": _tone(pc / 100)[2],
+        })
+
+    overall = round(100 * sum(values) / len(values))
+    rings = []
+    for frac in RADAR_RINGS:
+        r = RADAR_R * frac
+        pts = [_radar_point(a, r) for a in (-90, 0, 90, 180)]
+        rings.append({"r": round(r, 1), "points": " ".join(f"{x},{y}" for x, y in pts)})
+
+    axes = []
+    for subject in SUBJECTS:
+        angle = RADAR_ANGLES[subject["slug"]]
+        x2, y2 = _radar_point(angle, RADAR_R)
+        pc = overall if subject["active"] else None
+        value_r = round(RADAR_R * overall / 100, 1) if pc is not None else 0.0
+        value_x, value_y = _radar_point(angle, value_r)
+        sector = None
+        if pc is not None and value_r > 0:
+            x1, y1 = _radar_point(angle - RADAR_SWEEP, value_r)
+            x3, y3 = _radar_point(angle + RADAR_SWEEP, value_r)
+            sector = (f"M {RADAR_CX} {RADAR_CY} L {x1} {y1} "
+                      f"A {value_r} {value_r} 0 0 1 {x3} {y3} Z")
+        units = topic_rows if subject["active"] else []
+        aria = f"{subject['name']}, {'aktiv, ' + str(overall) + ' Prozent' if subject['active'] else 'bald verfügbar'}"
+        if units:
+            aria += ". Hauptbereiche: " + ", ".join(f"{u['short']} {u['pc']} Prozent" for u in units)
+        axes.append({
+            **subject, "pos": RADAR_POS[subject["slug"]], "angle": angle,
+            "x2": x2, "y2": y2, "pc": pc, "value_r": value_r,
+            "value_x": value_x, "value_y": value_y, "sector": sector,
+            "units": units, "aria": aria,
+        })
+
+    return {
+        "w": RADAR_W, "h": RADAR_H, "cx": RADAR_CX, "cy": RADAR_CY,
+        "rings": rings, "axes": axes, "overall": overall,
+        "secure": sum(1 for p in values if p >= 0.7),
+        "total": len(SKILLS),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +157,7 @@ def login(request: Request, who: str, username: str = Form(...), password: str =
     if who in USERS and USERS[who].get(username) == password:
         request.session.clear()
         request.session.update(role=who, user=username)
-        return RedirectResponse("/teacher" if who == "teacher" else "/student", 303)
+        return RedirectResponse("/teacher" if who == "teacher" else "/student/home", 303)
     return render(request, "login.html", who=who, error="Benutzername oder Passwort falsch.")
 
 
@@ -87,6 +175,23 @@ def student_home(request: Request):
     if (r := need(request, "student")):
         return r
     return render(request, "student_home.html", subjects=SUBJECTS)
+
+
+@app.get("/student/home", response_class=HTMLResponse)
+def student_dashboard(request: Request):
+    if (r := need(request, "student")):
+        return r
+    network = _learning_network(db.get_mastery(db.student_id()))
+    username = request.session.get("user")
+    display_name = "Hanna" if username == "admin" else username
+    return render(request, "home.html", subjects=SUBJECTS, network=network, display_name=display_name)
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings(request: Request):
+    if role(request) not in {"student", "teacher"}:
+        return RedirectResponse("/login/student", 303)
+    return render(request, "settings.html")
 
 
 @app.get("/student/chemie", response_class=HTMLResponse)

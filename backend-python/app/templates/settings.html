@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Settings – School Hack{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <p class="text-sm font-semibold uppercase tracking-wide text-reagent-600">Profil</p>
+  <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink-900 mt-1">Settings</h1>
+  <p class="text-slate-600 mt-2">Deine Kontoinformationen.</p>
+  <section class="card p-5 mt-6">
+    <dl class="divide-y divide-slate-100">
+      <div class="flex justify-between gap-4 py-3"><dt class="text-slate-500">Benutzername</dt><dd class="font-semibold text-ink-900">{{ user or '—' }}</dd></div>
+      <div class="flex justify-between gap-4 py-3"><dt class="text-slate-500">Status</dt><dd class="font-semibold text-ink-900">{{ 'Lehrkraft' if role == 'teacher' else 'Schülerin' }}</dd></div>
+    </dl>
+  </section>
+  <a href="{{ '/teacher' if role == 'teacher' else '/student/home' }}" class="btn btn-ghost mt-5">Zurück zur Startseite</a>
+</div>
+{% endblock %}

@@ -11,25 +11,41 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="/static/tailwind.css">
+  <style>
+    .profile-logout { color: rgba(220, 38, 38, .68); }
+    .profile-logout:hover { color: #dc2626; background: #fef2f2; }
+  </style>
   {% block head %}{% endblock %}
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
   <header class="bg-ink-900 text-white sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 font-display font-semibold text-lg">
+      <a href="{{ '/teacher' if role == 'teacher' else '/student/home' if role == 'student' else '/' }}" class="flex items-center gap-2 font-display font-semibold text-lg">
         <img src="/static/icon.svg" class="w-7 h-7" alt="">School Hack<span class="hidden sm:inline text-reagent-400">Berlin</span>
+        {% if role %}
+          <span class="ml-1 inline-flex items-center rounded-full bg-white/10 px-2 py-0.5 text-xs font-sans font-semibold text-reagent-400">
+            {{ 'Lehrkraft' if role == 'teacher' else 'Schülerin' }}
+          </span>
+        {% endif %}
       </a>
-      <nav class="flex items-center gap-0 sm:gap-1 text-[13px] sm:text-sm">
+      <nav class="flex items-center gap-0 sm:gap-1 text-[13px] sm:text-sm" aria-label="Hauptnavigation">
         {% if role == 'student' %}
+          <a href="/student/home" class="navlink">Startseite</a>
           <a href="/student" class="navlink">Fächer</a>
-          <a href="/student/chemie" class="navlink">Chemie</a>
         {% elif role == 'teacher' %}
-          <a href="/teacher" class="navlink">Dashboard</a>
+          <a href="/teacher" class="navlink">Startseite</a>
         {% endif %}
         {% if role %}
-          <span class="hidden sm:inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
-            {{ 'Lehrkraft' if role == 'teacher' else 'Schüler·in' }}</span>
-          <a href="/logout" class="navlink">Abmelden</a>
+          <details class="relative ml-1" id="profile-menu">
+            <summary class="navlink list-none flex items-center gap-1 cursor-pointer select-none" aria-label="Profil-Menü öffnen">
+              Profil <span aria-hidden="true" class="text-xs">▾</span>
+            </summary>
+            <div class="absolute right-0 mt-2 w-44 rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-800 shadow-xl">
+              <a href="/settings" class="block px-4 py-2.5 hover:bg-slate-50">Settings</a>
+              <div class="my-1 border-t border-slate-100"></div>
+              <a href="/logout" class="profile-logout block px-4 py-2.5">Abmelden</a>
+            </div>
+          </details>
         {% else %}
           <a href="/login/student" class="navlink">Schüler·innen</a>
           <a href="/login/teacher" class="navlink">Lehrkräfte</a>
@@ -43,6 +59,10 @@
   </footer>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    document.addEventListener('click', (event) => {
+      const menu = document.getElementById('profile-menu');
+      if (menu && !menu.contains(event.target)) menu.open = false;
+    });
   </script>
   {% block scripts %}{% endblock %}
 </body>

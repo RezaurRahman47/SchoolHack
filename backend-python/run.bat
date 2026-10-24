@@ -6,4 +6,4 @@ call .venv\Scripts\activate
 pip install -q -r requirements.txt
 echo Laptop: http://localhost:8000
 echo Handy: ipconfig zeigt deine IPv4-Adresse, dann http://IP:8000 im Handy-Browser
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

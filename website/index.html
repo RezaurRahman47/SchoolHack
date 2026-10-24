@@ -191,7 +191,7 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
 .foot { text-align: center; color: var(--muted); font-weight: 700; font-size: .9rem; padding-block: 8px 24px; }
 .brand { white-space: nowrap; }
 .top .wrap { flex-wrap: nowrap; }
-.topics { display: grid; gap: 16px; grid-template-columns: 1fr; }
+.topics { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
 @media (min-width: 700px) { .topics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) {
   .brand { font-size: 1.1rem; gap: 6px; }
@@ -426,12 +426,31 @@ const SKILLS = {
   alkan_formel:   { name: D('Alkan-Formeln', 'Alkane formulas'), topic: 'hc', pre: [] },
   alkan_name:     { name: D('Alkan-Namen', 'Alkane names'), topic: 'hc', pre: ['alkan_formel'] },
   siedetrend:     { name: D('Siedepunkte', 'Boiling points'), topic: 'hc', pre: ['alkan_formel'] },
+  // Curriculum 3.9–3.12
+  saeure_base_begriff: { name: D('Säure-Base-Begriff (Brønsted)', 'Acid–base theory (Brønsted)'), topic: 'acid', pre: ['ph_skala'] },
+  vorkommen_verwendung: { name: D('Vorkommen & Nutzung', 'Occurrence & uses'), topic: 'hc', pre: [] },
+  isomerie:       { name: D('Isomerie', 'Isomerism'), topic: 'hc', pre: ['alkan_name'] },
+  verbrennung:    { name: D('Verbrennung', 'Combustion'), topic: 'hc', pre: ['alkan_formel'] },
+  ungesaettigt:   { name: D('Ungesättigte KW', 'Unsaturated hydrocarbons'), topic: 'hc', pre: ['alkan_formel'] },
+  alkohol_herstellung: { name: D('Herstellung von Alkoholen', 'Making alcohols'), topic: 'alc', pre: [] },
+  alkohol_nomenklatur: { name: D('Alkohole: Struktur & Namen', 'Alcohols: structure & names'), topic: 'alc', pre: ['alkan_name'] },
+  alkohol_eigenschaften: { name: D('Alkohole: Eigenschaften', 'Alcohols: properties'), topic: 'alc', pre: ['alkohol_nomenklatur'] },
+  alkohol_wirkung: { name: D('Wirkung von Alkohol', 'Effects of alcohol'), topic: 'alc', pre: ['alkohol_eigenschaften'] },
+  alkanale:       { name: D('Alkanale', 'Alkanals'), topic: 'alc', pre: ['alkohol_nomenklatur'] },
+  carbonsaeure_struktur: { name: D('Carbonsäuren: Struktur', 'Carboxylic acids: structure'), topic: 'org', pre: ['alkanale'] },
+  carbonsaeure_eigenschaften: { name: D('Carbonsäuren: Eigenschaften', 'Carboxylic acids: properties'), topic: 'org', pre: ['carbonsaeure_struktur'] },
+  aminosaeuren:   { name: D('Aminosäuren', 'Amino acids'), topic: 'org', pre: ['carbonsaeure_struktur'] },
+  ester:          { name: D('Ester: Struktur & Synthese', 'Esters: structure & synthesis'), topic: 'est', pre: ['alkohol_nomenklatur', 'carbonsaeure_struktur'] },
+  fette:          { name: D('Fette, Fettsäuren & Seifen', 'Fats, fatty acids & soaps'), topic: 'est', pre: ['ester'] },
 };
 const TOPICS = [
   { id: 'base', name: D('Grundlagen', 'Basics'), icon: '🧱', color: '#ffe1a8' },
   { id: 'acid', name: D('Säuren & Laugen', 'Acids & alkalis'), icon: '🍋', color: '#ffd6e0' },
   { id: 'mol', name: D('Mol & Rechnen', 'Moles & maths'), icon: '⚖️', color: '#d6ecff' },
-  { id: 'hc', name: D('Kohlenwasserstoffe', 'Hydrocarbons'), icon: '🔥', color: '#d9f7e8' },
+  { id: 'hc', name: D('3.9 Kohlenwasserstoffe', '3.9 Hydrocarbons'), icon: '🔥', color: '#d9f7e8' },
+  { id: 'alc', name: D('3.10 Alkohole', '3.10 Alcohols'), icon: '🧴', color: '#ffe8cc' },
+  { id: 'org', name: D('3.11 Organische Säuren', '3.11 Organic acids'), icon: '🍋‍🟩', color: '#e6f6c9' },
+  { id: 'est', name: D('3.12 Ester', '3.12 Esters'), icon: '🍍', color: '#ffdff0' },
 ];
 const sname = k => L(SKILLS[k].name);
 
@@ -581,6 +600,182 @@ const T = {
       D('Längere Kette → mehr Anziehung (Van-der-Waals) → höherer Siedepunkt.', 'Longer chain → more attraction (van der Waals) → higher boiling point.'),
       { [same.de]: D('Längere Ketten halten stärker zusammen.', 'Longer chains stick together more strongly.') });
   },
+
+  // ---------- Curriculum 3.9–3.12 ----------
+  saeure_base_begriff() {
+    const DON = D('ein Protonendonator (H⁺-Spender)', 'a proton donor (H⁺ donor)');
+    const ACC = D('ein Protonenakzeptator (H⁺-Nehmer)', 'a proton acceptor (H⁺ acceptor)');
+    const ED = D('ein Elektronendonator', 'an electron donor');
+    const HD = D('ein Hydroxidspender', 'a hydroxide donor');
+    const k = pick([0, 1, 2]);
+    if (k === 0) return mc('saeure_base_begriff', D('Was ist nach Brønsted eine Säure?', 'According to Brønsted, what is an acid?'), DON, [ACC, ED, HD],
+      D('Säuren geben Protonen (H⁺) ab.', 'Acids give away protons (H⁺).'));
+    if (k === 1) return mc('saeure_base_begriff', D('Was ist nach Brønsted eine Base?', 'According to Brønsted, what is a base?'), ACC, [DON, ED, D('immer ein Metallhydroxid', 'always a metal hydroxide')],
+      D('Basen nehmen Protonen auf – sie müssen kein Hydroxid enthalten.', 'Bases take up protons – they need not contain hydroxide.'));
+    const B = D('Base, weil es ein Proton aufnimmt', 'a base, because it accepts a proton');
+    return mc('saeure_base_begriff', D('In HCl + H₂O → H₃O⁺ + Cl⁻ wirkt H₂O als ...', 'In HCl + H₂O → H₃O⁺ + Cl⁻, H₂O acts as ...'), B,
+      [D('Säure, weil es ein Proton abgibt', 'an acid, because it gives away a proton'), D('Katalysator, weil es unverändert bleibt', 'a catalyst, because it stays unchanged'), D('Salz, weil es Ionen bildet', 'a salt, because it forms ions')],
+      D('H₂O nimmt das Proton von HCl auf und wird zu H₃O⁺.', 'H₂O accepts the proton from HCl and becomes H₃O⁺.'));
+  },
+  vorkommen_verwendung() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('vorkommen_verwendung', D('Welches Gas ist der Hauptbestandteil von Erdgas?', 'Which gas is the main component of natural gas?'), D('Methan', 'Methane'),
+      [D('Ethen', 'Ethene'), D('Kohlenstoffdioxid', 'Carbon dioxide'), D('Wasserstoff', 'Hydrogen')], D('Erdgas besteht überwiegend aus Methan (CH₄).', 'Natural gas is mostly methane (CH₄).'));
+    if (k === 1) return mc('vorkommen_verwendung', D('Wofür werden Propan und Butan vor allem verwendet?', 'What are propane and butane mainly used for?'), D('Als Camping- und Heizgas', 'As camping and heating gas'),
+      [D('Als Entkalker', 'As a descaler'), D('Als Speiseöl', 'As cooking oil'), D('Als Düngemittel', 'As fertiliser')], D('Sie lassen sich bei mäßigem Druck verflüssigen und brennen sauber.', 'They liquefy at moderate pressure and burn cleanly.'));
+    if (k === 2) return mc('vorkommen_verwendung', D('Woraus besteht Erdöl?', 'What is crude oil made of?'), D('Aus einem Gemisch verschiedener Kohlenwasserstoffe', 'A mixture of different hydrocarbons'),
+      [D('Aus reinem Ethanol', 'Pure ethanol'), D('Aus einem einzelnen Alkan', 'A single alkane'), D('Aus Salzen und Wasser', 'Salts and water')], D('Erdöl ist ein Gemisch; Destillation trennt es in Fraktionen.', 'Crude oil is a mixture; distillation separates it into fractions.'));
+    return mc('vorkommen_verwendung', D('Welcher Kohlenwasserstoff ist ein typischer Bestandteil von Autobenzin?', 'Which hydrocarbon is a typical component of petrol?'), D('Octan', 'Octane'),
+      [D('Methan', 'Methane'), D('Ethanol', 'Ethanol'), D('Glycerin', 'Glycerol')], D('Octan (C₈H₁₈) ist ein typischer Bestandteil von Benzin; die Oktanzahl vergleicht die Klopffestigkeit mit Isooctan.', 'Octane (C₈H₁₈) is a typical component of petrol; the octane rating compares knock resistance with isooctane.'));
+  },
+  isomerie() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('isomerie', D('Zwei Moleküle haben dieselbe Summenformel, aber eine andere Struktur. Wie heißen sie?', 'Two molecules share a molecular formula but have different structures. What are they called?'), D('Isomere', 'Isomers'),
+      [D('Homologe', 'Homologues'), D('Isotope', 'Isotopes'), D('Ionen', 'Ions')], D('Isomere: gleiche Summenformel, verschiedene Struktur.', 'Isomers: same molecular formula, different structure.'));
+    if (k === 1) return mc('isomerie', D('Welches Molekül ist ein Isomer von Butan (C₄H₁₀)?', 'Which molecule is an isomer of butane (C₄H₁₀)?'), D('2-Methylpropan', '2-Methylpropane'),
+      [D('Propan (C₃H₈)', 'Propane (C₃H₈)'), D('Pentan (C₅H₁₂)', 'Pentane (C₅H₁₂)'), D('Ethen (C₂H₄)', 'Ethene (C₂H₄)')], D('2-Methylpropan hat ebenfalls C₄H₁₀, aber eine verzweigte Kette.', '2-Methylpropane is also C₄H₁₀, but branched.'));
+    if (k === 2) return mc('isomerie', D('Wie viele Konstitutionsisomere hat Butan (C₄H₁₀)?', 'How many constitutional isomers does butane (C₄H₁₀) have?'), D('2', '2'),
+      [D('1', '1'), D('3', '3'), D('4', '4')], D('Butan und 2-Methylpropan – zwei Isomere.', 'Butane and 2-methylpropane – two isomers.'));
+    return mc('isomerie', D('Warum haben Isomere unterschiedliche Siedepunkte?', 'Why do isomers have different boiling points?'), D('Weil ihre Molekülform die zwischenmolekularen Kräfte verändert', 'Because their shape changes the intermolecular forces'),
+      [D('Weil sie verschieden viele Atome enthalten', 'Because they contain different numbers of atoms'), D('Weil sie unterschiedliche Elemente enthalten', 'Because they contain different elements'), D('Weil Isomere immer gasförmig sind', 'Because isomers are always gases')], D('Verzweigte Moleküle haben eine kleinere Kontaktfläche und schwächere Van-der-Waals-Kräfte.', 'Branched molecules have a smaller contact area and weaker van der Waals forces.'));
+  },
+  verbrennung() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('verbrennung', D('Welche Produkte entstehen bei der vollständigen Verbrennung eines Kohlenwasserstoffs?', 'Which products form in the complete combustion of a hydrocarbon?'), D('Kohlenstoffdioxid und Wasser', 'Carbon dioxide and water'),
+      [D('Kohlenstoffmonoxid und Wasserstoff', 'Carbon monoxide and hydrogen'), D('Kohlenstoff und Wasser', 'Carbon and water'), D('Sauerstoff und Methan', 'Oxygen and methane')], D('C und H reagieren mit O₂ zu CO₂ und H₂O.', 'C and H react with O₂ to form CO₂ and H₂O.'));
+    if (k === 1) return mc('verbrennung', D('Welches giftige Gas entsteht bei unvollständiger Verbrennung?', 'Which toxic gas forms during incomplete combustion?'), D('Kohlenstoffmonoxid (CO)', 'Carbon monoxide (CO)'),
+      [D('Kohlenstoffdioxid (CO₂)', 'Carbon dioxide (CO₂)'), D('Wasserstoff (H₂)', 'Hydrogen (H₂)'), D('Sauerstoff (O₂)', 'Oxygen (O₂)')], D('CO ist geruchlos und blockiert den Sauerstofftransport im Blut.', 'CO is odourless and blocks oxygen transport in the blood.'));
+    if (k === 2) return mc('verbrennung', D('Wie viele O₂-Moleküle braucht die vollständige Verbrennung von Methan?', 'How many O₂ molecules does complete methane combustion need?'), D('2', '2'),
+      [D('1', '1'), D('3', '3'), D('4', '4')], D('CH₄ + 2 O₂ → CO₂ + 2 H₂O.', 'CH₄ + 2 O₂ → CO₂ + 2 H₂O.'));
+    return mc('verbrennung', D('Was zeigt eine gelbe, rußende Flamme?', 'What does a yellow, sooty flame show?'), D('Unvollständige Verbrennung durch Sauerstoffmangel', 'Incomplete combustion due to lack of oxygen'),
+      [D('Eine besonders vollständige Verbrennung', 'Particularly complete combustion'), D('Zusätzlich entstehendes Wasser', 'Extra water being formed'), D('Besonders reines Gas', 'Particularly pure gas')], D('Ruß deutet auf Sauerstoffmangel hin; dabei kann auch CO entstehen.', 'Soot indicates a lack of oxygen; CO may form too.'));
+  },
+  ungesaettigt() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('ungesaettigt', D('Welche Bindung kennzeichnet ein Alken?', 'Which bond characterises an alkene?'), D('Eine C=C-Doppelbindung', 'A C=C double bond'),
+      [D('Eine C-C-Einfachbindung', 'A C–C single bond'), D('Eine C≡C-Dreifachbindung', 'A C≡C triple bond'), D('Eine C-H-Bindung', 'A C–H bond')], D('Alkene haben mindestens eine C=C-Doppelbindung.', 'Alkenes have at least one C=C double bond.'));
+    if (k === 1) return mc('ungesaettigt', D('Woran erkennt man ungesättigte Kohlenwasserstoffe experimentell?', 'How are unsaturated hydrocarbons detected experimentally?'), D('Bromwasser wird entfärbt', 'Bromine water is decolourised'),
+      [D('Kalkwasser wird trüb', 'Limewater turns cloudy'), D('Die Knallgasprobe pfeift', 'The squeaky-pop test sounds'), D('Universalindikator wird rot', 'Universal indicator turns red')], D('Die C=C-Doppelbindung addiert Brom; die braune Lösung wird farblos.', 'The C=C bond adds bromine; the brown solution turns colourless.'));
+    if (k === 2) return mc('ungesaettigt', D('Wie lautet die Summenformel von Ethen?', 'What is the molecular formula of ethene?'), D('C₂H₄', 'C₂H₄'),
+      [D('C₂H₆', 'C₂H₆'), D('C₂H₂', 'C₂H₂'), D('CH₄', 'CH₄')], D('Ethen ist ein Alken: CₙH₂ₙ mit n = 2.', 'Ethene is an alkene: CₙH₂ₙ with n = 2.'));
+    return mc('ungesaettigt', D('Was entsteht bei der Addition von Wasserstoff an Ethen?', 'What forms when hydrogen adds to ethene?'), D('Ethan', 'Ethane'),
+      [D('Ethanol', 'Ethanol'), D('Kohlenstoffdioxid', 'Carbon dioxide'), D('Ein Alkin', 'An alkyne')], D('C₂H₄ + H₂ → C₂H₆.', 'C₂H₄ + H₂ → C₂H₆.'));
+  },
+  alkohol_herstellung() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('alkohol_herstellung', D('Wie wird Ethanol traditionell aus Zucker hergestellt?', 'How is ethanol traditionally made from sugar?'), D('Durch Gärung mit Hefe', 'By fermentation with yeast'),
+      [D('Durch Neutralisation mit Natronlauge', 'By neutralisation with sodium hydroxide'), D('Durch Verbrennung von Methan', 'By burning methane'), D('Durch Filtration von Erdöl', 'By filtering crude oil')], D('Hefe wandelt Glucose in Ethanol und CO₂ um.', 'Yeast turns glucose into ethanol and CO₂.'));
+    if (k === 1) return mc('alkohol_herstellung', D('Wie wird Ethanol industriell in großen Mengen hergestellt?', 'How is ethanol made industrially on a large scale?'), D('Durch Addition von Wasser an Ethen', 'By adding water to ethene'),
+      [D('Durch Gärung von Kalk', 'By fermenting chalk'), D('Durch Destillation von Essig', 'By distilling vinegar'), D('Durch Verbrennung von Ethan', 'By burning ethane')], D('Ethen reagiert mit Wasser zu Ethanol.', 'Ethene reacts with water to form ethanol.'));
+    if (k === 2) return mc('alkohol_herstellung', D('Aus welchem Rohstoff wird Methanol industriell hergestellt?', 'Which feedstock is used to make methanol industrially?'), D('Aus Synthesegas (CO und H₂)', 'From synthesis gas (CO and H₂)'),
+      [D('Aus Zucker und Hefe', 'Sugar and yeast'), D('Aus Kalkstein', 'Limestone'), D('Aus Natriumchlorid', 'Sodium chloride')], D('Methanol entsteht aus Synthesegas und ist stark giftig.', 'Methanol is made from synthesis gas and is highly toxic.'));
+    return mc('alkohol_herstellung', D('Was entsteht bei der alkoholischen Gärung neben Ethanol?', 'What else forms during alcoholic fermentation?'), D('Kohlenstoffdioxid', 'Carbon dioxide'),
+      [D('Sauerstoff', 'Oxygen'), D('Wasserstoff', 'Hydrogen'), D('Kohlenstoffmonoxid', 'Carbon monoxide')], D('Das CO₂ entweicht – deshalb schäumt gärender Most.', 'The CO₂ escapes – that is why fermenting must foams.'));
+  },
+  alkohol_nomenklatur() {
+    const ALC = [['CH₃–OH', D('Methanol', 'Methanol')], ['CH₃–CH₂–OH', D('Ethanol', 'Ethanol')], ['CH₃–CH₂–CH₂–OH', D('Propan-1-ol', 'Propan-1-ol')], ['CH₃–CH(OH)–CH₃', D('Propan-2-ol', 'Propan-2-ol')], ['CH₃–CH₂–CH₂–CH₂–OH', D('Butan-1-ol', 'Butan-1-ol')]];
+    if (Math.random() < .65) {
+      const [f, a] = pick(ALC), wrong = ALC.filter(x => x[1].de !== a.de).map(x => x[1]).slice(0, 3);
+      return mc('alkohol_nomenklatur', D(`Wie heißt der Alkohol ${f} nach IUPAC?`, `What is the IUPAC name of ${f}?`), a, wrong,
+        D('Die Endung -ol zeigt die Hydroxygruppe; die Zahl gibt ihre Position an.', 'The ending -ol marks the hydroxy group; the number gives its position.'));
+    }
+    const k = pick([0, 1]);
+    if (k === 0) return mc('alkohol_nomenklatur', D('Welche funktionelle Gruppe kennzeichnet Alkohole?', 'Which functional group characterises alcohols?'), D('Die Hydroxygruppe (–OH)', 'The hydroxy group (–OH)'),
+      [D('Die Carboxygruppe (–COOH)', 'The carboxy group (–COOH)'), D('Die Aldehydgruppe (–CHO)', 'The aldehyde group (–CHO)'), D('Die Aminogruppe (–NH₂)', 'The amino group (–NH₂)')], D('Die –OH-Gruppe bestimmt die typischen Eigenschaften der Alkohole.', 'The –OH group determines the typical properties of alcohols.'));
+    return mc('alkohol_nomenklatur', D('Wie heißt CH₃–CH(OH)–CH₃?', 'What is CH₃–CH(OH)–CH₃ called?'), D('Propan-2-ol', 'Propan-2-ol'),
+      [D('Propan-1-ol', 'Propan-1-ol'), D('Butan-1-ol', 'Butan-1-ol'), D('Propanal', 'Propanal')], D('Drei C-Atome und die OH-Gruppe am zweiten C-Atom ergeben Propan-2-ol.', 'Three C atoms and the OH group on the second C atom give propan-2-ol.'));
+  },
+  alkohol_eigenschaften() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('alkohol_eigenschaften', D('Warum löst sich Ethanol gut in Wasser, Decan-1-ol aber kaum?', 'Why does ethanol dissolve well in water, but decan-1-ol hardly at all?'),
+      D('Bei Ethanol überwiegt die hydrophile OH-Gruppe; bei der langen Kette dominiert der hydrophobe Teil', 'In ethanol the hydrophilic OH group dominates; in the long chain the hydrophobic part does'),
+      [D('Decan-1-ol hat keine OH-Gruppe', 'Decan-1-ol has no OH group'), D('Ethanol ist ein Salz', 'Ethanol is a salt'), D('Decan-1-ol ist eine Säure', 'Decan-1-ol is an acid')], D('Je länger die Kette, desto wasserabweisender das Molekül.', 'The longer the chain, the more water-repellent the molecule.'));
+    if (k === 1) return mc('alkohol_eigenschaften', D('Warum ist Glycerin (Propan-1,2,3-triol) gut wasserlöslich und zähflüssig?', 'Why is glycerol (propane-1,2,3-triol) water-soluble and viscous?'), D('Es besitzt drei OH-Gruppen, die viele Wasserstoffbrücken bilden', 'It has three OH groups that form many hydrogen bonds'),
+      [D('Es ist ein langkettiger Kohlenwasserstoff', 'It is a long-chain hydrocarbon'), D('Es enthält eine C=C-Doppelbindung', 'It contains a C=C double bond'), D('Es ist ein Salz', 'It is a salt')], D('Drei Hydroxygruppen machen Glycerin hydrophil und viskos.', 'Three hydroxy groups make glycerol hydrophilic and viscous.'));
+    if (k === 2) return mc('alkohol_eigenschaften', D('Welcher Alkohol hat den höheren Siedepunkt: Ethanol oder Butan-1-ol?', 'Which alcohol has the higher boiling point: ethanol or butan-1-ol?'), D('Butan-1-ol', 'Butan-1-ol'),
+      [D('Ethanol', 'Ethanol'), D('Beide gleich', 'Both the same'), D('Das lässt sich nicht vorhersagen', 'Impossible to predict')], D('Die längere Kette verstärkt die Van-der-Waals-Kräfte.', 'The longer chain strengthens the van der Waals forces.'));
+    return mc('alkohol_eigenschaften', D('Warum siedet Ethanol höher als das gleich große Ethan?', 'Why does ethanol boil higher than ethane, which is similar in size?'), D('Wegen der Wasserstoffbrücken zwischen den OH-Gruppen', 'Because of hydrogen bonds between the OH groups'),
+      [D('Weil Ethan eine Doppelbindung hat', 'Because ethane has a double bond'), D('Weil Ethanol ein Salz ist', 'Because ethanol is a salt'), D('Weil Ethan schwerer ist', 'Because ethane is heavier')], D('Die polare OH-Gruppe ermöglicht starke Wasserstoffbrücken.', 'The polar OH group enables strong hydrogen bonds.'));
+  },
+  alkohol_wirkung() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('alkohol_wirkung', D('Warum ist Ethanol in alkoholischen Getränken gesundheitsschädlich?', 'Why is ethanol in alcoholic drinks harmful?'), D('Es wird in der Leber zu Acetaldehyd abgebaut, das Zellen schädigt', 'It is broken down in the liver to acetaldehyde, which damages cells'),
+      [D('Es ist ein Vitamin', 'It is a vitamin'), D('Es wird unverändert ausgeschieden', 'It is excreted unchanged'), D('Es bildet im Magen Salzsäure', 'It forms hydrochloric acid in the stomach')], D('Acetaldehyd ist ein reaktives Zellgift; außerdem dämpft Ethanol das Nervensystem.', 'Acetaldehyde is a reactive cell toxin; ethanol also depresses the nervous system.'));
+    if (k === 1) return mc('alkohol_wirkung', D('Wie wirkt Alkohol auf das zentrale Nervensystem?', 'How does alcohol affect the central nervous system?'), D('Er dämpft es und verlangsamt Reaktion und Urteilsvermögen', 'It depresses it and slows reactions and judgement'),
+      [D('Er beschleunigt alle Reaktionen dauerhaft', 'It permanently speeds up all reactions'), D('Er stärkt die Sehleistung', 'It improves eyesight'), D('Er hat keine Wirkung', 'It has no effect')], D('Alkohol verschlechtert Reaktionszeit, Koordination und Urteilsfähigkeit.', 'Alcohol worsens reaction time, coordination and judgement.'));
+    if (k === 2) return mc('alkohol_wirkung', D('Warum ist Methanol viel gefährlicher als Ethanol?', 'Why is methanol much more dangerous than ethanol?'), D('Es wird zu giftiger Ameisensäure abgebaut und kann erblinden', 'It is broken down into toxic formic acid and can cause blindness'),
+      [D('Es riecht stärker', 'It smells stronger'), D('Es ist ein Feststoff', 'It is a solid'), D('Es kann nicht verdampfen', 'It cannot evaporate')], D('Schon kleine Mengen Methanol können Sehnerv und Organe schwer schädigen.', 'Even small amounts of methanol can severely damage the optic nerve and organs.'));
+    return mc('alkohol_wirkung', D('Welche Aussage über Alkohol und Fahren ist richtig?', 'Which statement about alcohol and driving is correct?'), D('Schon geringe Mengen verlängern die Reaktionszeit und sind im Straßenverkehr verboten', 'Even small amounts lengthen reaction time and are banned while driving'),
+      [D('Ein Kaffee macht den Alkohol sofort unschädlich', 'Coffee immediately neutralises the alcohol'), D('Alkohol verbessert die Konzentration', 'Alcohol improves concentration'), D('Nur Schnaps ist gefährlich, Bier nicht', 'Only spirits are dangerous, not beer')], D('Der Körper baut Alkohol nur langsam ab; Kaffee beschleunigt das nicht.', 'The body breaks down alcohol only slowly; coffee does not speed it up.'));
+  },
+  alkanale() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('alkanale', D('Welche funktionelle Gruppe kennzeichnet Alkanale?', 'Which functional group characterises alkanals?'), D('Die Aldehydgruppe (–CHO)', 'The aldehyde group (–CHO)'),
+      [D('Die Hydroxygruppe (–OH)', 'The hydroxy group (–OH)'), D('Die Carboxygruppe (–COOH)', 'The carboxy group (–COOH)'), D('Die Aminogruppe (–NH₂)', 'The amino group (–NH₂)')], D('Alkanale enden auf -al und enthalten –CHO.', 'Alkanals end in -al and contain –CHO.'));
+    if (k === 1) return mc('alkanale', D('Ethanol wird mild oxidiert. Welcher Stoff entsteht zuerst?', 'Ethanol is gently oxidised. Which substance forms first?'), D('Ethanal', 'Ethanal'),
+      [D('Ethansäure', 'Ethanoic acid'), D('Ethen', 'Ethene'), D('Methan', 'Methane')], D('Primäre Alkohole werden zuerst zu Alkanalen oxidiert.', 'Primary alcohols are first oxidised to alkanals.'));
+    if (k === 2) return mc('alkanale', D('Wie heißt CH₃–CHO?', 'What is CH₃–CHO called?'), D('Ethanal', 'Ethanal'),
+      [D('Ethanol', 'Ethanol'), D('Ethansäure', 'Ethanoic acid'), D('Methanal', 'Methanal')], D('Zwei C-Atome und eine Aldehydgruppe ergeben Ethanal.', 'Two C atoms and an aldehyde group give ethanal.'));
+    return mc('alkanale', D('Was entsteht bei der weiteren Oxidation von Ethanal?', 'What forms when ethanal is oxidised further?'), D('Ethansäure (Essigsäure)', 'Ethanoic acid (acetic acid)'),
+      [D('Ethanol', 'Ethanol'), D('Ethen', 'Ethene'), D('Kohlenstoffdioxid', 'Carbon dioxide')], D('Aldehyde können weiter zur Carbonsäure oxidiert werden.', 'Aldehydes can be oxidised further to the carboxylic acid.'));
+  },
+  carbonsaeure_struktur() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('carbonsaeure_struktur', D('Welche Atomgruppe macht eine Carbonsäure sauer?', 'Which group makes a carboxylic acid acidic?'), D('Die Carboxygruppe (–COOH)', 'The carboxy group (–COOH)'),
+      [D('Die Hydroxygruppe (–OH)', 'The hydroxy group (–OH)'), D('Die Aldehydgruppe (–CHO)', 'The aldehyde group (–CHO)'), D('Die Aminogruppe (–NH₂)', 'The amino group (–NH₂)')], D('Die Carboxygruppe kann ein Proton (H⁺) abgeben.', 'The carboxy group can release a proton (H⁺).'));
+    if (k === 1) return mc('carbonsaeure_struktur', D('Wie heißt CH₃–COOH nach IUPAC?', 'What is the IUPAC name of CH₃–COOH?'), D('Ethansäure', 'Ethanoic acid'),
+      [D('Methansäure', 'Methanoic acid'), D('Propansäure', 'Propanoic acid'), D('Ethanal', 'Ethanal')], D('Zwei C-Atome und eine Carboxygruppe ergeben Ethansäure – Essigsäure.', 'Two C atoms and a carboxy group give ethanoic acid – vinegar acid.'));
+    if (k === 2) return mc('carbonsaeure_struktur', D('Wie lautet die allgemeine Formel der gesättigten Alkansäuren?', 'What is the general formula of saturated alkanoic acids?'), D('CₙH₂ₙ₊₁COOH', 'CₙH₂ₙ₊₁COOH'),
+      [D('CₙH₂ₙ₊₂', 'CₙH₂ₙ₊₂'), D('CₙH₂ₙ', 'CₙH₂ₙ'), D('CₙH₂ₙ₊₁OH', 'CₙH₂ₙ₊₁OH')], D('Alkansäuren bestehen aus einer Alkylkette und einer Carboxygruppe.', 'Alkanoic acids consist of an alkyl chain and a carboxy group.'));
+    return mc('carbonsaeure_struktur', D('Wie viele H⁺-Ionen kann eine Carboxygruppe abgeben?', 'How many H⁺ ions can a carboxy group release?'), D('1', '1'),
+      [D('2', '2'), D('3', '3'), D('0', '0')], D('Nur das Wasserstoffatom der COOH-Gruppe ist sauer.', 'Only the hydrogen atom of the COOH group is acidic.'));
+  },
+  carbonsaeure_eigenschaften() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('carbonsaeure_eigenschaften', D('Warum löst Essigsäure Kalk (Calciumcarbonat) auf?', 'Why does acetic acid dissolve chalk (calcium carbonate)?'), D('Sie gibt H⁺-Ionen ab; Carbonat reagiert zu CO₂ und Wasser', 'It releases H⁺ ions; carbonate reacts to CO₂ and water'),
+      [D('Sie bildet mit Kalk eine Seife', 'It forms soap with chalk'), D('Sie ist ein Metalloxid', 'It is a metal oxide'), D('Sie entzieht dem Kalk Wasser', 'It removes water from chalk')], D('Säure + Carbonat → Salz + Wasser + CO₂. Deshalb schäumt Entkalker.', 'Acid + carbonate → salt + water + CO₂. That is why descaler fizzes.'));
+    if (k === 1) return mc('carbonsaeure_eigenschaften', D('Wie ändert sich die Wasserlöslichkeit innerhalb der homologen Reihe der Alkansäuren?', 'How does water solubility change along the homologous series of alkanoic acids?'), D('Sie nimmt mit längerer Kohlenwasserstoffkette ab', 'It decreases as the hydrocarbon chain grows'),
+      [D('Sie nimmt mit längerer Kette zu', 'It increases with a longer chain'), D('Sie bleibt gleich', 'It stays the same'), D('Sie steigt zuerst stark an und bleibt dann gleich', 'It rises sharply then stays the same')], D('Die hydrophobe Kette wird länger, die polare Carboxygruppe bleibt gleich.', 'The hydrophobic chain grows while the polar carboxy group stays the same.'));
+    if (k === 2) return mc('carbonsaeure_eigenschaften', D('Wofür wird Essigsäure im Alltag verwendet?', 'What is acetic acid used for in everyday life?'), D('Als Essig, Konservierungsmittel und Entkalker', 'As vinegar, preservative and descaler'),
+      [D('Als Campinggas', 'As camping gas'), D('Als Kunststoff', 'As plastic'), D('Als Düngesalz', 'As fertiliser salt')], D('Verdünnte Essigsäure ist Essig; sie konserviert und löst Kalk.', 'Dilute acetic acid is vinegar; it preserves food and dissolves chalk.'));
+    return mc('carbonsaeure_eigenschaften', D('Was entsteht, wenn Zink mit Essigsäure reagiert?', 'What forms when zinc reacts with acetic acid?'), D('Zinkacetat und Wasserstoff', 'Zinc acetate and hydrogen'),
+      [D('Zinkacetat und Sauerstoff', 'Zinc acetate and oxygen'), D('Zinkoxid und Wasser', 'Zinc oxide and water'), D('Nur Wasserstoff und Wasser', 'Only hydrogen and water')], D('Metall + Säure → Salz + Wasserstoff.', 'Metal + acid → salt + hydrogen.'));
+  },
+  aminosaeuren() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('aminosaeuren', D('Welche zwei funktionellen Gruppen hat eine Aminosäure?', 'Which two functional groups does an amino acid have?'), D('Aminogruppe (–NH₂) und Carboxygruppe (–COOH)', 'Amino group (–NH₂) and carboxy group (–COOH)'),
+      [D('Hydroxygruppe (–OH) und Aldehydgruppe (–CHO)', 'Hydroxy group (–OH) and aldehyde group (–CHO)'), D('Nur Carboxygruppen', 'Only carboxy groups'), D('Estergruppe und Aminogruppe', 'Ester group and amino group')], D('Die Aminogruppe nimmt Protonen auf, die Carboxygruppe gibt sie ab.', 'The amino group accepts protons, the carboxy group releases them.'));
+    if (k === 1) return mc('aminosaeuren', D('Warum können Aminosäuren sowohl als Säure als auch als Base wirken?', 'Why can amino acids act as both acid and base?'), D('Die Carboxygruppe gibt H⁺ ab, die Aminogruppe nimmt H⁺ auf', 'The carboxy group releases H⁺, the amino group accepts H⁺'),
+      [D('Sie enthalten zwei Carboxygruppen', 'They contain two carboxy groups'), D('Sie sind immer neutral', 'They are always neutral'), D('Sie enthalten kein Wasserstoffatom', 'They contain no hydrogen atom')], D('Diese Doppelnatur heißt amphoter und hängt vom pH-Wert ab.', 'This dual nature is called amphoteric and depends on pH.'));
+    if (k === 2) return mc('aminosaeuren', D('Woraus bestehen Proteine?', 'What are proteins made of?'), D('Aus Aminosäuren, die durch Peptidbindungen verknüpft sind', 'Amino acids linked by peptide bonds'),
+      [D('Aus Fettsäuren und Glycerin', 'Fatty acids and glycerol'), D('Aus Zuckermolekülen', 'Sugar molecules'), D('Aus Alkansäuren und Alkohol', 'Alkanoic acids and alcohol')], D('Aminosäuren sind die Bausteine der Proteine.', 'Amino acids are the building blocks of proteins.'));
+    return mc('aminosaeuren', D('Welche Aminosäure ist die einfachste?', 'Which amino acid is the simplest?'), D('Glycin', 'Glycine'),
+      [D('Alanin', 'Alanine'), D('Glycerin', 'Glycerol'), D('Ethansäure', 'Ethanoic acid')], D('Glycin hat als Seitenkette nur ein Wasserstoffatom.', 'Glycine has only a hydrogen atom as its side chain.'));
+  },
+  ester() {
+    const k = pick([0, 1, 2, 3, 4]);
+    if (k === 0) return mc('ester', D('Wie entsteht ein Ester in einer Kondensationsreaktion?', 'How does an ester form in a condensation reaction?'), D('Alkohol + Carbonsäure → Ester + Wasser', 'Alcohol + carboxylic acid → ester + water'),
+      [D('Alkohol + Carbonsäure → Ester + Wasserstoff', 'Alcohol + carboxylic acid → ester + hydrogen'), D('Alkohol + Lauge → Ester + Salz', 'Alcohol + alkali → ester + salt'), D('Carbonsäure + Metall → Ester + Wasser', 'Carboxylic acid + metal → ester + water')], D('Unter Säurekatalyse reagieren Alkohol und Säure zu Ester und Wasser.', 'With acid catalysis, alcohol and acid form ester and water.'));
+    if (k === 1) return mc('ester', D('Welche Atomgruppe kennzeichnet die Estergruppe?', 'Which group characterises the ester group?'), D('–COO–', '–COO–'),
+      [D('–COOH', '–COOH'), D('–OH', '–OH'), D('–CHO', '–CHO')], D('Die Estergruppe entsteht aus Carboxygruppe und OH-Gruppe.', 'The ester group forms from a carboxy group and an OH group.'));
+    if (k === 2) return mc('ester', D('Wie heißt der Ester aus Ethanol und Ethansäure?', 'What is the ester from ethanol and ethanoic acid called?'), D('Ethylethanoat (Essigsäureethylester)', 'Ethyl ethanoate (ethyl acetate)'),
+      [D('Methylethanoat', 'Methyl ethanoate'), D('Ethansäure', 'Ethanoic acid'), D('Ethanal', 'Ethanal')], D('Alkohol liefert den ersten Namensteil, die Säure den zweiten.', 'The alcohol gives the first part of the name, the acid the second.'));
+    if (k === 3) return mc('ester', D('Was passiert bei der Hydrolyse eines Esters?', 'What happens during ester hydrolysis?'), D('Er reagiert mit Wasser zurück zu Alkohol und Carbonsäure', 'It reacts with water back to alcohol and carboxylic acid'),
+      [D('Er verbrennt zu CO₂ und Wasser', 'It burns to CO₂ and water'), D('Er wird zu einem Alkan', 'It becomes an alkane'), D('Er bildet eine Lauge', 'It forms an alkali')], D('Die Estersynthese ist umkehrbar; Hydrolyse spaltet den Ester.', 'Ester synthesis is reversible; hydrolysis splits the ester.'));
+    return mc('ester', D('Warum riecht ein Ester oft nach Früchten?', 'Why does an ester often smell of fruit?'), D('Kleine Ester sind flüchtig und werden vom Geruchssinn wahrgenommen', 'Small esters are volatile and detected by smell'),
+      [D('Ester sind immer Salze', 'Esters are always salts'), D('Ester enthalten Zucker', 'Esters contain sugar'), D('Ester sind radioaktiv', 'Esters are radioactive')], D('Viele kurzkettige Ester haben charakteristische Fruchtaromen.', 'Many short-chain esters have characteristic fruity aromas.'));
+  },
+  fette() {
+    const k = pick([0, 1, 2, 3]);
+    if (k === 0) return mc('fette', D('Fette sind Ester aus ...', 'Fats are esters of ...'), D('Glycerin und drei Fettsäuren', 'Glycerol and three fatty acids'),
+      [D('Ethanol und drei Alkansäuren', 'Ethanol and three alkanoic acids'), D('Glycerin und drei Mineralien', 'Glycerol and three minerals'), D('Fettsäuren und Natronlauge', 'Fatty acids and sodium hydroxide')], D('Fette (Triglyceride) sind Triester des Glycerins.', 'Fats (triglycerides) are triesters of glycerol.'));
+    if (k === 1) return mc('fette', D('Was entsteht bei der Verseifung von Fett mit Natronlauge?', 'What forms when fat is saponified with sodium hydroxide?'), D('Glycerin und Natriumseifen (Fettsäuresalze)', 'Glycerol and sodium soaps (fatty acid salts)'),
+      [D('Glycerin und freie Salzsäure', 'Glycerol and free hydrochloric acid'), D('Ethanol und Natriumchlorid', 'Ethanol and sodium chloride'), D('Nur Wasser und CO₂', 'Only water and CO₂')], D('Die Estergruppen werden hydrolysiert; die Fettsäuren bilden mit Na⁺ Seifen.', 'The ester groups are hydrolysed; the fatty acids form soaps with Na⁺.'));
+    if (k === 2) return mc('fette', D('Was sind Fettsäuren?', 'What are fatty acids?'), D('Langkettige Carbonsäuren', 'Long-chain carboxylic acids'),
+      [D('Kurzkettige Alkohole', 'Short-chain alcohols'), D('Salze der Schwefelsäure', 'Sulfuric acid salts'), D('Zucker mit Aminogruppe', 'Sugars with an amino group')], D('Fettsäuren sind Carbonsäuren mit meist 12 bis 22 C-Atomen.', 'Fatty acids are carboxylic acids with mostly 12 to 22 C atoms.'));
+    return mc('fette', D('Warum sind Fette lipophil und kaum wasserlöslich?', 'Why are fats lipophilic and barely water-soluble?'), D('Der lange unpolare Kohlenwasserstoffrest überwiegt die polare Estergruppe', 'The long non-polar hydrocarbon part outweighs the polar ester group'),
+      [D('Fette enthalten keine Atombindungen', 'Fats contain no covalent bonds'), D('Fette sind Salze', 'Fats are salts'), D('Fette haben viele OH-Gruppen', 'Fats have many OH groups')], D('Die langen Fettsäureketten sind unpolar und lösen sich gut in Fett, schlecht in Wasser.', 'The long fatty acid chains are non-polar and dissolve well in fat, poorly in water.'));
+  },
 };
 const TIPS = {
   ionen: D('Metalle geben Elektronen ab, Nichtmetalle nehmen welche auf.', 'Metals give electrons away, non-metals take them.'),
@@ -598,10 +793,25 @@ const TIPS = {
   alkan_formel: D('Alkane: doppelt so viele H wie C, plus 2.', 'Alkanes: twice as many H as C, plus 2.'),
   alkan_name: D('Meth = 1, Eth = 2, Prop = 3, But = 4, Pent = 5 …', 'Meth = 1, Eth = 2, Prop = 3, But = 4, Pent = 5 …'),
   siedetrend: D('Längere Ketten halten fester zusammen.', 'Longer chains hold together more strongly.'),
+  saeure_base_begriff: D('Säure gibt H⁺ ab, Base nimmt H⁺ auf.', 'An acid gives H⁺ away, a base takes H⁺ up.'),
+  vorkommen_verwendung: D('Erdgas = Methan, Campinggas = Propan/Butan, Benzin = Octan.', 'Natural gas = methane, camping gas = propane/butane, petrol = octane.'),
+  isomerie: D('Gleiche Summenformel, andere Struktur.', 'Same molecular formula, different structure.'),
+  verbrennung: D('Vollständig: CO₂ + H₂O. Sauerstoffmangel: CO und Ruß.', 'Complete: CO₂ + H₂O. Low oxygen: CO and soot.'),
+  ungesaettigt: D('Doppelbindung? Bromwasser wird farblos.', 'Double bond? Bromine water turns colourless.'),
+  alkohol_herstellung: D('Gärung: Zucker → Ethanol + CO₂.', 'Fermentation: sugar → ethanol + CO₂.'),
+  alkohol_nomenklatur: D('OH-Gruppe = -ol; die Zahl nennt ihre Position.', 'OH group = -ol; the number gives its position.'),
+  alkohol_eigenschaften: D('Kurze Kette löst sich in Wasser, lange nicht.', 'Short chains dissolve in water, long ones do not.'),
+  alkohol_wirkung: D('Ethanol → Acetaldehyd; das schädigt Zellen.', 'Ethanol → acetaldehyde; that damages cells.'),
+  alkanale: D('Aldehydgruppe –CHO, Endung -al.', 'Aldehyde group –CHO, ending -al.'),
+  carbonsaeure_struktur: D('Carboxygruppe –COOH gibt ein H⁺ ab.', 'Carboxy group –COOH releases one H⁺.'),
+  carbonsaeure_eigenschaften: D('Säure + Carbonat → Salz + Wasser + CO₂.', 'Acid + carbonate → salt + water + CO₂.'),
+  aminosaeuren: D('Aminogruppe + Carboxygruppe = Aminosäure.', 'Amino group + carboxy group = amino acid.'),
+  ester: D('Alkohol + Säure ⇌ Ester + Wasser.', 'Alcohol + acid ⇌ ester + water.'),
+  fette: D('Fett = Glycerin + drei Fettsäuren; Verseifung macht Seife.', 'Fat = glycerol + three fatty acids; saponification makes soap.'),
 };
 
 function buildTest() {
-  const ids = Object.keys(SKILLS), plan = shuffle([...ids, ...ids]), seen = new Set(), qs = [];
+  const ids = Object.keys(SKILLS), plan = shuffle(ids).slice(0, TOTAL), seen = new Set(), qs = [];
   plan.forEach((s, i) => { let q; for (let k = 0; k < 12; k++) { q = T[s](); if (!seen.has(K(q.prompt))) break; } seen.add(K(q.prompt)); q.id = 'q' + i; qs.push(q); });
   return qs;
 }
@@ -822,13 +1032,15 @@ function confetti() {
 
 // ---------- TEACHER ----------
 const NAMES = ['Lena', 'Jonas', 'Mia', 'Elias', 'Emilia', 'Noah', 'Hannah', 'Paul', 'Lea', 'Ben', 'Sophie', 'Finn', 'Amira', 'Luca', 'Zeynep', 'Leon', 'Clara', 'Yusuf', 'Marie', 'Tim', 'Aylin', 'Felix', 'Nora', 'Can'];
-const HARD = { konzentration: -.28, ph_rechnen: -.32, stoffmenge: -.18, neutralisation: -.22, salzformel: -.15, ph_skala: .18, indikator: .12, alkan_formel: .08 };
+const HARD = { konzentration: -.28, ph_rechnen: -.32, stoffmenge: -.18, neutralisation: -.22, salzformel: -.15,
+  ester: -.28, fette: -.22, aminosaeuren: -.20, carbonsaeure_eigenschaften: -.15, alkohol_herstellung: -.10,
+  ph_skala: .18, indikator: .12, alkan_formel: .08 };
 function demoClass() {
   const r = mulberry(9), rows = [];
   NAMES.forEach((fn, i) => {
     const ability = .5 + r() * .45, m = {}, sk = {};
     for (const s in SKILLS) { const p = Math.min(.97, Math.max(.05, ability + (HARD[s] || 0) + (r() - .5) * .24)); m[s] = p; let c = 0; for (let k = 0; k < 12; k++) if (r() < p) c++; sk[s] = [c, 12]; }
-    let score = 0; for (const s in SKILLS) for (let k = 0; k < 2; k++) if (r() < Math.min(.98, m[s] + .1)) score++;
+    let score = 0; for (const s in SKILLS) if (r() < Math.min(.98, m[s] + .1)) score++;
     rows.push({ name: `${fn} ${'ABCDEFGHIKLMNOPRSTUVWZYJ'[i]}.`, klasse: i % 2 ? '9b' : '9a', score, mastery: m, sk });
   });
   const last = S.tests[S.tests.length - 1];
@@ -936,7 +1148,7 @@ function paintAgent(a, withSteps) {
 const nd = (id, col, row, ico, tt, s, about, h = 56) => ({ id, x: 35 + col * 270, y: 72 + row * 100, h, ico, t: tt, s, about });
 const ed = (id, from, to, d, lx, ly, label, cls = '') => ({ id, from, to, d, lx, ly, label, cls });
 const st = (e, n, who, short, title, text, say) => ({ e, n, who, short, title, text, say });
-const RLP = D('Die Skills folgen dem Rahmenlehrplan Berlin-Brandenburg, Chemie Klasse 9: Ionen, Säuren und Laugen, Mol, Kohlenwasserstoffe.', 'The skills follow the Berlin-Brandenburg curriculum for grade 9 chemistry: ions, acids and alkalis, moles, hydrocarbons.');
+const RLP = D('Die Skills folgen dem Rahmenlehrplan Berlin-Brandenburg, Chemie Klasse 9: Säuren und Laugen, Kohlenwasserstoffe, Alkohole, organische Säuren und Ester – plus Ionen und Mol als Grundlagen.', 'The skills follow the Berlin-Brandenburg curriculum for grade 9 chemistry: acids and alkalis, hydrocarbons, alcohols, organic acids and esters – plus ions and moles as foundations.');
 const ARCH = {
   tech: {
     aria: D('Technische Architektur: Schüler·in und Lehrkraft nutzen Fragen-Generator, Bewertung, Tipp-Helfer und Lücken-Agent. Daten bleiben im Browser, Claude ist optional.', 'Technical architecture: student and teacher use the question engine, grader, hint helper and gap finder. Data stays in the browser, Claude is optional.'),
@@ -945,11 +1157,11 @@ const ARCH = {
     nodes: [
       nd('student', 0, 0, '🧒', D('Schüler·in', 'Student'), D('Quiz im Browser', 'quiz in the browser'), D('Lernt im Browser: Test starten, antworten, Tipps holen. Der Fortschritt bleibt auf diesem Gerät.', 'Learns in the browser: starts a test, answers, asks for hints. Progress stays on this device.'), 156),
       nd('teacher', 0, 3, '👩‍🏫', D('Lehrkraft', 'Teacher'), D('Dashboard + Diagramme', 'dashboard + charts'), D('Sieht Punkte, Bestehensquote und die schwierigsten Themen der Klasse und startet den Lücken-Agenten.', 'Sees scores, pass rate and the hardest topics, and runs the gap finder.')),
-      nd('engine', 1, 0, '🧪', D('Fragen-Generator', 'Question engine'), D('15 Skills · 30 Fragen', 'builds 30 questions'), D('Erzeugt aus Vorlagen (T) neue Aufgaben mit Zufallswerten: jeder der 15 Skills zweimal, also 30 Fragen. Die Python-Version gewichtet schwache Skills stärker.', 'Builds fresh questions from templates (T) with random values: each of the 15 skills twice, so 30 questions. The Python version favours weak skills.')),
+      nd('engine', 1, 0, '🧪', D('Fragen-Generator', 'Question engine'), D('30 Skills · 30 Fragen', 'builds 30 questions'), D('Erzeugt aus Vorlagen (T) neue Aufgaben mit Zufallswerten: 30 Fragen aus 30 Skills. Die Python-Version gewichtet schwache Skills stärker.', 'Builds fresh questions from templates (T) with random values: 30 questions from 30 skills. The Python version favours weak skills.')),
       nd('grader', 1, 1, '✅', D('Bewertung', 'Grader'), D('im Code, nicht per KI', 'in code, not by AI'), D('Prüft jede Antwort im Code: Auswahl exakt, Zahlen mit 2 % Toleranz. Typische Fehler (Traps) bekommen eine eigene Erklärung.', 'Checks every answer in code: choices exactly, numbers within 2 %. Typical mistakes (traps) get their own explanation.')),
       nd('tutor', 1, 2, '💡', D('Tipp-Helfer', 'Hint helper'), D('Atomi gibt Tipps', 'Atomi’s hints'), D('Erster Tipp: ein Denkanstoß ohne Lösung. Zweiter Tipp: der Lösungsweg.', 'First hint: a nudge without the answer. Second hint: the method.')),
       nd('agent', 1, 3, '🤖', D('Lücken-Agent', 'Gap finder'), D('5 Schritte, erklärbar', '5 explainable steps'), D('Fünf Schritte: Daten laden, Schwächen finden, Ursachen im Skill-Graph suchen, Gruppen bilden, Tipps geben. Jeder Schritt ist nachvollziehbar.', 'Five steps: load data, find weak spots, trace causes in the skill graph, form groups, give tips. Every step can be checked.')),
-      nd('skills', 2, 0, '🕸️', D('Skill-Graph', 'Skill graph'), D('Themen, Vorwissen', 'topics + prerequisites'), D('15 Skills in 4 Themen. Jeder Skill kennt seine Voraussetzungen, z. B. braucht Konzentration die Stoffmenge.', '15 skills in 4 topics. Each skill knows its prerequisites, e.g. concentration needs amount of substance.')),
+      nd('skills', 2, 0, '🕸️', D('Skill-Graph', 'Skill graph'), D('Themen, Vorwissen', 'topics + prerequisites'), D('30 Skills in 7 Themen. Jeder Skill kennt seine Voraussetzungen, z. B. braucht Ester die Alkohole und Carbonsäuren.', '30 skills in 7 topics. Each skill knows its prerequisites, e.g. esters need alcohols and carboxylic acids.')),
       nd('store', 2, 1, '💾', D('Lernstand', 'Progress'), D('localStorage', 'localStorage'), D('Mastery pro Skill, Sterne, Serie und Testergebnisse. Richtig schließt 22 % der Lücke, falsch zieht 18 % ab. Gespeichert im localStorage.', 'Mastery per skill, stars, streak and test results. Right closes 22 % of the gap, wrong takes off 18 %. Saved in localStorage.')),
       nd('claude', 2, 2, '✨', D('Claude (optional)', 'Claude (optional)'), D('formuliert nur Texte', 'only phrases text'), D('Nur wenn die Seite auf claude.ai läuft (oder in der Python-Version mit API-Key). Formuliert Tipps und das Fazit, bewertet aber nie.', 'Only when the page runs on claude.ai (or in the Python version with an API key). Phrases hints and the summary, never grades.')),
       nd('klass', 2, 3, '📊', D('Klassendaten', 'Class data'), D('24 Demo-Kinder + du', '24 demo students + you'), D('24 erfundene Schüler·innen in 9a und 9b, plus dein letzter Test. Als Beispieldaten gekennzeichnet.', '24 made-up students in 9a and 9b, plus your last test. Marked as example data.')),
@@ -977,8 +1189,8 @@ const ARCH = {
     flows: {
       test: { name: D('Ein Test', 'Taking a test'), steps: [
         st(['start', 'uses'], ['student', 'engine', 'skills'], 'engine', D('Test bauen', 'Build the test'), D('Atomi baut deinen Test', 'Atomi builds your test'),
-          D('Der Fragen-Generator nimmt jeden der 15 Skills zweimal und füllt Vorlagen mit Zufallswerten. So entstehen 30 Fragen, und kein Test ist wie der andere.', 'The question engine takes each of the 15 skills twice and fills templates with random values. That makes 30 questions, and no two tests are the same.'),
-          D('Ich habe 30 neue Fragen gebaut, zwei pro Skill aus dem Skill-Graph.', 'I built 30 fresh questions, two per skill from the skill graph.')),
+          D('Der Fragen-Generator wählt 30 Skills aus dem Skill-Graph und füllt ihre Vorlagen mit Zufallswerten. So entstehen 30 Fragen, und kein Test ist wie der andere.', 'The question engine picks 30 skills from the skill graph and fills their templates with random values. That makes 30 questions, and no two tests are the same.'),
+          D('Ich habe 30 neue Fragen gebaut, eine pro Skill aus dem Skill-Graph.', 'I built 30 fresh questions, one per skill from the skill graph.')),
         st(['qs'], ['engine', 'student'], 'student', D('Fragen zeigen', 'Show questions'), D('Eine Frage nach der anderen', 'One question at a time'),
           D('Auswahlfragen mit vier Antworten oder Rechenaufgaben mit Zahlenfeld. Komma oder Punkt, beides geht.', 'Multiple choice with four options, or a calculation with a number field. Comma or point both work.'),
           D('Ich sehe Frage 1 von 30 und tippe meine Antwort.', 'I see question 1 of 30 and type my answer.')),
@@ -1032,7 +1244,7 @@ const ARCH = {
           D('Ich bekomme nie einen Namen zu sehen.', 'I never see a name.')),
         st(['rlpE', 'uses'], ['rlp', 'skills', 'engine'], 'skills', D('Aus dem Lehrplan', 'From the curriculum'), D('Inhalte aus dem Berliner Lehrplan', 'Content from the Berlin curriculum'),
           D('Skills, Vorlagen und Erklärungen stehen direkt im Code (SKILLS, T, TIPS), zweisprachig. Neue Aufgaben kommen dort hinzu.', 'Skills, templates and explanations live in the code (SKILLS, T, TIPS), in two languages. New questions are added there.'),
-          D('15 Skills, 4 Themen, jeder mit seinen Voraussetzungen.', '15 skills, 4 topics, each with its prerequisites.')),
+          D('30 Skills, 7 Themen, jeder mit seinen Voraussetzungen.', '30 skills, 7 topics, each with its prerequisites.')),
       ] },
     },
   },
@@ -1043,7 +1255,7 @@ const ARCH = {
     nodes: [
       nd('login', 0, 0, '🔑', D('Anmelden', 'Sign in'), D('Demo: admin / admin', 'demo: admin / admin'), D('Eine Anmeldung für beide Rollen. In der Demo: admin / admin.', 'One sign-in for both roles. In the demo: admin / admin.')),
       nd('stars', 0, 1, '⭐', D('Sterne pro Thema', 'Stars per topic'), D('zeigt, was sitzt', 'shows what is solid'), D('Bis zu drei Sterne pro Skill zeigen, was schon sitzt und was noch nicht.', 'Up to three stars per skill show what is solid and what is not yet.')),
-      nd('test', 0, 2, '📝', D('30-Fragen-Test', '30-question test'), D('neu bei jedem Start', 'new every time'), D('30 neue Fragen bei jedem Start, aus allen 15 Skills.', '30 fresh questions every time, from all 15 skills.')),
+      nd('test', 0, 2, '📝', D('30-Fragen-Test', '30-question test'), D('neu bei jedem Start', 'new every time'), D('30 neue Fragen bei jedem Start, aus allen 30 Skills.', '30 fresh questions every time, from all 30 skills.')),
       nd('result', 0, 3, '🏁', D('Ergebnis', 'Result'), D('ab 20 von 30 bestanden', 'pass at 20 of 30'), D('Bestanden ab 20 von 30 in der ersten Runde. Bei Erfolg gibt es Konfetti.', 'Passed with 20 of 30 in the first round. Success means confetti.')),
       nd('progress', 1, 1, '📈', D('Lernstand', 'Progress'), D('jede Antwort zählt', 'every answer counts'), D('Jede Antwort verändert die Mastery des Skills. Das sehen Kind und Lehrkraft.', 'Every answer moves that skill’s mastery. Student and teacher both see it.')),
       nd('help', 1, 2, '💡', D('Tipps von Atomi', 'Atomi’s hints'), D('ohne die Lösung', 'never the answer'), D('Atomi stellt eine Gegenfrage, statt die Lösung zu verraten. Beim zweiten Mal zeigt Atomi den Weg.', 'Atomi asks a guiding question instead of giving the answer. The second time, Atomi shows the method.')),
@@ -1097,7 +1309,7 @@ const ARCH = {
           D('Alle Ergebnisse auf einer Seite, ohne Korrigieren.', 'All results on one page, no marking needed.')),
         st(['b8', 'b9'], ['progress', 'dash', 'gapf'], 'gapf', D('Lücken finden', 'Find gaps'), D('Ein Klick findet die Lücken', 'One click finds the gaps'),
           D('Der Lücken-Agent liest den Lernstand aller Kinder und findet die schwächsten Skills.', 'The gap finder reads every student’s progress and finds the weakest skills.'),
-          D('Ich prüfe alle 15 Skills für die ganze Klasse.', 'I check all 15 skills for the whole class.')),
+          D('Ich prüfe alle 30 Skills für die ganze Klasse.', 'I check all 30 skills for the whole class.')),
         st(['b10'], ['gapf', 'groups'], 'groups', D('Gruppen', 'Groups'), D('Ursachen und Fördergruppen', 'Causes and support groups'),
           D('Zu jeder Lücke sucht der Agent die schwache Voraussetzung. Kinder mit demselben schwächsten Skill kommen in eine Gruppe.', 'For each gap the agent looks for the weak prerequisite. Students with the same weakest skill form one group.'),
           D('Diese Kinder brauchen alle dasselbe.', 'These students all need the same thing.')),

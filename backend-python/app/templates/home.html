@@ -62,7 +62,7 @@
 <div class="max-w-6xl mx-auto px-4 py-8">
   <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink-900">Hallo {{ display_name }}!</h1>
 
-  <section class="card p-5 sm:p-6 mt-6" aria-labelledby="lernnetz-title">
+  <section class="card p-5 sm:p-6 mt-4" aria-labelledby="lernnetz-title">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <div class="flex flex-wrap items-center gap-2">
@@ -161,6 +161,15 @@
       <span>Fahre oder tippe auf ein Fach, um die Hauptbereiche zu sehen.</span>
     </p>
   </section>
+
+  <a href="/student/tutor" class="card mt-6 p-4 flex items-center gap-3 hover:border-reagent-500 hover:shadow-sm transition group">
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-reagent-400">✦</span>
+    <span class="min-w-0 flex-1">
+      <span class="block font-display font-bold text-ink-900 group-hover:text-reagent-600">KI-Tutor</span>
+      <span class="block text-xs text-slate-500">Naturwissenschaften fragen, verstehen, üben.</span>
+    </span>
+    <span class="text-sm font-semibold text-reagent-600">Öffnen →</span>
+  </a>
 
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
     {% for s in subjects %}

@@ -7,7 +7,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .questions import SKILLS, PASS_MARK
+from .questions import SKILLS, VISIBLE_SKILLS, PASS_MARK
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "chemtutor.db"
 
@@ -26,6 +26,15 @@ CREATE TABLE IF NOT EXISTS answers (
 CREATE TABLE IF NOT EXISTS chat_messages (
     id INTEGER PRIMARY KEY, student_id INTEGER, skill TEXT, role TEXT, message TEXT,
     sources TEXT, images TEXT, created TEXT);
+CREATE TABLE IF NOT EXISTS tutor_conversations (
+    id INTEGER PRIMARY KEY, student_id INTEGER, subject TEXT DEFAULT 'science',
+    title TEXT DEFAULT 'Neue Unterhaltung', created TEXT, updated TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS tutor_messages (
+    id INTEGER PRIMARY KEY, conversation_id INTEGER, role TEXT, message TEXT,
+    question TEXT, sources TEXT, images TEXT, created TEXT);
+CREATE INDEX IF NOT EXISTS idx_tutor_conv_student ON tutor_conversations(student_id, updated);
+CREATE INDEX IF NOT EXISTS idx_tutor_msg_conv ON tutor_messages(conversation_id, id);
 """
 
 FIRST = ["Lena", "Jonas", "Mia", "Elias", "Emilia", "Noah", "Hannah", "Paul", "Lea", "Ben", "Sophie", "Finn",
@@ -47,6 +56,9 @@ def init() -> None:
     cols = {row["name"] for row in c.execute("PRAGMA table_info(chat_messages)").fetchall()}
     if "images" not in cols:
         c.execute("ALTER TABLE chat_messages ADD COLUMN images TEXT")
+    conv_cols = {row["name"] for row in c.execute("PRAGMA table_info(tutor_conversations)").fetchall()}
+    if "sort_order" not in conv_cols:
+        c.execute("ALTER TABLE tutor_conversations ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
     if c.execute("SELECT COUNT(*) FROM students").fetchone()[0] == 0:
         _seed(c)
     c.commit()
@@ -58,13 +70,15 @@ def _seed(c: sqlite3.Connection) -> None:
     # the logged-in demo student
     c.execute("INSERT INTO students (name, klasse, is_demo) VALUES ('admin', '9b', 0)")
     sid = c.execute("SELECT id FROM students WHERE name='admin'").fetchone()[0]
-    for s in SKILLS:
+    for s in VISIBLE_SKILLS:
         c.execute("INSERT INTO mastery VALUES (?,?,?,0,0)", (sid, s, 0.3))
 
     # class-wide difficulty: some skills are systematically harder (gives the agent real gaps to find)
     difficulty = {s: 0.0 for s in SKILLS}
     difficulty.update({"konzentration": -0.28, "ph_rechnen": -0.32, "stoffmenge": -0.18,
                        "neutralisation": -0.22, "salzformel": -0.15, "alkan_name": -0.05,
+                       "ester": -0.28, "fette": -0.22, "aminosaeuren": -0.20,
+                       "carbonsaeure_eigenschaften": -0.15, "alkohol_herstellung": -0.10,
                        "ph_skala": 0.18, "indikator": 0.12, "alkan_formel": 0.08})
     now = datetime.now()
     for i, fn in enumerate(FIRST):
@@ -74,26 +88,28 @@ def _seed(c: sqlite3.Connection) -> None:
         c.execute("INSERT INTO students (name, klasse) VALUES (?,?)", (name, klasse))
         stid = c.execute("SELECT id FROM students WHERE name=?", (name,)).fetchone()[0]
         probs = {}
-        for s in SKILLS:
+        for s in VISIBLE_SKILLS:
             p = min(0.97, max(0.05, ability + difficulty[s] + rng.uniform(-0.12, 0.12)))
             probs[s] = p
             att = rng.randint(4, 10)
             cor = sum(rng.random() < p for _ in range(att))
             c.execute("INSERT INTO mastery VALUES (?,?,?,?,?)", (stid, s, round(p, 3), att, cor))
-        # 6 weekly tests, slight improvement over time
+        # 6 weekly tests, slight improvement over time (30 questions each)
+        plan = list(VISIBLE_SKILLS) * 2
+        while len(plan) < 30:
+            plan.append(rng.choice(list(VISIBLE_SKILLS)))
         for w in range(6):
             boost = w * 0.025
-            score = sum(rng.random() < min(0.98, probs[s] + boost) for s in list(SKILLS) * 2)
+            score = sum(rng.random() < min(0.98, probs[s] + boost) for s in plan)
             score = min(30, score)
             created = (now - timedelta(weeks=5 - w, days=rng.randint(0, 2))).isoformat(timespec="minutes")
             c.execute("INSERT INTO tests (student_id, created, questions, first_score, final_round, status) "
                       "VALUES (?,?,?,?,?,?)", (stid, created, "[]", score, 1 + (score < 30), "done"))
             tid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
-            for s in SKILLS:  # 2 answers per skill per test
-                for k in range(2):
-                    ok = int(rng.random() < min(0.98, probs[s] + boost))
-                    c.execute("INSERT INTO answers (test_id, round, qid, skill, given, correct, created) "
-                              "VALUES (?,?,?,?,?,?,?)", (tid, 1, f"{s}{k}", s, "", ok, created))
+            for i, s in enumerate(plan):  # one answer per question
+                ok = int(rng.random() < min(0.98, probs[s] + boost))
+                c.execute("INSERT INTO answers (test_id, round, qid, skill, given, correct, created) "
+                          "VALUES (?,?,?,?,?,?,?)", (tid, 1, f"{s}{i}", s, "", ok, created))
 
 
 # ---------------------------------------------------------------------------
@@ -198,9 +214,12 @@ def save_chat_message(sid: int, skill: str, role: str, message: str,
 
 def get_chat_history(sid: int, skill: str, limit: int = 50) -> list[dict]:
     c = conn()
+    # Take the newest messages, then restore chronological order for display.
     rows = c.execute(
-        "SELECT id, student_id, skill, role, message, sources, images, created FROM chat_messages "
-        "WHERE student_id=? AND skill=? ORDER BY id ASC LIMIT ?",
+        "SELECT * FROM ("
+        "  SELECT id, student_id, skill, role, message, sources, images, created "
+        "  FROM chat_messages WHERE student_id=? AND skill=? ORDER BY id DESC LIMIT ?"
+        ") ORDER BY id ASC",
         (sid, skill, limit)
     ).fetchall()
     c.close()
@@ -227,6 +246,136 @@ def clear_chat_history(sid: int, skill: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# AI tutor conversations
+# ---------------------------------------------------------------------------
+def create_tutor_conversation(sid: int, subject: str = "science",
+                              title: str = "Neue Unterhaltung") -> int:
+    c = conn()
+    now = datetime.now().isoformat(timespec="seconds")
+    position = c.execute(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM tutor_conversations WHERE student_id=?",
+        (sid,)
+    ).fetchone()[0]
+    c.execute("INSERT INTO tutor_conversations (student_id, subject, title, created, updated, sort_order) "
+              "VALUES (?,?,?,?,?,?)", (sid, subject, title, now, now, position))
+    cid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
+    c.commit()
+    c.close()
+    return cid
+
+
+def list_tutor_conversations(sid: int, limit: int = 50) -> list[dict]:
+    c = conn()
+    rows = c.execute(
+        "SELECT c.id, c.title, c.subject, c.created, c.updated, "
+        "  (SELECT m.message FROM tutor_messages m "
+        "   WHERE m.conversation_id=c.id ORDER BY m.id DESC LIMIT 1) AS preview "
+        "FROM tutor_conversations c WHERE c.student_id=? "
+        "ORDER BY c.sort_order DESC, c.updated DESC, c.id DESC LIMIT ?",
+        (sid, limit)
+    ).fetchall()
+    c.close()
+    return [dict(r) for r in rows]
+
+
+def reorder_tutor_conversations(sid: int, ids: list[int]) -> None:
+    c = conn()
+    total = len(ids)
+    for index, cid in enumerate(ids):
+        c.execute("UPDATE tutor_conversations SET sort_order=? WHERE id=? AND student_id=?",
+                  (total - index, cid, sid))
+    c.commit()
+    c.close()
+
+
+def _parse_tutor_row(row: sqlite3.Row) -> dict:
+    d = dict(row)
+    for key in ("question", "sources", "images"):
+        try:
+            d[key] = json.loads(d[key]) if d.get(key) else (None if key == "question" else [])
+        except Exception:
+            d[key] = None if key == "question" else []
+    return d
+
+
+def get_tutor_messages(cid: int, sid: int, limit: int = 50) -> list[dict]:
+    c = conn()
+    owned = c.execute("SELECT 1 FROM tutor_conversations WHERE id=? AND student_id=?",
+                      (cid, sid)).fetchone()
+    if not owned:
+        c.close()
+        return []
+    rows = c.execute(
+        "SELECT * FROM ("
+        "  SELECT id, conversation_id, role, message, question, sources, images, created "
+        "  FROM tutor_messages WHERE conversation_id=? ORDER BY id DESC LIMIT ?"
+        ") ORDER BY id ASC", (cid, limit)
+    ).fetchall()
+    c.close()
+    return [_parse_tutor_row(r) for r in rows]
+
+
+def get_tutor_conversation(cid: int, sid: int) -> dict | None:
+    c = conn()
+    row = c.execute(
+        "SELECT id, student_id, subject, title, created, updated "
+        "FROM tutor_conversations WHERE id=? AND student_id=?", (cid, sid)
+    ).fetchone()
+    c.close()
+    if not row:
+        return None
+    conversation = dict(row)
+    conversation["messages"] = get_tutor_messages(cid, sid)
+    return conversation
+
+
+def add_tutor_message(cid: int, role: str, message: str, question: dict | None = None,
+                      sources: list | None = None, images: list | None = None) -> int:
+    c = conn()
+    now = datetime.now().isoformat(timespec="seconds")
+    c.execute(
+        "INSERT INTO tutor_messages (conversation_id, role, message, question, sources, images, created) "
+        "VALUES (?,?,?,?,?,?,?)",
+        (cid, role, message,
+         json.dumps(question, ensure_ascii=False) if question else None,
+         json.dumps(sources or [], ensure_ascii=False),
+         json.dumps(images or [], ensure_ascii=False), now)
+    )
+    mid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
+    c.execute("UPDATE tutor_conversations SET updated=? WHERE id=?", (now, cid))
+    c.commit()
+    c.close()
+    return mid
+
+
+def update_tutor_conversation(cid: int, sid: int, subject: str | None = None,
+                              title: str | None = None) -> None:
+    sets, args = ["updated=?"], [datetime.now().isoformat(timespec="seconds")]
+    if subject is not None:
+        sets.append("subject=?")
+        args.append(subject)
+    if title is not None:
+        sets.append("title=?")
+        args.append(title[:80])
+    args.extend([cid, sid])
+    c = conn()
+    c.execute(f"UPDATE tutor_conversations SET {', '.join(sets)} WHERE id=? AND student_id=?", args)
+    c.commit()
+    c.close()
+
+
+def delete_tutor_conversation(cid: int, sid: int) -> None:
+    c = conn()
+    owned = c.execute("SELECT 1 FROM tutor_conversations WHERE id=? AND student_id=?",
+                      (cid, sid)).fetchone()
+    if owned:
+        c.execute("DELETE FROM tutor_messages WHERE conversation_id=?", (cid,))
+        c.execute("DELETE FROM tutor_conversations WHERE id=? AND student_id=?", (cid, sid))
+        c.commit()
+    c.close()
+
+
+# ---------------------------------------------------------------------------
 # class analytics for the teacher dashboard
 # ---------------------------------------------------------------------------
 def class_overview(klasse: str | None = None) -> dict:
@@ -245,7 +394,7 @@ def class_overview(klasse: str | None = None) -> dict:
     for r in c.execute(f"SELECT student_id, skill, p FROM mastery WHERE student_id IN ({q})", ids):
         mastery.setdefault(r["student_id"], {})[r["skill"]] = r["p"]
 
-    skill_stats = {s: {"correct": 0, "wrong": 0} for s in SKILLS}
+    skill_stats = {s: {"correct": 0, "wrong": 0} for s in VISIBLE_SKILLS}
     for r in c.execute(f"SELECT a.skill, SUM(a.correct) c, COUNT(*) n FROM answers a JOIN tests t ON a.test_id=t.id "
                        f"WHERE t.student_id IN ({q}) AND a.round=1 GROUP BY a.skill", ids):
         if r["skill"] in skill_stats:

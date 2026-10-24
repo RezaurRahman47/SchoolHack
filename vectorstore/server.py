@@ -118,6 +118,18 @@ class ChatRequest(BaseModel):
     core_principle: Optional[str] = ""
 
 
+class TutorChatRequest(BaseModel):
+    message: str
+    history: Optional[list] = None
+    subject: Optional[str] = ""
+    chemistry_skills: Optional[list] = None
+
+
+class ScienceQuestionRequest(BaseModel):
+    subject: str
+    topic: Optional[str] = ""
+
+
 class WarmupRequest(BaseModel):
     questions: list[str] = []
 
@@ -175,8 +187,12 @@ async def get_status():
 
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
-    """Chat with the textbook — ask questions and get RAG-grounded answers."""
+def chat(req: ChatRequest):
+    """Chat with the textbook — ask questions and get RAG-grounded answers.
+
+    Deliberately synchronous: FastAPI runs it in its threadpool, so the local
+    embedding/reranker and the OpenRouter call do not block other students.
+    """
     if not req.question.strip():
         raise HTTPException(400, "Frage darf nicht leer sein.")
 
@@ -202,8 +218,6 @@ async def chat(req: ChatRequest):
     # 3. Direct RAG response from the vectorized textbook
     if rag_results:
         best = rag_results[0]
-        page = best["metadata"].get("page", "?")
-        chapter = best["metadata"].get("chapter", "")
 
         sources = [
             {
@@ -214,13 +228,13 @@ async def chat(req: ChatRequest):
             for idx, r in enumerate(rag_results)
         ]
 
-        # Format excerpt with clean paragraphs
-        clean_text = best["text"].strip()
-        answer = (
-            f"**Gefunden im Schulbuch \"Fokus Chemie\" (Seite {page}{' · ' + chapter if chapter else ''}):**\n\n"
-            f"{clean_text}\n\n"
-            f"> 💡 *Dieser Ausschnitt wurde mit semantischer Vektorsuche (Ähnlichkeit: {best['relevance']:.1%}) direkt aus deinem PDF abgerufen.*"
-        )
+        # Plain, compact excerpt: the legacy path must look like an answer,
+        # not like a page dump with markdown chrome.
+        clean_text = " ".join(best["text"].split())
+        words = clean_text.split()
+        if len(words) > 55:
+            clean_text = " ".join(words[:55]).rstrip(" ,;:-–—") + " …"
+        answer = clean_text
         return {
             "question": req.question,
             "answer": answer,
@@ -233,6 +247,34 @@ async def chat(req: ChatRequest):
         "sources": [],
     }
 
+
+
+@app.post("/api/tutor/chat")
+def tutor_chat(req: TutorChatRequest):
+    """General science tutor with conversation history and optional quiz request."""
+    if not (req.message or "").strip():
+        raise HTTPException(400, "Frage darf nicht leer sein.")
+    agent = get_agent()
+    if agent is None or not hasattr(agent, "tutor_chat"):
+        raise HTTPException(503, "Tutor nicht verfügbar.")
+    return agent.tutor_chat(
+        req.message,
+        req.history or [],
+        req.subject or "",
+        req.chemistry_skills or [],
+    )
+
+
+@app.post("/api/science-question")
+def science_question(req: ScienceQuestionRequest):
+    """Generate and validate one AI question for biology, physics or maths."""
+    agent = get_agent()
+    if agent is None or not hasattr(agent, "generate_science_question"):
+        raise HTTPException(503, "Tutor nicht verfügbar.")
+    question = agent.generate_science_question(req.subject, req.topic or "")
+    if not question:
+        raise HTTPException(422, "Keine sichere Übungsfrage erzeugt.")
+    return question
 
 
 @app.post("/api/warmup")

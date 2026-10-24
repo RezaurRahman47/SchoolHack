@@ -81,7 +81,7 @@ sequenceDiagram
     participant P as 💾 Progress
 
     S->>E: Start test
-    E->>E: Each of 15 skills twice → 30 questions with random values
+    E->>E: 30 skills → 30 questions with random values
     E-->>S: Question (multiple choice or number)
     S->>G: Answer
     G->>G: Choices exact · numbers ±2 % · known mistakes ("traps")

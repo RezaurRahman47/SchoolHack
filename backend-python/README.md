@@ -18,18 +18,23 @@ Then open **http://localhost:8000**.
 
 Login for both portals: **admin / admin**
 
-### Textbook tutor (RAG) — recommended
+### AI tutor (RAG) — recommended
 
-The chemistry chat gets its short, book-grounded answers from a local service on
-port 8080. Start it in a second terminal before using the Chemie subtopics:
+The AI tutor page at `/student/tutor` answers chemistry, biology, physics and
+mathematics questions. Chemistry answers use the local textbook index; other
+subjects use general model knowledge. The tutor can also add interactive
+practice questions: chemistry questions come from the deterministic question
+engine, other subjects use a validated AI-generated question.
+
+Start the local service on port 8080 before using the tutor:
 
 ```bash
 cd ../vectorstore
 ./run.sh
 ```
 
-Without it, the chat falls back to the built-in "Kerninformation" for each skill
-(no book passages, no images). Health check:
+Without it, the tutor shows a short "tutor unavailable" message (no book
+passages, no images). Health check:
 `curl http://localhost:8080/api/status`.
 
 The RAG URL is configurable, so moving to a VPS later needs no code change:
@@ -62,22 +67,26 @@ cp .env.example .env     # then put your key into .env
 |---|---|
 | Login | Separate student and teacher portals, sessions, role check (a student can't open the teacher pages) |
 | Student | Subject picker (Chemie live; Mathe, Bio, Physik "bald"), skill graph with mastery colours, test history |
-| Test | 30 questions across 15 skills · pass at 20/30 · wrong answers come back in repeat rounds until all are correct · progress bar · "Tipp vom Tutor" per question |
+| Test | 30 questions across 25 skills · pass at 20/30 · wrong answers come back in repeat rounds until all are correct · progress bar · "Tipp vom Tutor" per question |
 | Grading | Done in code, never by the LLM. Recognises typical mistakes (sign errors, multiply vs divide, mL vs L, alkene vs alkane formula, unbalanced ion charges) and explains them |
 | Adaptive | Each answer updates per-skill mastery (Elo-style); new tests are weighted toward weak skills |
 | Teacher | KPIs, green/red score bars with pass line, pass/fail doughnut, right-vs-wrong per skill, weekly trend, mastery heatmap, class filter 9a/9b |
 | Lücken-Agent | 5-step workflow: load data → detect weak skills → trace root causes in the prerequisite graph → form support groups → recommend actions |
 | Mobile | Responsive layout + installable PWA, all assets bundled (no CDN needed) |
 
-Topics covered (Klasse 9): Säuren und Laugen, Stoffmenge und Mol, Kohlenwasserstoffe, plus the 7/8 prerequisites
-(Ionen, Salzformeln). The teacher dashboard ships with a demo class of 24 fictional students so the charts aren't empty.
+Topics covered (Klasse 9), in curriculum order: Unit 1 *Klare Verhältnisse – Quantitative Betrachtungen*
+(Stoffmenge, molare Masse, Konzentration), Unit 2 *Säuren und Laugen – echt ätzend*, Unit 3
+*Kohlenwasserstoffe – vom Campinggas zum Superbenzin*, Unit 4 *Alkohole – vom Holzgeist zum Glycerin*,
+Unit 5 *Organische Säuren – Salatsauce, Entkalker & Co* and Unit 6 *Ester – Vielfalt der Produkte aus
+Alkoholen und Säuren*. The teacher dashboard ships with a demo class of 24 fictional students so the
+charts aren't empty.
 
 ## Project layout
 
 ```
 app/
   main.py        routes (FastAPI)
-  questions.py   skill graph + 15 question templates + grading
+  questions.py   skill graph + 30 question templates + grading
   db.py          SQLite storage + demo class
   agent.py       teacher gap-finder agent
   llm.py         Claude API wrapper (optional)

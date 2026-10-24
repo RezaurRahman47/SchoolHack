@@ -43,6 +43,15 @@
   .radar-tip-bar > span { display: block; height: 100%; border-radius: inherit; }
   .radar-tip-empty { margin-top: .3rem; font-size: .72rem; color: #94a3b8; }
   .radar-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .25rem .9rem; }
+  .card-highlight {
+    border-color: #14b8a6;
+    box-shadow: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .card-highlight:hover {
+    border-color: #14b8a6;
+    box-shadow: 0 0 0 1px #14b8a6, 0 10px 26px rgba(15, 27, 45, .10);
+  }
   @media (max-width: 639px) {
     .radar-wrap { max-width: 360px; }
     .radar-label { min-width: 0; padding: .3rem .45rem; font-size: .64rem; gap: .05rem; border-radius: .7rem; }
@@ -162,7 +171,7 @@
     </p>
   </section>
 
-  <a href="/student/tutor" class="card mt-6 p-4 flex items-center gap-3 hover:border-reagent-500 hover:shadow-sm transition group">
+  <a href="/student/tutor" class="card mt-6 p-4 flex items-center gap-3 transition group card-highlight">
     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-reagent-400" style="width: 2.5rem; height: 2.5rem;">✦</span>
     <span class="min-w-0 flex-1">
       <span class="block font-display font-bold text-ink-900 group-hover:text-reagent-600">KI-Tutor</span>
@@ -174,7 +183,7 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
     {% for s in subjects %}
       {% if s.active %}
-      <a href="/student/{{ s.slug }}" class="card p-5 hover:border-reagent-500 hover:shadow-md transition group">
+      <a href="/student/{{ s.slug }}" class="card p-5 transition group card-highlight">
         <div class="text-5xl">{{ s.icon }}</div>
         <div class="font-display font-bold text-xl text-ink-900 mt-3 group-hover:text-reagent-600">{{ s.name }}</div>
         <div class="text-sm text-slate-500">{{ s.desc }}</div>

@@ -1968,7 +1968,6 @@
   });
 
   renderSidebar();
-  updateUrl();
 
   const params = new URLSearchParams(window.location.search);
   const cParam = params.get('c');
@@ -1978,10 +1977,9 @@
   } else if (subjectParam && SUBJECT_LABELS[subjectParam]) {
     currentSubject = subjectParam;
     newChat(true);
-  } else if (conversations.length) {
-    loadConversation(conversations[0].id);
   } else {
     showWelcome(true);
+    updateUrl();
     input.focus();
   }
 }) ();

@@ -10,7 +10,7 @@ Adaptive tests, a friendly tutor called Atomi, a teacher dashboard with an expla
 ![Languages](https://img.shields.io/badge/UI-DE%20%7C%20EN-ffc93c)
 ![AI](https://img.shields.io/badge/AI-optional%2C%20never%20grades-ff8fb3)
 
-[🚀 Quick start](#-quick-start) · [🗺️ Archify](#%EF%B8%8F-archify-how-it-fits-together) · [💼 Business flow](docs/business-flow.md) · [⚙️ Technical flow](docs/technical-flow.md) · [🛠️ Change things](#%EF%B8%8F-where-to-change-things)
+[🚀 Quick start](#-quick-start) · [🎒 Local demo](#-run-the-full-demo-locally) · [🗺️ Archify](#%EF%B8%8F-archify-how-it-fits-together) · [💼 Business flow](docs/business-flow.md) · [⚙️ Technical flow](docs/technical-flow.md) · [🛠️ Change things](#%EF%B8%8F-where-to-change-things)
 
 </div>
 
@@ -217,3 +217,198 @@ SchoolHack/
 
 > [!NOTE]
 > Demo boundaries: both roles use `admin` / `admin`; the teacher dashboard shows 24 made-up students (marked as example data) plus your own last test; login is a demo, not a production user system.
+
+## 🎒 Run the full demo locally
+
+This starts the complete stack on **one laptop**: FastAPI + SQLite, the local RAG
+service (ChromaDB + EmbeddingGemma 2 + reranker), and the web UI. The textbook
+index is already committed, so **the PDF is not needed**. No tunnel is needed
+when everything runs on the same machine.
+
+### What runs where
+
+| Component | Port | Location in the clone |
+|---|---:|---|
+| SchoolHack web app | **8000** | `backend-python/` |
+| RAG API + chat | **8080** | `vectorstore/server.py` |
+| Vector store (ChromaDB) | — | `vectorstore/processed_data_v2/chroma/` |
+| Textbook images | — | `vectorstore/processed_data_v2/images/` |
+| SQLite database | — | `backend-python/data/chemtutor.db` (created on first start) |
+| Local models (~3.8 GB) | — | `~/.cache/huggingface/hub` (downloaded once) |
+
+The vector store is **21 MB** and contains 243 text chunks + 162 indexed images
+(729 vectors, collection `chemie_rag_v2`). The 3.8 GB model cache is separate
+from Git and is downloaded on first setup.
+
+### macOS / Linux
+
+```bash
+git clone https://github.com/RezaurRahman47/SchoolHack.git
+cd SchoolHack
+python3 --version          # must be 3.10 or newer
+./setup.sh                 # one time: venvs, packages, .env, models
+nano vectorstore/.env      # add OPENROUTER_API_KEY=sk-or-...
+./run_demo.sh              # every time: RAG :8080 + app :8000
+```
+
+Open <http://localhost:8000> and sign in with `admin` / `admin`.
+Press `Ctrl+C` to stop both servers.
+
+- If `./setup.sh` says “permission denied”:
+  `chmod +x setup.sh run_demo.sh vectorstore/run.sh`.
+- If the models were copied from another machine (USB), skip the download:
+  `SKIP_MODELS=1 ./setup.sh`. Copy these two folders to the same path:
+  `~/.cache/huggingface/hub/models--google--embeddinggemma-2` and
+  `models--BAAI--bge-reranker-v2-m3`.
+- `setup.sh` and `run_demo.sh` are **macOS/Linux bash scripts**. On Windows use
+  the PowerShell steps below, or run the same scripts inside WSL.
+
+### Windows (native PowerShell)
+
+Prerequisites: Windows 10/11, **Python 3.12** from
+<https://python.org> (tick “Add python.exe to PATH”), Git, and internet.
+Open PowerShell in the folder where you want the repo.
+
+**1. Clone**
+
+```powershell
+git clone https://github.com/RezaurRahman47/SchoolHack.git
+cd SchoolHack
+```
+
+**2. RAG environment**
+
+```powershell
+py -3.12 -m venv vectorstore\.venv-v2
+vectorstore\.venv-v2\Scripts\python.exe -m pip install --upgrade pip
+vectorstore\.venv-v2\Scripts\python.exe -m pip install -r vectorstore\requirements-v2.txt
+```
+
+**3. SchoolHack environment**
+
+```powershell
+py -3.12 -m venv backend-python\.venv
+backend-python\.venv\Scripts\python.exe -m pip install --upgrade pip
+backend-python\.venv\Scripts\python.exe -m pip install -r backend-python\requirements.txt
+```
+
+If `py -3.12` is not found, use `python` instead (it must be >= 3.10).
+
+**4. Environment files**
+
+```powershell
+Copy-Item vectorstore\.env.example vectorstore\.env
+notepad vectorstore\.env
+```
+
+Put your key in the file:
+
+```env
+OPENROUTER_API_KEY=sk-or-...
+```
+
+The default `RAG_BASE=http://localhost:8080/api` is correct for a local demo.
+`backend-python\.env` is optional unless you also want the Claude-written hints.
+
+**5. Models (one time, ~3.8 GB)**
+
+```powershell
+vectorstore\.venv-v2\Scripts\python.exe scripts\download_models.py
+```
+
+To skip this at the venue, copy the two Hugging Face folders from the Mac to
+`%USERPROFILE%\.cache\huggingface\hub\`.
+
+**6. Start RAG — PowerShell window 1**
+
+Open a PowerShell window in the `SchoolHack` folder:
+
+```powershell
+cd vectorstore
+$env:RAG_RERANK_CANDIDATES="8"
+$env:RAG_IMAGE_RERANK="4"
+$env:RAG_IMAGE_VLM_CHECK="0"
+.venv-v2\Scripts\python.exe server.py
+```
+
+Health check: <http://localhost:8080/api/status>
+
+**7. Start SchoolHack — PowerShell window 2**
+
+Open a second PowerShell window in the `SchoolHack` folder:
+
+```powershell
+cd backend-python
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Open <http://localhost:8000> → `admin` / `admin`.
+SQLite is created and seeded in `backend-python\data\` on first start.
+
+**8. Warm the demo cache (optional, recommended) — window 3**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/warmup `
+  -ContentType "application/json" `
+  -Body '{"questions":["Was ist der pH-Wert?","Warum leitet eine Salzlösung Strom?","Was passiert bei einer Neutralisation?","Was sind Alkane?"]}'
+```
+
+Troubleshooting: see [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md).
+
+### Windows via WSL (closest to macOS)
+
+If WSL is allowed on the laptop, the macOS/Linux scripts work unchanged:
+
+```powershell
+wsl --install -d Ubuntu
+```
+
+Inside Ubuntu:
+
+```bash
+sudo apt update && sudo apt install -y git python3.12 python3.12-venv
+git clone https://github.com/RezaurRahman47/SchoolHack.git
+cd SchoolHack
+./setup.sh
+./run_demo.sh
+```
+
+Open <http://localhost:8000> in the Windows browser; WSL2 forwards localhost.
+
+### Expected speed
+
+| Laptop | New question | Cached question |
+|---|---:|---:|
+| Apple Silicon Mac (M1–M4) | **~3–4 s** | **0.001 s** |
+| Intel Mac / mid-range CPU | ~6–10 s | 0.001 s |
+| Windows / CPU-only | ~6–12 s | 0.001 s |
+| Windows with the `RAG_*` fast flags | ~4–8 s | 0.001 s |
+
+The vector store itself is fast (ChromaDB query + BM25 < 50 ms). The local
+embedding + reranker models are the variable part; the answer model and the
+final image check call OpenRouter, so **internet is required** for generated
+answers. Without a valid key the app still runs, but the chat falls back to each
+skill’s built-in core principle.
+
+### Demo checklist
+
+- [ ] `git clone` on the presentation laptop
+- [ ] Python >= 3.10 available
+- [ ] `setup.sh` / Windows venv steps completed
+- [ ] `vectorstore/.env` contains a working `OPENROUTER_API_KEY`
+- [ ] models downloaded, or the two Hugging Face cache folders copied via USB
+- [ ] ports 8000 and 8080 free
+- [ ] `run_demo.sh` / the two PowerShell windows running
+- [ ] <http://localhost:8000> opens; `admin` / `admin` works
+- [ ] one RAG question answered with a source and (optionally) an image
+
+### If the Mac stays at home
+
+Every command above runs on the presentation laptop, so the Mac is not needed
+and there is **no tunnel**. If you instead want the Mac to host the stack, see
+[scripts/remote_demo.md](scripts/remote_demo.md):
+
+- **Tailscale + SSH port forwarding** — gives you a real `localhost:8000` and
+  `localhost:8080` on the venue laptop; the tunnel runs **on the Mac**.
+- **Cloudflare Tunnel** — browser-only access to the app on port 8000; again the
+  tunnel runs on the Mac, and port 8080 must not be exposed.

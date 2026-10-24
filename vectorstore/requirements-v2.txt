@@ -1,0 +1,20 @@
+# Python 3.10+ (tested with 3.12). Install into vectorstore/.venv-v2.
+# EmbeddingGemma 2 needs sentence-transformers >= 6.1 for multimodal input.
+torch>=2.4
+torchvision
+sentence-transformers==6.2.0
+transformers==5.20.2
+
+# Vector store / retrieval
+chromadb==1.5.9
+rank-bm25==0.2.2
+numpy>=1.26,<3
+pymupdf>=1.24
+pillow>=10
+
+# API
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart
+requests
+certifi

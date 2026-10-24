@@ -18,6 +18,23 @@ Then open **http://localhost:8000**.
 
 Login for both portals: **admin / admin**
 
+### Textbook tutor (RAG) — recommended
+
+The chemistry chat gets its short, book-grounded answers from a local service on
+port 8080. Start it in a second terminal before using the Chemie subtopics:
+
+```bash
+cd ../vectorstore
+./run.sh
+```
+
+Without it, the chat falls back to the built-in "Kerninformation" for each skill
+(no book passages, no images). Health check:
+`curl http://localhost:8080/api/status`.
+
+The RAG URL is configurable, so moving to a VPS later needs no code change:
+`RAG_BASE=https://rag.example.com/api` in `.env`.
+
 ## Use it on your phone
 
 1. Start the app on your laptop (above). The script prints a line like `Handy: http://192.168.1.23:8000`.

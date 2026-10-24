@@ -5,13 +5,15 @@ import math
 import random
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import agent, db, llm
+from . import agent, db, llm, subtopics_data, vectorstore
 from .questions import PASS_MARK, SKILLS, TOPICS, build_test, grade
 
 BASE = Path(__file__).resolve().parent
@@ -304,6 +306,206 @@ async def hint(request: Request):
     given = body.get("given") or None
     err = grade(q, given)[1] if given else None
     return {"hint": llm.tutor_hint(q, given, int(body.get("attempt", 1)), err)}
+
+
+# ---------------------------------------------------------------------------
+# RAG / vectorstore endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/rag-context")
+def rag_context(request: Request, skill: str = "", query: str = ""):
+    """Return relevant Chemie book passages and images for a skill or free-text query.
+
+    Query params:
+      - skill: skill id from SKILLS (e.g. "ph_skala") — auto-expands to the skill name
+      - query: free-text query (overrides skill name if both are given)
+    Either skill or query must be provided.
+    """
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    search_query = query or (SKILLS.get(skill, {}).get("name", skill) if skill else "")
+    if not search_query:
+        return JSONResponse({"error": "skill or query required"}, 400)
+    return vectorstore.rag_context_for_skill(search_query)
+
+
+@app.post("/api/rag-chat")
+async def rag_chat(request: Request):
+    """Ask the Chemie RAG chat endpoint and return the grounded answer."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    body = await request.json()
+    question = body.get("question", "").strip()
+    if not question:
+        return JSONResponse({"error": "question required"}, 400)
+    result = await run_in_threadpool(vectorstore.rag_chat, question)
+    if result is None:
+        return JSONResponse({"error": "RAG server unavailable"}, 503)
+    return result
+
+
+@app.get("/api/rag-image/{filename}")
+def rag_image(request: Request, filename: str):
+    """Proxy textbook images from the RAG server (works from phones too)."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    fetched = vectorstore.fetch_image(filename)
+    if not fetched:
+        return JSONResponse({"error": "image not found"}, 404)
+    body, media_type = fetched
+    return Response(body, media_type=media_type, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/subtopic/{skill}")
+def get_subtopic(request: Request, skill: str):
+    """Get core knowledge flashcards, practice exercises, and chat history for a subtopic."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    if skill not in SKILLS:
+        return JSONResponse({"error": "unknown skill"}, 404)
+
+    data = subtopics_data.get_subtopic_data(skill) or {}
+    user = request.session.get("user", "admin")
+    try:
+        sid = db.student_id(user)
+    except Exception:
+        sid = 1
+
+    history = db.get_chat_history(sid, skill)
+    return {
+        "skill": skill,
+        "name": SKILLS[skill]["name"],
+        "topic": SKILLS[skill]["topic"],
+        "core_principle": data.get("core_principle", ""),
+        "flashcards": data.get("flashcards", []),
+        "practice": data.get("practice", {"true_false": [], "sentence_choice": [], "sentence_split": []}),
+        "chat_history": history,
+    }
+
+
+@app.post("/api/subtopic/chat")
+async def subtopic_chat(request: Request):
+    """Save student question, query RAG vectorstore, persist conversation, and return answer."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    body = await request.json()
+    skill = body.get("skill", "").strip()
+    msg = body.get("message", "").strip()
+    if not skill or not msg:
+        return JSONResponse({"error": "skill and message required"}, 400)
+
+    skill_info = SKILLS.get(skill, {"name": skill, "topic": ""})
+    skill_name = skill_info["name"]
+    user = request.session.get("user", "admin")
+    try:
+        sid = db.student_id(user)
+    except Exception:
+        sid = 1
+
+    # 1. Save user question in DB
+    db.save_chat_message(sid, skill, "user", msg)
+
+    # 2. One retrieval + one short answer from the v2 RAG server.
+    #    The skill name is passed as a topic hint, never concatenated into the
+    #    search query (that used to pollute the embedding).
+    sub_info = subtopics_data.get_subtopic_data(skill) or {}
+    core = sub_info.get("core_principle", "")
+    chat_resp = await run_in_threadpool(vectorstore.rag_chat, msg, skill_name, core)
+
+    answer = None
+    sources: list[dict] = []
+    images: list[dict] = []
+    if isinstance(chat_resp, dict) and chat_resp.get("answer"):
+        answer = chat_resp["answer"]
+        sources = chat_resp.get("sources", []) or []
+        images = [i for i in (chat_resp.get("images") or [])
+                  if isinstance(i, dict) and i.get("url")]
+
+    if not answer:
+        answer = (f"Kerninformation zu {skill_name}:\n{core}" if core else
+                  "Das steht in diesem Buchabschnitt nicht. Frag mich gern genauer.")
+
+    # 4. Save assistant answer in DB
+    db.save_chat_message(sid, skill, "assistant", answer, sources, images)
+
+    return {
+        "answer": answer,
+        "sources": sources,
+        "images": images[:1],
+    }
+
+
+@app.post("/api/subtopic/chat/clear")
+async def subtopic_chat_clear(request: Request):
+    """Clear chat history for a skill."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    body = await request.json()
+    skill = body.get("skill", "").strip()
+    user = request.session.get("user", "admin")
+    try:
+        sid = db.student_id(user)
+    except Exception:
+        sid = 1
+    db.clear_chat_history(sid, skill)
+    return {"ok": True}
+
+
+class GenerateRequest(BaseModel):
+    skill: str
+    count: int | None = None
+
+
+def _skill_topic(req: GenerateRequest) -> str | None:
+    info = SKILLS.get(req.skill)
+    return info["name"] if info else None
+
+
+@app.post("/api/subtopic/quiz")
+def subtopic_quiz(request: Request, req: GenerateRequest):
+    """Generate a RAG quiz for one subtopic (book-grounded multiple choice)."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    topic = _skill_topic(req)
+    if not topic:
+        return JSONResponse({"error": "unknown skill"}, 404)
+    n = max(2, min(10, req.count or 5))
+    return vectorstore.rag_quiz(topic, n)
+
+
+@app.post("/api/subtopic/statements")
+def subtopic_statements(request: Request, req: GenerateRequest):
+    """Generate RAG true/false statements for one subtopic."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    topic = _skill_topic(req)
+    if not topic:
+        return JSONResponse({"error": "unknown skill"}, 404)
+    n = max(3, min(12, req.count or 6))
+    return vectorstore.rag_statements(topic, n)
+
+
+@app.post("/api/subtopic/flashcards")
+def subtopic_flashcards(request: Request, req: GenerateRequest):
+    """Generate RAG flashcards for one subtopic."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    topic = _skill_topic(req)
+    if not topic:
+        return JSONResponse({"error": "unknown skill"}, 404)
+    n = max(3, min(15, req.count or 8))
+    return vectorstore.rag_flashcards(topic, n)
+
+
+@app.post("/api/subtopic/explore")
+def subtopic_explore(request: Request, req: GenerateRequest):
+    """Generate a short RAG overview ("Entdecken") for one subtopic."""
+    if role(request) not in {"student", "teacher"}:
+        return JSONResponse({"error": "login"}, 401)
+    topic = _skill_topic(req)
+    if not topic:
+        return JSONResponse({"error": "unknown skill"}, 404)
+    return vectorstore.rag_explore(topic)
+
 
 
 # ---------------------------------------------------------------------------

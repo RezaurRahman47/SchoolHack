@@ -1,50 +1,1245 @@
 {% extends "base.html" %}
 {% block title %}Chemie – School Hack{% endblock %}
+
+{% block head %}
+<style>
+  /* 3D Flip Card Effect */
+  .flashcard-scene {
+    perspective: 1000px;
+  }
+  .flashcard-inner {
+    position: relative;
+    width: 100%;
+    min-height: 240px;
+    transition: transform 0.5s cubic-bezier(0.34, 1.25, 0.64, 1);
+    transform-style: preserve-3d;
+  }
+  .flashcard-inner.is-flipped {
+    transform: rotateY(180deg);
+  }
+  .flashcard-face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 1rem;
+    overflow-y: auto;
+  }
+  .flashcard-back {
+    transform: rotateY(180deg);
+  }
+
+  /* Interactive Sentence Choice - Animated Circle Effect */
+  .sentence-opt-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.85rem;
+    margin: 0.15rem 0.2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    border: 1.5px dashed #cbd5e1;
+    background-color: #fff;
+    color: #1e293b;
+    cursor: pointer;
+    transition: border-color .18s, background .18s, color .18s;
+    vertical-align: middle;
+  }
+  .sentence-opt-btn:hover:not(:disabled) {
+    border-color: #94a3b8;
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+  .sentence-opt-btn.is-correct {
+    border-style: solid;
+    border-color: #86efac;
+    background-color: #f0fdf4;
+    color: #15803d;
+    animation: ring-draw-correct 0.5s ease-out;
+  }
+  .sentence-opt-btn.is-wrong {
+    border-style: solid;
+    border-color: #fca5a5;
+    background-color: #fef2f2;
+    color: #b91c1c;
+    animation: ring-draw-wrong 0.4s ease-in-out;
+  }
+
+  @keyframes ring-draw-correct {
+    0% { transform: scale(0.94); }
+    60% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes ring-draw-wrong {
+    0%, 100% { transform: translateX(0); }
+    25%, 75% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+  }
+
+  /* Smooth dropdown expand animation */
+  .subtopic-drawer {
+    animation: drawer-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes drawer-slide-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Quiz options (ported from the vectorstore frontend) */
+  .quiz-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.8rem 0.95rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #fff;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    color: #1e293b;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .quiz-opt:hover:not(.is-locked) { border-color: #cbd5e1; background: #f8fafc; }
+  .quiz-opt.is-locked { cursor: default; }
+  .quiz-opt .quiz-letter {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.4rem; height: 1.4rem; min-width: 1.4rem;
+    border-radius: 9999px; background: #f1f5f9; color: #64748b;
+    font-size: 0.68rem; font-weight: 700;
+  }
+  .quiz-opt.is-correct { border-color: #86efac; background: #f0fdf4; color: #14532d; }
+  .quiz-opt.is-correct .quiz-letter { background: #16a34a; color: #fff; }
+  .quiz-opt.is-wrong { border-color: #fca5a5; background: #fef2f2; color: #7f1d1d; }
+  .quiz-opt.is-wrong .quiz-letter { background: #dc2626; color: #fff; }
+
+  /* Subtopic card — quiet hover, nothing loud */
+  .subtopic-card { transition: border-color .2s; }
+  .subtopic-card:hover { border-color: #cbd5e1; }
+
+  /* Chat message images */
+  .msg-image-card {
+    border: 1px solid #e2e8f0; border-radius: 0.6rem; overflow: hidden;
+    background: #f8fafc; cursor: zoom-in;
+  }
+  .msg-image-card img { display: block; width: 100%; height: auto; }
+  .msg-image-card figcaption { padding: 0.25rem 0.45rem; font-size: 0.62rem; color: #475569; }
+
+  /* Lightbox */
+  .lightbox-overlay {
+    position: fixed; inset: 0; z-index: 60; display: none;
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .lightbox-overlay.is-open { display: flex; }
+  .lightbox-backdrop { position: absolute; inset: 0; background: rgba(15, 27, 45, 0.82); }
+  .lightbox-inner { position: relative; max-width: 56rem; width: 100%; max-height: 92vh; display: flex; flex-direction: column; gap: 0.5rem; }
+  .lightbox-inner img { max-height: 80vh; width: auto; max-width: 100%; margin: 0 auto; border-radius: 0.75rem; background: #fff; }
+  .lightbox-close {
+    align-self: flex-end; padding: 0.25rem 0.6rem; border-radius: 0.5rem;
+    background: rgba(255,255,255,0.12); color: #fff; font-weight: 600; font-size: 0.8rem; cursor: pointer;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-caption { color: #e2e8f0; font-size: 0.75rem; text-align: center; }
+
+  /* Small typing dots */
+  @keyframes dot-blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+  .typing-dot { animation: dot-blink 1.4s infinite; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-8">
-  <a href="/student" class="text-slate-500 hover:text-ink-900">← Fächer</a>
+<div class="max-w-3xl mx-auto px-4 py-8 w-full">
+  <div class="flex items-center justify-between">
+    <a href="/student" class="text-slate-500 hover:text-ink-900 font-medium">← Fächer</a>
+    <span class="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+      Fokus Chemie · Vektorstore
+    </span>
+  </div>
+
   <h1 class="font-display text-4xl font-bold text-ink-900 mt-2">Chemie</h1>
 
-  <div class="card p-6 mt-5 text-center bg-ink-900 border-ink-900 text-white">
-    <div class="text-xl">30 Fragen · ab {{ pass_mark }} richtig bestanden</div>
-    <div class="text-slate-300 mt-1">Falsche Fragen kommen noch einmal.</div>
-    <form method="post" action="/student/test/new" class="mt-5"><button class="btn btn-primary text-xl w-full sm:w-auto px-10">Test starten</button></form>
+  {# Test Start Card #}
+  <div class="card p-6 mt-5 text-center bg-ink-900 border-ink-900 text-white shadow-md">
+    <div class="text-xl font-semibold">30 Fragen · ab {{ pass_mark }} richtig bestanden</div>
+    <div class="text-slate-300 mt-1 text-sm">Falsche Fragen kommen noch einmal.</div>
+    <form method="post" action="/student/test/new" class="mt-4">
+      <button class="btn btn-primary text-lg w-full sm:w-auto px-10">Test starten</button>
+    </form>
   </div>
 
-  <h2 class="font-display font-bold text-2xl text-ink-900 mt-10">Dein Stand</h2>
-  <div class="flex flex-wrap gap-4 mt-2 text-slate-600">
-    <span><span class="inline-block w-3 h-3 rounded-full bg-fail"></span> üben</span>
-    <span><span class="inline-block w-3 h-3 rounded-full bg-amberx"></span> fast</span>
-    <span><span class="inline-block w-3 h-3 rounded-full bg-pass"></span> sitzt</span>
+  {# Progress Legend #}
+  <div class="flex items-center justify-between mt-8">
+    <h2 class="font-display font-bold text-2xl text-ink-900">Dein Stand</h2>
+    <div class="flex items-center gap-3 text-xs text-slate-600 font-medium">
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-fail"></span> üben</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-amberx"></span> fast</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-pass"></span> sitzt</span>
+    </div>
   </div>
+
+  {# Topic cards with subtopics #}
   {% for t in topics %}
-  <div class="card p-5 mt-4">
-    <div class="font-display font-bold text-xl text-ink-900">{{ t }}</div>
-    <div class="mt-3 space-y-3">
+  <section class="mt-8">
+    <div class="flex items-center justify-between gap-3 px-1">
+      <div class="font-display font-bold text-xl text-ink-900">{{ t }}</div>
+      <button
+        class="lernhilfe-btn flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-ink-900 border border-slate-200 hover:border-slate-300 rounded-full px-2.5 py-1 transition-colors"
+        data-topic="{{ t }}"
+        aria-label="Buch-Auszüge für {{ t }} öffnen"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        Buch-Auszüge
+      </button>
+    </div>
+
+    {# Subtopic list in topic #}
+    <div class="mt-4 space-y-3">
       {% for n in nodes if n.topic == t %}
       {% set pc = (n.p*100)|round|int %}
       {% set col = 'bg-fail' if n.p < 0.45 else ('bg-amberx' if n.p < 0.7 else 'bg-pass') %}
-      <div>
-        <div class="flex justify-between"><span>{{ n.name }}</span><span class="font-bold num">{{ pc }} %</span></div>
-        <div class="h-3 rounded-full bg-slate-100 mt-1 overflow-hidden"><div class="h-full rounded-full {{ col }}" style="width: {{ pc }}%"></div></div>
+      <div class="subtopic-block subtopic-card rounded-xl border border-slate-200 bg-white p-4 sm:p-5" data-skill-id="{{ n.id }}" data-skill-name="{{ n.name }}" data-topic="{{ t }}">
+
+        {# Subtopic title and mastery percentage #}
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="font-semibold text-ink-900 text-sm sm:text-base leading-snug">{{ n.name }}</span>
+          <span class="num text-xs font-medium {{ 'text-pass' if n.p >= 0.7 else ('text-amberx' if n.p >= 0.45 else 'text-fail') }} shrink-0">
+            {{ pc }} %
+          </span>
+        </div>
+
+        {# Progress bar #}
+        <div class="h-1 rounded-full bg-slate-100 mt-2 overflow-hidden w-full">
+          <div class="h-full rounded-full {{ col }}" style="width: {{ pc }}%"></div>
+        </div>
+
+        {# TOOL BUTTONS — ported from the vectorstore frontend navigation #}
+        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-4 w-full" role="tablist"
+             aria-label="Lernwerkzeuge für {{ n.name }}">
+          <button type="button" role="tab" aria-selected="false"
+            class="sub-btn flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-2 text-[11px] sm:text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+            data-action="cards">
+            <span class="text-[13px] leading-none">🗂️</span><span class="truncate">Karten</span>
+          </button>
+          <button type="button" role="tab" aria-selected="false"
+            class="sub-btn flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-2 text-[11px] sm:text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+            data-action="practice">
+            <span class="text-[13px] leading-none">🎯</span><span class="truncate">Üben</span>
+          </button>
+          <button type="button" role="tab" aria-selected="false"
+            class="sub-btn flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-2 text-[11px] sm:text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+            data-action="quiz">
+            <span class="text-[13px] leading-none">🧠</span><span class="truncate">Quiz</span>
+          </button>
+          <button type="button" role="tab" aria-selected="false"
+            class="sub-btn flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-2 text-[11px] sm:text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+            data-action="chat">
+            <span class="text-[13px] leading-none">💬</span><span class="truncate">Chat</span>
+          </button>
+          <button type="button" role="tab" aria-selected="false"
+            class="sub-btn flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-2 text-[11px] sm:text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+            data-action="explore">
+            <span class="text-[13px] leading-none">🔬</span><span class="truncate">Entdecken</span>
+          </button>
+        </div>
+
+        {# DROPDOWN WINDOW WITH THE COMPONENT #}
+        <div class="subtopic-drawer hidden mt-4 rounded-xl border border-slate-200 bg-slate-50/40 p-4 sm:p-6">
+          <div class="flex items-start justify-between gap-3 pb-4 border-b border-slate-200">
+            <div class="min-w-0">
+              <span class="drawer-header-type block truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Lernkarten</span>
+              <h3 class="font-display font-semibold text-base sm:text-lg text-ink-900 truncate mt-0.5">{{ n.name }}</h3>
+            </div>
+            <button type="button"
+              class="drawer-close-btn shrink-0 -mr-1 -mt-0.5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-ink-900 cursor-pointer"
+              aria-label="Fenster schließen" title="Schließen">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="drawer-body mt-5"></div>
+        </div>
+
       </div>
       {% endfor %}
     </div>
-  </div>
+
+    {# Collapsible Topic-Level RAG panel #}
+    <div class="rag-panel hidden mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden" data-topic="{{ t }}">
+      <div class="rag-loading flex items-center gap-2 px-4 py-3.5 text-slate-500 text-xs">
+        <span class="inline-block w-3.5 h-3.5 rounded-full border-2 border-reagent-500 border-t-transparent animate-spin"></span>
+        Lade Lehrbuch-Kontext…
+      </div>
+      <div class="rag-content hidden"></div>
+    </div>
+  </section>
   {% endfor %}
 
+  {# Tests history #}
   {% if tests %}
   <h2 class="font-display font-bold text-2xl text-ink-900 mt-10">Letzte Tests</h2>
-  <div class="card mt-3 divide-y">
+  <div class="card mt-3 divide-y border border-slate-200">
     {% for t in tests[:5] %}
-    <a href="/student/test/{{ t.id }}{{ '/result' if t.status == 'done' else '' }}" class="flex items-center justify-between p-4 hover:bg-slate-50">
-      <span>{{ t.created[:10] }}</span>
+    <a href="/student/test/{{ t.id }}{{ '/result' if t.status == 'done' else '' }}" class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+      <span class="text-slate-700 font-medium">{{ t.created[:10] }}</span>
       {% if t.status == 'done' %}
         <span class="font-bold num text-lg {{ 'text-pass' if t.first_score >= pass_mark else 'text-fail' }}">{{ t.first_score }}/30</span>
-      {% else %}<span class="text-slate-500">weitermachen →</span>{% endif %}
+      {% else %}
+        <span class="text-reagent-600 font-semibold text-sm">fortsetzen →</span>
+      {% endif %}
     </a>
     {% endfor %}
   </div>
   {% endif %}
 </div>
+
+{# Global image lightbox #}
+<div class="lightbox-overlay" id="img-lightbox" aria-hidden="true">
+  <div class="lightbox-backdrop" data-close></div>
+  <div class="lightbox-inner">
+    <button type="button" class="lightbox-close" data-close>✕ Schließen</button>
+    <img id="lightbox-img" src="" alt="">
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════════
+  //  HELPERS (ported from the vectorstore frontend)
+  // ═══════════════════════════════════════════════════════════
+
+  function esc(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function formatMarkdown(text) {
+    if (!text) return '';
+    let html = esc(text);
+    html = html.replace(/^### (.+)$/gm, '<h3 class="font-bold text-sm mt-2 mb-1">$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2 class="font-bold text-base mt-2 mb-1">$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1 class="font-bold text-lg mt-2 mb-1">$1</h1>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/(^|[^*])\*(?!\*)(.+?)\*/g, '$1<em>$2</em>');
+    html = html.replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[0.85em]">$1</code>');
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="border-l-2 border-slate-300 pl-2 italic text-slate-500">$1</blockquote>');
+    html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>');
+    html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal">$2</li>');
+    html = html.replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, '<ul class="my-1 space-y-0.5">$1</ul>');
+    html = html.replace(/\n\n/g, '</p><p class="mt-1.5">');
+    html = html.replace(/\n/g, '<br>');
+    html = '<p>' + html + '</p>';
+    html = html.replace(/<p>\s*<\/p>/g, '');
+    html = html.replace(/<p>\s*<(h[1-3]|ul|blockquote)/g, '<$1');
+    html = html.replace(/<\/(h[1-3]|ul|blockquote)>\s*<\/p>/g, '</$1>');
+    return html;
+  }
+
+  function spinner(label) {
+    return `<div class="flex items-center justify-center gap-2 py-8 text-slate-500 text-sm">
+      <span class="inline-block w-4 h-4 rounded-full border-2 border-slate-400 border-t-transparent animate-spin"></span>
+      <span>${esc(label || 'Lade Inhalte…')}</span></div>`;
+  }
+
+  function emptyState(text) {
+    return `<div class="p-3 text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-300 rounded-lg">${text}</div>`;
+  }
+
+  // ── Lightbox ──────────────────────────────────────────────
+  const lightbox = document.getElementById('img-lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+  const lightboxCaption = document.getElementById('lightbox-caption');
+
+  function openLightbox(url, caption) {
+    if (!lightbox) return;
+    lightboxImg.src = url;
+    lightboxImg.alt = caption || '';
+    lightboxCaption.textContent = caption || '';
+    lightbox.classList.add('is-open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.classList.remove('is-open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  if (lightbox) {
+    lightbox.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeLightbox));
+    lightboxImg.addEventListener('click', closeLightbox);
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  // ── Per-skill client cache ────────────────────────────────
+  const skillCache = {};
+
+  function state(skillId) {
+    if (!skillCache[skillId]) skillCache[skillId] = { base: null, quiz: null, statements: null, explore: null };
+    return skillCache[skillId];
+  }
+
+  async function baseData(skillId) {
+    const s = state(skillId);
+    if (s.base) return s.base;
+    const resp = await fetch(`/api/subtopic/${encodeURIComponent(skillId)}`);
+    if (!resp.ok) throw new Error('load failed');
+    s.base = await resp.json();
+    return s.base;
+  }
+
+  async function postJSON(url, payload) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    let data = {};
+    try { data = await resp.json(); } catch (e) { data = {}; }
+    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+    return data;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  SUBTOPIC DRAWER CONTROLLER
+  // ═══════════════════════════════════════════════════════════
+
+  const LABELS = {
+    cards: '🗂️ Lernkarten',
+    practice: '🎯 Interaktives Üben',
+    quiz: '🧠 Quiz aus dem Buch',
+    chat: '💬 Chemie-Chat (RAG)',
+    explore: '🔬 Thema entdecken',
+  };
+
+  const BTN_IDLE = 'sub-btn flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-2 text-[11px] sm:text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer';
+  const BTN_ACTIVE = 'sub-btn flex items-center justify-center gap-1.5 rounded-full border border-ink-900 bg-ink-900 px-2 py-2 text-[11px] sm:text-xs font-semibold text-white transition-colors cursor-pointer';
+
+  document.querySelectorAll('.subtopic-block').forEach(block => {
+    const skillId = block.dataset.skillId;
+    const drawer = block.querySelector('.subtopic-drawer');
+    const body = drawer.querySelector('.drawer-body');
+    const headerType = drawer.querySelector('.drawer-header-type');
+    const closeBtn = drawer.querySelector('.drawer-close-btn');
+    const buttons = Array.from(block.querySelectorAll('.sub-btn'));
+
+    let action = null;
+    let renderSeq = 0;
+
+    function stale(seq) { return seq !== renderSeq; }
+
+    function paintButtons(active) {
+      buttons.forEach(b => {
+        const on = b.dataset.action === active;
+        b.className = on ? BTN_ACTIVE : BTN_IDLE;
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    }
+
+    function closeDrawer() {
+      drawer.classList.add('hidden');
+      action = null;
+      renderSeq += 1; // cancel any in-flight render/generation
+      paintButtons(null);
+    }
+
+    async function openAction(next) {
+      if (action === next && !drawer.classList.contains('hidden')) {
+        closeDrawer();
+        return;
+      }
+      action = next;
+      const seq = ++renderSeq;
+      paintButtons(next);
+      drawer.classList.remove('hidden');
+      headerType.textContent = LABELS[next] || 'Lerneinheit';
+      body.innerHTML = spinner();
+
+      try {
+        if (next === 'cards') await renderCards(seq);
+        else if (next === 'practice') await renderPractice(seq);
+        else if (next === 'quiz') await renderQuiz(seq);
+        else if (next === 'chat') await renderChat(seq);
+        else if (next === 'explore') await renderExplore(seq);
+      } catch (err) {
+        if (stale(seq)) return;
+        body.innerHTML = emptyState('⚠️ Inhalte konnten nicht geladen werden. Ist der RAG-Server gestartet?');
+      }
+    }
+
+    closeBtn.addEventListener('click', closeDrawer);
+    buttons.forEach(btn => btn.addEventListener('click', () => openAction(btn.dataset.action)));
+
+    // ─────────────────────────────────────────────────────────
+    //  1. LERNKARTEN (3D flip cards)
+    // ─────────────────────────────────────────────────────────
+    async function renderCards(seq) {
+      const data = await baseData(skillId);
+      if (stale(seq)) return;
+      const cards = data.flashcards || [];
+      const core = data.core_principle || 'Fundamentales Konzept für das Verständnis.';
+
+      if (!cards.length) {
+        body.innerHTML = `<div class="rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-3 text-xs leading-relaxed text-slate-700">
+          <span class="font-semibold text-amber-900">Kernfundament</span>
+          <p class="mt-1">${esc(core)}</p></div>
+          ${emptyState('Für dieses Unterthema sind noch keine Lernkarten hinterlegt.')}`;
+        return;
+      }
+
+      body.innerHTML = `
+        <div class="space-y-6">
+          <div class="rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-3.5 text-xs leading-relaxed text-slate-700">
+            <span class="font-semibold text-amber-900">Kernfundament</span>
+            <p class="mt-1">${esc(core)}</p>
+          </div>
+
+          <div class="flashcard-scene max-w-lg mx-auto">
+            <div class="flashcard-inner cursor-pointer" role="button" tabindex="0" aria-label="Karte umdrehen">
+              <div class="flashcard-face flashcard-front p-6 bg-white border border-slate-200 rounded-2xl flex flex-col justify-between transition-colors hover:border-slate-300">
+                <div>
+                  <div class="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <span class="card-index-label whitespace-nowrap">Karte 1</span>
+                    <span class="normal-case tracking-normal font-medium whitespace-nowrap">Klick zum Aufdecken</span>
+                  </div>
+                  <h4 class="card-front-heading font-display font-semibold text-base sm:text-lg text-ink-900 mt-4 leading-snug"></h4>
+                </div>
+                <div class="mt-6 pt-3 border-t border-slate-100 text-[10px] text-slate-400">Quelle: Fokus Chemie</div>
+              </div>
+              <div class="flashcard-face flashcard-back p-6 bg-ink-900 text-white rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-reagent-400">Erklärung &amp; Merkregel</div>
+                  <p class="card-back-content text-sm text-slate-200 mt-3 leading-relaxed whitespace-pre-line"></p>
+                </div>
+                <div class="mt-5 pt-3 border-t border-white/10 text-[11px] text-slate-400">
+                  <span class="font-semibold text-slate-300">Kerngedanke:</span>
+                  <span class="card-takeaway-text ml-1"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-center gap-2">
+            <button type="button" class="card-prev-btn px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-30 cursor-pointer">← Zurück</button>
+            <button type="button" class="card-flip-btn px-4 py-1.5 rounded-full border border-ink-900 bg-ink-900 text-xs font-semibold text-white hover:bg-ink-700 cursor-pointer">Umdrehen</button>
+            <button type="button" class="card-next-btn px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-30 cursor-pointer">Weiter →</button>
+          </div>
+        </div>`;
+
+      const scene = body.querySelector('.flashcard-inner');
+      const idxLabel = body.querySelector('.card-index-label');
+      const front = body.querySelector('.card-front-heading');
+      const back = body.querySelector('.card-back-content');
+      const takeaway = body.querySelector('.card-takeaway-text');
+      const prevBtn = body.querySelector('.card-prev-btn');
+      const nextBtn = body.querySelector('.card-next-btn');
+      const flipBtn = body.querySelector('.card-flip-btn');
+
+      let idx = 0;
+
+      function show(i) {
+        const card = cards[i];
+        if (!card) return;
+        scene.classList.remove('is-flipped');
+        idxLabel.textContent = `Karte ${i + 1} von ${cards.length}`;
+        front.textContent = card.front || card.title || '';
+        back.textContent = card.back || '';
+        takeaway.textContent = card.takeaway || card.title || '';
+        prevBtn.disabled = i === 0;
+        nextBtn.disabled = i === cards.length - 1;
+      }
+
+      function flip() { scene.classList.toggle('is-flipped'); }
+
+      scene.addEventListener('click', flip);
+      scene.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+        if (e.key === 'ArrowLeft' && idx > 0) { idx--; show(idx); }
+        if (e.key === 'ArrowRight' && idx < cards.length - 1) { idx++; show(idx); }
+      });
+      flipBtn.addEventListener('click', e => { e.stopPropagation(); flip(); });
+      prevBtn.addEventListener('click', () => { if (idx > 0) { idx--; show(idx); } });
+      nextBtn.addEventListener('click', () => { if (idx < cards.length - 1) { idx++; show(idx); } });
+
+      show(0);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  2. INTERAKTIVES ÜBEN (true/false, sentence choice, split)
+    // ─────────────────────────────────────────────────────────
+    async function renderPractice(seq) {
+      const data = await baseData(skillId);
+      if (stale(seq)) return;
+      const practice = data.practice || {};
+
+      body.innerHTML = `
+        <div class="space-y-4">
+          <section class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+            <header class="flex items-center justify-between gap-3">
+              <h4 class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Wahr oder Falsch</h4>
+              <span class="tf-badge text-[10px] font-medium text-slate-400">Offen</span>
+            </header>
+            <div class="tf-list mt-1"></div>
+          </section>
+
+          <section class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+            <header class="flex items-center justify-between gap-3">
+              <h4 class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Wort-Wahl im Satz</h4>
+              <span class="sc-badge text-[10px] font-medium text-slate-400">Offen</span>
+            </header>
+            <div class="mt-3 rounded-lg bg-slate-50 px-4 py-3 text-sm leading-loose text-ink-900">
+              <span class="sc-prefix-text"></span><button type="button" class="sentence-opt-btn sc-btn1"></button><span class="text-slate-300 px-0.5">/</span><button type="button" class="sentence-opt-btn sc-btn2"></button><span class="sc-suffix-text"></span>
+            </div>
+            <div class="sc-feedback-box hidden mt-3 rounded-lg px-3.5 py-2.5 text-xs leading-relaxed"></div>
+          </section>
+
+          <section class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+            <header class="flex items-center justify-between gap-3">
+              <h4 class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Satz vervollständigen</h4>
+              <span class="split-badge text-[10px] font-medium text-slate-400">Offen</span>
+            </header>
+            <div class="split-prompt-text mt-3 rounded-lg bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-ink-900"></div>
+            <div class="grid gap-2 mt-3">
+              <button type="button" class="split-btn text-left rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer" data-idx="0"><span class="mr-1.5 font-semibold text-slate-400">A)</span><span class="split-text-0"></span></button>
+              <button type="button" class="split-btn text-left rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer" data-idx="1"><span class="mr-1.5 font-semibold text-slate-400">B)</span><span class="split-text-1"></span></button>
+            </div>
+            <div class="split-feedback-box hidden mt-3 rounded-lg px-3.5 py-2.5 text-xs leading-relaxed"></div>
+          </section>
+
+          <section class="rounded-xl border border-dashed border-slate-300 bg-white p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h4 class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Aussagen aus dem Schulbuch</h4>
+                <p class="mt-1.5 text-[11px] leading-relaxed text-slate-500">Frische Richtig/Falsch-Aussagen, direkt aus „Fokus Chemie“ erzeugt.</p>
+              </div>
+              <button type="button" class="rag-stmt-btn shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900 cursor-pointer">Erzeugen</button>
+            </div>
+            <div class="rag-stmt-area mt-4 space-y-3"></div>
+          </section>
+        </div>`;
+
+      setupTrueFalse(practice.true_false || []);
+      setupSentenceChoice(practice.sentence_choice || []);
+      setupSentenceSplit(practice.sentence_split || []);
+      setupRagStatements();
+    }
+
+    function setupTrueFalse(list) {
+      const items = list.length ? list : [{
+        statement: 'Metalle geben bei der Ionenbildung Valenzelektronen ab.',
+        is_true: true,
+        explanation: 'Metalle bilden positiv geladene Kationen.',
+      }];
+      const box = body.querySelector('.tf-list');
+      const badge = body.querySelector('.tf-badge');
+      let answered = 0;
+      let correct = 0;
+
+      box.innerHTML = items.map((item, i) => `
+        <div class="tf-item border-t border-slate-100 pt-4 mt-4 first:mt-3 first:border-0 first:pt-0" data-idx="${i}">
+          <p class="text-sm font-medium text-ink-900 leading-relaxed">${esc(item.statement)}</p>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" class="tf-opt-btn rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer" data-val="true">✓ Wahr</button>
+            <button type="button" class="tf-opt-btn rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer" data-val="false">✗ Falsch</button>
+          </div>
+          <div class="tf-feedback hidden mt-3 rounded-lg px-3.5 py-2.5 text-xs leading-relaxed"></div>
+        </div>`).join('');
+
+      box.querySelectorAll('.tf-item').forEach(row => {
+        const i = parseInt(row.dataset.idx, 10);
+        const item = items[i];
+        const feedback = row.querySelector('.tf-feedback');
+        const btns = Array.from(row.querySelectorAll('.tf-opt-btn'));
+
+        btns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            btns.forEach(b => { b.disabled = true; });
+            const chosen = btn.dataset.val === 'true';
+            const ok = chosen === item.is_true;
+            answered += 1;
+            if (ok) correct += 1;
+            feedback.classList.remove('hidden');
+
+            if (ok) {
+              btn.className = 'tf-opt-btn rounded-lg border border-emerald-200 bg-emerald-50/60 py-2 text-xs font-semibold text-emerald-700';
+              feedback.className = 'tf-feedback mt-3 rounded-lg border border-emerald-100 bg-emerald-50/50 px-3.5 py-2.5 text-xs leading-relaxed text-emerald-900';
+            } else {
+              btn.className = 'tf-opt-btn rounded-lg border border-rose-200 bg-rose-50/60 py-2 text-xs font-semibold text-rose-700';
+              const right = btns.find(b => (b.dataset.val === 'true') === item.is_true);
+              if (right) right.className = 'tf-opt-btn rounded-lg border border-emerald-200 bg-emerald-50/60 py-2 text-xs font-semibold text-emerald-700';
+              feedback.className = 'tf-feedback mt-3 rounded-lg border border-rose-100 bg-rose-50/50 px-3.5 py-2.5 text-xs leading-relaxed text-rose-900';
+            }
+            feedback.innerHTML = `<strong>${ok ? 'Erklärung:' : 'Nicht ganz:'}</strong> ${esc(item.explanation || '')}`;
+
+            if (answered === items.length) {
+              badge.textContent = `${correct}/${items.length} richtig`;
+              badge.className = `tf-badge text-[10px] font-semibold ${correct === items.length ? 'text-emerald-600' : 'text-slate-500'}`;
+            }
+          });
+        });
+      });
+    }
+
+    function setupSentenceChoice(list) {
+      const item = list[0] || {
+        prefix: 'Lösungen mit einem pH-Wert kleiner als 7 sind ',
+        opt1: 'Säuren', opt2: 'Laugen',
+        suffix: ', da Oxonium-Ionen überwiegen.',
+        correct: 'Säuren',
+        explanation: 'Säuren besitzen pH < 7.',
+      };
+      body.querySelector('.sc-prefix-text').textContent = item.prefix || '';
+      body.querySelector('.sc-suffix-text').textContent = item.suffix || '';
+      const b1 = body.querySelector('.sc-btn1');
+      const b2 = body.querySelector('.sc-btn2');
+      const badge = body.querySelector('.sc-badge');
+      const feedback = body.querySelector('.sc-feedback-box');
+      b1.textContent = item.opt1;
+      b2.textContent = item.opt2;
+
+      function pick(chosen, other, text) {
+        b1.disabled = true;
+        b2.disabled = true;
+        const ok = text === item.correct;
+        feedback.classList.remove('hidden');
+
+        if (ok) {
+          chosen.classList.add('is-correct');
+          badge.textContent = '✓ Richtig';
+          badge.className = 'sc-badge text-[10px] font-semibold text-emerald-600';
+          feedback.className = 'sc-feedback-box mt-3 rounded-lg border border-emerald-100 bg-emerald-50/50 px-3.5 py-2.5 text-xs leading-relaxed text-emerald-900';
+          feedback.innerHTML = `<strong>Klasse!</strong> ${esc(item.explanation || '')}`;
+        } else {
+          chosen.classList.add('is-wrong');
+          other.classList.add('is-correct');
+          badge.textContent = '✗ Falsch';
+          badge.className = 'sc-badge text-[10px] font-semibold text-rose-600';
+          feedback.className = 'sc-feedback-box mt-3 rounded-lg border border-rose-100 bg-rose-50/50 px-3.5 py-2.5 text-xs leading-relaxed text-rose-900';
+          feedback.innerHTML = `<strong>Richtig ist „${esc(item.correct)}“:</strong> ${esc(item.explanation || '')}`;
+        }
+      }
+
+      b1.addEventListener('click', () => pick(b1, b2, item.opt1));
+      b2.addEventListener('click', () => pick(b2, b1, item.opt2));
+    }
+
+    function setupSentenceSplit(list) {
+      const item = list[0] || {
+        half1: 'Bei einer Neutralisationsreaktion reagieren Säure und Lauge zu ...',
+        opt1: 'Wasser und einem Salz.',
+        opt2: 'Wasserstoffgas und unedlem Metall.',
+        correct: 0,
+        explanation: 'H₃O⁺ + OH⁻ neutralisieren sich zu Wasser.',
+      };
+      body.querySelector('.split-prompt-text').textContent = item.half1;
+      body.querySelector('.split-text-0').textContent = item.opt1;
+      body.querySelector('.split-text-1').textContent = item.opt2;
+      const badge = body.querySelector('.split-badge');
+      const feedback = body.querySelector('.split-feedback-box');
+      const btns = Array.from(body.querySelectorAll('.split-btn'));
+
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          btns.forEach(b => { b.disabled = true; });
+          const idx = parseInt(btn.dataset.idx, 10);
+          const ok = idx === item.correct;
+          feedback.classList.remove('hidden');
+
+          const idleSplit = 'split-btn text-left rounded-lg border px-3.5 py-3 text-xs font-medium';
+          if (ok) {
+            btn.className = `${idleSplit} border-emerald-200 bg-emerald-50/60 text-emerald-800`;
+            badge.textContent = '✓ Vollständig';
+            badge.className = 'split-badge text-[10px] font-semibold text-emerald-600';
+            feedback.className = 'split-feedback-box mt-3 rounded-lg border border-emerald-100 bg-emerald-50/50 px-3.5 py-2.5 text-xs leading-relaxed text-emerald-900';
+            feedback.innerHTML = `<strong>Richtig vervollständigt:</strong> ${esc(item.explanation || '')}`;
+          } else {
+            btn.className = `${idleSplit} border-rose-200 bg-rose-50/60 text-rose-800`;
+            const other = btns[item.correct];
+            if (other) other.className = `${idleSplit} border-emerald-200 bg-emerald-50/60 text-emerald-800`;
+            badge.textContent = '✗ Falsch';
+            badge.className = 'split-badge text-[10px] font-semibold text-rose-600';
+            feedback.className = 'split-feedback-box mt-3 rounded-lg border border-rose-100 bg-rose-50/50 px-3.5 py-2.5 text-xs leading-relaxed text-rose-900';
+            feedback.innerHTML = `<strong>Erklärung:</strong> ${esc(item.explanation || '')}`;
+          }
+        });
+      });
+    }
+
+    function setupRagStatements() {
+      const btn = body.querySelector('.rag-stmt-btn');
+      const area = body.querySelector('.rag-stmt-area');
+      const s = state(skillId);
+
+      function draw(list) {
+        let answered = 0;
+        let correct = 0;
+        area.innerHTML = list.map((st, i) => `
+          <div class="statement-card rounded-lg border border-slate-200 bg-white p-4" data-idx="${i}">
+            <div class="text-sm font-medium text-ink-900 leading-relaxed">${esc(st.statement)}</div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" class="stmt-btn rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer" data-val="true">✓ Richtig</button>
+              <button type="button" class="stmt-btn rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 cursor-pointer" data-val="false">✗ Falsch</button>
+            </div>
+            <div class="stmt-feedback hidden mt-3 rounded-lg px-3.5 py-2.5 text-xs leading-relaxed"></div>
+          </div>`).join('') + `<div class="stmt-score text-xs font-medium text-slate-500"></div>`;
+
+        area.querySelectorAll('.statement-card').forEach(card => {
+          const i = parseInt(card.dataset.idx, 10);
+          const st = list[i];
+          const feedback = card.querySelector('.stmt-feedback');
+          const btns = Array.from(card.querySelectorAll('.stmt-btn'));
+          btns.forEach(btn => btn.addEventListener('click', () => {
+            btns.forEach(b => { b.disabled = true; });
+            const userAnswer = btn.dataset.val === 'true';
+            const ok = userAnswer === !!st.is_true;
+            answered += 1;
+            if (ok) correct += 1;
+
+            const good = 'border-emerald-200 bg-emerald-50/60 text-emerald-700';
+            const bad = 'border-rose-200 bg-rose-50/60 text-rose-700';
+            btn.className = `stmt-btn rounded-lg border py-2 text-xs font-semibold ${ok ? good : bad}`;
+            if (!ok) {
+              const right = btns.find(b => (b.dataset.val === 'true') === !!st.is_true);
+              if (right) right.className = `stmt-btn rounded-lg border py-2 text-xs font-semibold ${good}`;
+            }
+
+            feedback.classList.remove('hidden');
+            feedback.className = `stmt-feedback mt-3 rounded-lg px-3.5 py-2.5 text-xs leading-relaxed ${ok ? 'border border-emerald-100 bg-emerald-50/50 text-emerald-900' : 'border border-rose-100 bg-rose-50/50 text-rose-900'}`;
+            feedback.innerHTML = `<strong>${ok ? '✓ Richtig!' : '✗ Falsch!'}</strong> ${esc(st.explanation || '')}` +
+              (!ok && st.correction ? `<br><strong>Korrektur:</strong> ${esc(st.correction)}` : '') +
+              (st.page_reference ? `<br><em>📄 Seite ${esc(st.page_reference)}</em>` : '');
+
+            if (answered === list.length) {
+              const pct = Math.round((correct / list.length) * 100);
+              const score = area.querySelector('.stmt-score');
+              if (score) score.textContent = `${correct}/${list.length} richtig · ${pct} %`;
+            }
+          }));
+        });
+      }
+
+      if (s.statements && s.statements.length) draw(s.statements);
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        area.innerHTML = spinner('Erzeuge Aussagen aus dem Buch…');
+        try {
+          const data = await postJSON('/api/subtopic/statements', { skill: skillId, count: 6 });
+          if (!data.statements || !data.statements.length) {
+            area.innerHTML = emptyState(esc(data.error || 'Keine Aussagen gefunden.'));
+            return;
+          }
+          s.statements = data.statements;
+          draw(data.statements);
+        } catch (err) {
+          area.innerHTML = emptyState('⚠️ RAG-Server nicht erreichbar. Bitte später erneut versuchen.');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  3. QUIZ (RAG multiple choice — vectorstore quiz component)
+    // ─────────────────────────────────────────────────────────
+    async function renderQuiz(seq) {
+      const s = state(skillId);
+      let count = (s.quizCount = s.quizCount || 4);
+
+      body.innerHTML = `
+        <div class="space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fragen</span>
+              <div class="inline-flex items-center rounded-full border border-slate-200 bg-white">
+                <button type="button" class="quiz-minus px-3 py-1.5 text-sm text-slate-500 hover:text-ink-900 cursor-pointer">−</button>
+                <span class="quiz-count num px-1 text-xs font-semibold text-ink-900">${count}</span>
+                <button type="button" class="quiz-plus px-3 py-1.5 text-sm text-slate-500 hover:text-ink-900 cursor-pointer">+</button>
+              </div>
+            </div>
+            <button type="button" class="quiz-generate-btn rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-700 cursor-pointer">Quiz generieren</button>
+          </div>
+          <div class="quiz-area space-y-4"></div>
+        </div>`;
+
+      const area = body.querySelector('.quiz-area');
+      const countEl = body.querySelector('.quiz-count');
+      const genBtn = body.querySelector('.quiz-generate-btn');
+
+      body.querySelector('.quiz-minus').addEventListener('click', () => {
+        count = Math.max(2, count - 1);
+        s.quizCount = count;
+        countEl.textContent = count;
+      });
+      body.querySelector('.quiz-plus').addEventListener('click', () => {
+        count = Math.min(10, count + 1);
+        s.quizCount = count;
+        countEl.textContent = count;
+      });
+
+      function renderQuestions(data) {
+        const questions = data.questions || [];
+        if (!questions.length) {
+          area.innerHTML = emptyState(esc(data.error || 'Kein Quiz gefunden.'));
+          return;
+        }
+
+        area.innerHTML =
+          `<p class="text-[11px] text-slate-500">${esc(data.title || 'Quiz')}</p>` +
+          questions.map((q, qi) => {
+            const opts = (q.options || []).map((raw, oi) => {
+              const letter = String.fromCharCode(65 + oi);
+              const text = String(raw).replace(/^[A-D]\)\s*/, '');
+              return `<button type="button" class="quiz-opt" data-q="${qi}" data-letter="${letter}" data-text="${esc(text)}">
+                  <span class="quiz-letter">${letter}</span><span>${esc(text)}</span>
+                </button>`;
+            }).join('');
+
+            return `<div class="quiz-card rounded-xl border border-slate-200 bg-white p-4 sm:p-5" data-q="${qi}">
+              <div class="flex gap-3">
+                <span class="shrink-0 num text-[11px] font-semibold text-slate-400 pt-0.5">${String(qi + 1).padStart(2, '0')}</span>
+                <div class="text-sm font-medium text-ink-900 leading-relaxed">${esc(q.question)}</div>
+              </div>
+              <div class="mt-4 space-y-2">${opts}</div>
+              <div class="quiz-explanation hidden mt-4 rounded-lg bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed text-slate-600">
+                <strong class="font-semibold text-slate-700">Erklärung:</strong> ${esc(q.explanation || '')}${q.page_reference ? `<span class="mt-1 block text-slate-400">Seite ${esc(q.page_reference)}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('') +
+          `<div class="quiz-score hidden rounded-xl border border-slate-200 bg-white px-4 py-5 text-center">
+             <div class="text-2xl font-semibold num text-ink-900"></div>
+             <div class="mt-1 text-[11px] font-medium text-slate-500">richtig beantwortet</div>
+           </div>`;
+
+        const answered = {};
+        const correctMap = {};
+        questions.forEach((q, qi) => {
+          correctMap[qi] = String(q.correct_answer || '').trim().toUpperCase().charAt(0);
+        });
+
+        function updateScore() {
+          const done = Object.keys(answered).length;
+          if (done !== questions.length) return;
+          const okCount = Object.values(answered).filter(Boolean).length;
+          const score = area.querySelector('.quiz-score');
+          if (!score) return;
+          score.classList.remove('hidden');
+          score.querySelector('.num').textContent = `${okCount}/${questions.length}`;
+        }
+
+        area.querySelectorAll('.quiz-opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const qi = btn.dataset.q;
+            if (qi in answered) return;
+
+            const correct = correctMap[qi];
+            const chosen = btn.dataset.letter;
+            const ok = chosen === correct;
+            answered[qi] = ok;
+
+            const card = area.querySelector(`.quiz-card[data-q="${qi}"]`);
+            card.querySelectorAll('.quiz-opt').forEach(o => o.classList.add('is-locked'));
+            btn.classList.add(ok ? 'is-correct' : 'is-wrong');
+            if (!ok) {
+              const right = card.querySelector(`.quiz-opt[data-letter="${correct}"]`);
+              if (right) right.classList.add('is-correct');
+            }
+            card.querySelector('.quiz-explanation').classList.remove('hidden');
+            updateScore();
+          });
+        });
+      }
+
+      if (s.quiz && (s.quiz.questions || []).length) renderQuestions(s.quiz);
+      else area.innerHTML = emptyState('Erzeuge ein Quiz mit Fragen aus deinem Schulbuch.');
+
+      genBtn.addEventListener('click', async () => {
+        genBtn.disabled = true;
+        area.innerHTML = spinner('Erzeuge Quiz aus dem Buch…');
+        try {
+          const data = await postJSON('/api/subtopic/quiz', { skill: skillId, count });
+          s.quiz = data;
+          if (stale(seq)) return;
+          renderQuestions(data);
+        } catch (err) {
+          if (stale(seq)) return;
+          area.innerHTML = emptyState('⚠️ RAG-Server nicht erreichbar. Bitte später erneut versuchen.');
+        } finally {
+          genBtn.disabled = false;
+        }
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  4. CHAT (vectorstore chat: markdown, sources, book images)
+    // ─────────────────────────────────────────────────────────
+    async function renderChat(seq) {
+      const data = await baseData(skillId);
+      if (stale(seq)) return;
+      if (!Array.isArray(data.chat_history)) data.chat_history = [];
+
+      body.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-[11px] text-slate-500">Frag den Chemie-Tutor · Antworten aus „Fokus Chemie“</p>
+            <button type="button" class="chat-clear-btn shrink-0 text-[11px] font-medium text-slate-400 transition-colors hover:text-rose-600 cursor-pointer">Verlauf leeren</button>
+          </div>
+          <div class="chat-log-box h-80 overflow-y-auto space-y-4 rounded-xl border border-slate-200 bg-white p-4 text-xs sm:text-sm"></div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="quick-pill rounded-full border border-slate-200 px-3 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:border-slate-300 hover:bg-white hover:text-ink-900">Grundprinzip erklären</button>
+            <button type="button" class="quick-pill rounded-full border border-slate-200 px-3 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:border-slate-300 hover:bg-white hover:text-ink-900">Alltagsbeispiel</button>
+            <button type="button" class="quick-pill rounded-full border border-slate-200 px-3 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:border-slate-300 hover:bg-white hover:text-ink-900">Typischer Prüfungsfehler</button>
+          </div>
+          <form class="chat-form flex gap-2">
+            <input type="text" class="chat-input-text input flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm focus:outline-none focus:border-slate-300" placeholder="Deine Frage zu diesem Thema…" autocomplete="off">
+            <button type="submit" class="chat-submit-btn shrink-0 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-700 cursor-pointer">Senden</button>
+          </form>
+        </div>`;
+
+      const log = body.querySelector('.chat-log-box');
+      const form = body.querySelector('.chat-form');
+      const input = body.querySelector('.chat-input-text');
+      const submit = body.querySelector('.chat-submit-btn');
+      const clearBtn = body.querySelector('.chat-clear-btn');
+
+      function paintAll() {
+        log.innerHTML = '';
+        if (!data.chat_history.length) {
+          log.innerHTML = `<div class="flex h-full items-center justify-center px-6 text-center text-xs leading-relaxed text-slate-400">
+            Noch keine Fragen zu diesem Unterthema.<br>Stell die erste Frage zum Buchabschnitt.</div>`;
+        } else {
+          data.chat_history.forEach(m => addMessage(m));
+        }
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function addMessage(m) {
+        const isUser = m.role === 'user';
+        const wrap = document.createElement('div');
+        wrap.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'}`;
+
+        let imagesHtml = '';
+        if (!isUser && Array.isArray(m.images) && m.images.length) {
+          imagesHtml = `<div class="mt-3 grid grid-cols-2 gap-2">` + m.images.map(img => `
+            <figure class="msg-image-card" data-url="${esc(img.url)}" data-caption="${esc(img.caption || ('Abbildung Seite ' + (img.page || '')))}" title="Klicken zum Vergrößern">
+              <img src="${esc(img.url)}" alt="${esc(img.caption || '')}" loading="lazy"
+                   onerror="this.closest('.msg-image-card').remove()">
+              <figcaption>📷 ${esc(img.caption || 'Abbildung')}${img.page ? ` · S. ${esc(img.page)}` : ''}</figcaption>
+            </figure>`).join('') + `</div>`;
+        }
+
+        let sourcesHtml = '';
+        if (!isUser && Array.isArray(m.sources) && m.sources.length) {
+          sourcesHtml = `<div class="mt-3 flex flex-wrap gap-1 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+            <span class="font-medium text-slate-400">Quelle:</span> ${m.sources.map(s => `S. ${esc(s.page || 'Buch')}${s.section ? ' · ' + esc(s.section) : ''}`).join(', ')}
+          </div>`;
+        }
+
+        const bubbleClass = isUser
+          ? 'max-w-[85%] rounded-2xl rounded-br-md bg-ink-900 px-4 py-2.5 text-xs leading-relaxed text-white'
+          : 'max-w-[92%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-xs leading-relaxed text-slate-800';
+
+        wrap.innerHTML = `
+          <div class="${bubbleClass}">
+            <div class="mb-1 text-[10px] font-semibold ${isUser ? 'text-white/50' : 'text-slate-400'}">${isUser ? 'Du' : 'Tutor (Fokus Chemie)'}</div>
+            <div class="chat-body">${isUser ? esc(m.message) : formatMarkdown(m.message)}</div>
+            ${imagesHtml}
+            ${sourcesHtml}
+          </div>`;
+
+        wrap.querySelectorAll('.msg-image-card').forEach(card => {
+          card.addEventListener('click', () => openLightbox(card.dataset.url, card.dataset.caption));
+        });
+
+        log.appendChild(wrap);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function addTyping() {
+        const el = document.createElement('div');
+        el.className = 'flex flex-col items-start';
+        el.innerHTML = `<div class="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-400">
+          <span class="typing-dot">●</span><span class="typing-dot" style="animation-delay:.2s">●</span><span class="typing-dot" style="animation-delay:.4s">●</span>
+          <span class="ml-1.5">Durchsuche Schulbuch…</span></div>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+        return el;
+      }
+
+      paintAll();
+
+      async function ask(text) {
+        const question = (text || '').trim();
+        if (!question) return;
+        input.value = '';
+        input.disabled = true;
+        submit.disabled = true;
+
+        const userMsg = { role: 'user', message: question };
+        data.chat_history.push(userMsg);
+        if (data.chat_history.length === 1) log.innerHTML = '';
+        addMessage(userMsg);
+        const typing = addTyping();
+
+        try {
+          const res = await postJSON('/api/subtopic/chat', { skill: skillId, message: question });
+          typing.remove();
+          const assistantMsg = {
+            role: 'assistant', message: res.answer || '',
+            sources: res.sources || [], images: res.images || [],
+          };
+          data.chat_history.push(assistantMsg);
+          addMessage(assistantMsg);
+        } catch (err) {
+          typing.remove();
+          addMessage({ role: 'assistant', message: 'Fehler bei der Verbindung zum RAG-Server.' });
+        } finally {
+          input.disabled = false;
+          submit.disabled = false;
+          input.focus();
+          log.scrollTop = log.scrollHeight;
+        }
+      }
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        ask(input.value);
+      });
+
+      clearBtn.addEventListener('click', async () => {
+        if (!confirm('Verlauf für dieses Thema leeren?')) return;
+        try {
+          await postJSON('/api/subtopic/chat/clear', { skill: skillId });
+        } catch (err) { /* offline: clear locally anyway */ }
+        data.chat_history = [];
+        paintAll();
+      });
+
+      body.querySelectorAll('.quick-pill').forEach(p => {
+        p.addEventListener('click', () => ask(p.textContent.trim()));
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  5. ENTDECKEN (RAG topic summary — vectorstore explore view)
+    // ─────────────────────────────────────────────────────────
+    async function renderExplore(seq) {
+      const s = state(skillId);
+
+      body.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-[11px] leading-relaxed text-slate-500">Kurz-Zusammenfassung aus deinem Schulbuch: Kernaussage, zwei Fakten, Merksatz.</p>
+            <button type="button" class="explore-btn shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-white hover:text-ink-900 cursor-pointer">Neu erstellen</button>
+          </div>
+          <div class="explore-result"></div>
+        </div>`;
+
+      const area = body.querySelector('.explore-result');
+      const btn = body.querySelector('.explore-btn');
+
+      function render(data) {
+        const sources = (data.sources || []).slice(0, 4);
+        const sourcesHtml = sources.length
+          ? `<div class="mt-4 flex flex-wrap gap-1 border-t border-slate-100 pt-3 text-[10px] text-slate-500">
+              <span class="font-medium text-slate-400">Quelle:</span> ${sources.map(x => `S. ${esc(x.page || 'Buch')}${x.section ? ' · ' + esc(x.section) : ''}`).join(', ')}
+            </div>` : '';
+
+        area.innerHTML = `<div class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 text-sm leading-relaxed text-slate-700">
+          ${data.summary ? formatMarkdown(data.summary) : emptyState(esc(data.error || 'Keine Zusammenfassung gefunden.'))}
+          ${sourcesHtml}
+        </div>`;
+      }
+
+      async function load() {
+        btn.disabled = true;
+        area.innerHTML = spinner('Fasse den Buchabschnitt zusammen…');
+        try {
+          const data = await postJSON('/api/subtopic/explore', { skill: skillId });
+          s.explore = data;
+          if (stale(seq)) return;
+          render(data);
+        } catch (err) {
+          if (stale(seq)) return;
+          area.innerHTML = emptyState('⚠️ RAG-Server nicht erreichbar. Bitte später erneut versuchen.');
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      btn.addEventListener('click', () => { s.explore = null; load(); });
+
+      if (s.explore) render(s.explore);
+      else load();
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  TOPIC-LEVEL LEHRBUCH RAG VIEWER
+  // ═══════════════════════════════════════════════════════════
+  const topicCache = {};
+  document.querySelectorAll('.lernhilfe-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const topic = btn.dataset.topic;
+      const panel = document.querySelector(`.rag-panel[data-topic="${CSS.escape(topic)}"]`);
+      if (!panel) return;
+      if (!panel.classList.contains('hidden')) {
+        panel.classList.add('hidden');
+        return;
+      }
+      panel.classList.remove('hidden');
+
+      if (!topicCache[topic]) {
+        try {
+          const resp = await fetch(`/api/rag-context?query=${encodeURIComponent(topic)}`);
+          topicCache[topic] = await resp.json();
+        } catch (e) {
+          topicCache[topic] = { available: false };
+        }
+      }
+
+      const data = topicCache[topic];
+      const content = panel.querySelector('.rag-content');
+      const loading = panel.querySelector('.rag-loading');
+      loading.classList.add('hidden');
+      content.classList.remove('hidden');
+
+      const chunks = (data.text_chunks || []).slice(0, 3);
+      if (!chunks.length) {
+        content.innerHTML = '<div class="p-3 text-xs text-slate-500">Keine Lehrbuch-Einträge gefunden.</div>';
+        return;
+      }
+
+      content.innerHTML = `
+        <div class="divide-y divide-slate-100 text-xs">
+          ${chunks.map(c => `
+            <div class="px-4 py-3.5">
+              <span class="block mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Seite ${esc(c.metadata && c.metadata.page || 'Buch')}</span>
+              <p class="leading-relaxed text-slate-600">${esc((c.text || '').slice(0, 240))}…</p>
+            </div>
+          `).join('')}
+        </div>`;
+    });
+  });
+
+})();
+</script>
 {% endblock %}

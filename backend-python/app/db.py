@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS tests (
 CREATE TABLE IF NOT EXISTS answers (
     id INTEGER PRIMARY KEY, test_id INTEGER, round INTEGER, qid TEXT, skill TEXT,
     given TEXT, correct INTEGER, created TEXT);
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY, student_id INTEGER, skill TEXT, role TEXT, message TEXT,
+    sources TEXT, images TEXT, created TEXT);
 """
 
 FIRST = ["Lena", "Jonas", "Mia", "Elias", "Emilia", "Noah", "Hannah", "Paul", "Lea", "Ben", "Sophie", "Finn",
@@ -40,6 +43,10 @@ def conn() -> sqlite3.Connection:
 def init() -> None:
     c = conn()
     c.executescript(SCHEMA)
+    # Migration for databases created before image-bearing chat messages.
+    cols = {row["name"] for row in c.execute("PRAGMA table_info(chat_messages)").fetchall()}
+    if "images" not in cols:
+        c.execute("ALTER TABLE chat_messages ADD COLUMN images TEXT")
     if c.execute("SELECT COUNT(*) FROM students").fetchone()[0] == 0:
         _seed(c)
     c.commit()
@@ -170,6 +177,53 @@ def student_tests(sid: int, limit: int = 10) -> list[dict]:
                      "ORDER BY id DESC LIMIT ?", (sid, limit)).fetchall()
     c.close()
     return [dict(r) for r in rows]
+
+
+def save_chat_message(sid: int, skill: str, role: str, message: str,
+                      sources: list | None = None, images: list | None = None) -> int:
+    c = conn()
+    now = datetime.now().isoformat(timespec="seconds")
+    src_json = json.dumps(sources or [], ensure_ascii=False)
+    img_json = json.dumps(images or [], ensure_ascii=False)
+    c.execute(
+        "INSERT INTO chat_messages (student_id, skill, role, message, sources, images, created) "
+        "VALUES (?,?,?,?,?,?,?)",
+        (sid, skill, role, message, src_json, img_json, now)
+    )
+    msg_id = c.execute("SELECT last_insert_rowid()").fetchone()[0]
+    c.commit()
+    c.close()
+    return msg_id
+
+
+def get_chat_history(sid: int, skill: str, limit: int = 50) -> list[dict]:
+    c = conn()
+    rows = c.execute(
+        "SELECT id, student_id, skill, role, message, sources, images, created FROM chat_messages "
+        "WHERE student_id=? AND skill=? ORDER BY id ASC LIMIT ?",
+        (sid, skill, limit)
+    ).fetchall()
+    c.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["sources"] = json.loads(d["sources"]) if d["sources"] else []
+        except Exception:
+            d["sources"] = []
+        try:
+            d["images"] = json.loads(d["images"]) if d["images"] else []
+        except Exception:
+            d["images"] = []
+        result.append(d)
+    return result
+
+
+def clear_chat_history(sid: int, skill: str) -> None:
+    c = conn()
+    c.execute("DELETE FROM chat_messages WHERE student_id=? AND skill=?", (sid, skill))
+    c.commit()
+    c.close()
 
 
 # ---------------------------------------------------------------------------

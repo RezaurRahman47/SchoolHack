@@ -1,0 +1,22 @@
+# RAG Pipeline
+chromadb>=0.5.0
+sentence-transformers[image]>=3.0.0
+transformers>=4.40.0
+torch
+pillow
+
+# PDF Processing
+pymupdf>=1.24.0
+pdf2image
+
+# Backend
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+python-multipart
+
+# LLM
+anthropic>=0.30.0
+
+# Utilities
+numpy
+pydantic>=2.0.0

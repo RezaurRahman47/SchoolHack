@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemie RAG — Interaktive Lernplattform</title>
+    <meta name="description" content="Interaktive Lernplattform für Chemie (9./10. Klasse) mit KI-gestützten Quizzes, Lernkarten und Chat.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- ─── Animated Background ─── -->
+    <div class="bg-chemistry">
+        <div class="molecule molecule-1"></div>
+        <div class="molecule molecule-2"></div>
+        <div class="molecule molecule-3"></div>
+        <div class="molecule molecule-4"></div>
+        <div class="molecule molecule-5"></div>
+        <div class="orbital orbital-1"></div>
+        <div class="orbital orbital-2"></div>
+    </div>
+
+    <!-- ─── Header ─── -->
+    <header class="app-header" id="app-header">
+        <div class="header-content">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <path d="M16 2L14 12H10L12 8L8 14H4L16 30L28 14H24L20 8L22 12H18L16 2Z" fill="url(#logo-grad)"/>
+                        <circle cx="16" cy="16" r="3" fill="#fff" opacity="0.9"/>
+                        <circle cx="10" cy="12" r="1.5" fill="#67e8f9"/>
+                        <circle cx="22" cy="12" r="1.5" fill="#a78bfa"/>
+                        <defs>
+                            <linearGradient id="logo-grad" x1="4" y1="2" x2="28" y2="30">
+                                <stop stop-color="#67e8f9"/>
+                                <stop offset="0.5" stop-color="#a78bfa"/>
+                                <stop offset="1" stop-color="#f472b6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="app-title">Chemie<span class="title-highlight">RAG</span></h1>
+                    <p class="app-subtitle">Fokus Chemie · 9./10. Klasse</p>
+                </div>
+            </div>
+            <div class="header-status" id="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Wird geladen...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ─── Navigation ─── -->
+    <nav class="app-nav" id="app-nav">
+        <button class="nav-btn active" data-view="chat" id="nav-chat">
+            <span class="nav-icon">💬</span>
+            <span class="nav-label">Chat</span>
+        </button>
+        <button class="nav-btn" data-view="quiz" id="nav-quiz">
+            <span class="nav-icon">🧠</span>
+            <span class="nav-label">Quiz</span>
+        </button>
+        <button class="nav-btn" data-view="flashcards" id="nav-flashcards">
+            <span class="nav-icon">📇</span>
+            <span class="nav-label">Lernkarten</span>
+        </button>
+        <button class="nav-btn" data-view="statements" id="nav-statements">
+            <span class="nav-icon">✅</span>
+            <span class="nav-label">Richtig/Falsch</span>
+        </button>
+        <button class="nav-btn" data-view="explore" id="nav-explore">
+            <span class="nav-icon">🔬</span>
+            <span class="nav-label">Entdecken</span>
+        </button>
+    </nav>
+
+    <!-- ─── Main Content Area ─── -->
+    <main class="app-main" id="app-main">
+
+        <!-- ═══ CHAT VIEW ═══ -->
+        <section class="view active" id="view-chat">
+            <div class="view-header">
+                <h2>Frag dein Schulbuch</h2>
+                <p>Stelle eine Frage und erhalte eine Antwort basierend auf deinem Chemie-Buch.</p>
+            </div>
+            <div class="chat-container" id="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-welcome">
+                        <div class="welcome-icon">🧪</div>
+                        <h3>Willkommen bei ChemieRAG!</h3>
+                        <p>Stelle mir eine Frage über dein Chemie-Schulbuch. Ich finde die Antwort und erkläre sie dir.</p>
+                        <div class="suggestion-chips">
+                            <button class="chip" onclick="askSuggestion('Was ist ein Atom?')">Was ist ein Atom?</button>
+                            <button class="chip" onclick="askSuggestion('Erkläre das Periodensystem')">Periodensystem</button>
+                            <button class="chip" onclick="askSuggestion('Was sind chemische Bindungen?')">Chem. Bindungen</button>
+                            <button class="chip" onclick="askSuggestion('Wie funktioniert eine chemische Reaktion?')">Reaktionen</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <textarea id="chat-input" placeholder="Stelle eine Frage zur Chemie..." rows="1"></textarea>
+                        <button class="send-btn" id="chat-send-btn" onclick="sendChat()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ QUIZ VIEW ═══ -->
+        <section class="view" id="view-quiz">
+            <div class="view-header">
+                <h2>Quiz erstellen</h2>
+                <p>Teste dein Wissen mit automatisch erstellten Multiple-Choice-Fragen.</p>
+            </div>
+            <div class="generator-controls">
+                <div class="control-group">
+                    <label for="quiz-topic">Thema (optional)</label>
+                    <input type="text" id="quiz-topic" placeholder="z.B. Atombau, Säuren, Redoxreaktionen...">
+                </div>
+                <div class="control-group">
+                    <label for="quiz-count">Anzahl Fragen</label>
+                    <div class="count-selector">
+                        <button class="count-btn" onclick="adjustCount('quiz-count', -1)">−</button>
+                        <input type="number" id="quiz-count" value="5" min="2" max="10">
+                        <button class="count-btn" onclick="adjustCount('quiz-count', 1)">+</button>
+                    </div>
+                </div>
+                <button class="generate-btn" id="quiz-generate-btn" onclick="generateQuiz()">
+                    <span class="btn-icon">🧠</span>
+                    Quiz generieren
+                </button>
+            </div>
+            <div class="quiz-area" id="quiz-area"></div>
+        </section>
+
+        <!-- ═══ FLASHCARDS VIEW ═══ -->
+        <section class="view" id="view-flashcards">
+            <div class="view-header">
+                <h2>Lernkarten</h2>
+                <p>Erstelle Karteikarten zum Lernen — klicke auf eine Karte, um die Antwort zu sehen.</p>
+            </div>
+            <div class="generator-controls">
+                <div class="control-group">
+                    <label for="fc-topic">Thema (optional)</label>
+                    <input type="text" id="fc-topic" placeholder="z.B. Ionenbindung, Periodensystem...">
+                </div>
+                <div class="control-group">
+                    <label for="fc-count">Anzahl Karten</label>
+                    <div class="count-selector">
+                        <button class="count-btn" onclick="adjustCount('fc-count', -1)">−</button>
+                        <input type="number" id="fc-count" value="8" min="3" max="15">
+                        <button class="count-btn" onclick="adjustCount('fc-count', 1)">+</button>
+                    </div>
+                </div>
+                <button class="generate-btn" id="fc-generate-btn" onclick="generateFlashcards()">
+                    <span class="btn-icon">📇</span>
+                    Lernkarten erstellen
+                </button>
+            </div>
+            <div class="flashcard-grid" id="flashcard-area"></div>
+        </section>
+
+        <!-- ═══ STATEMENTS VIEW ═══ -->
+        <section class="view" id="view-statements">
+            <div class="view-header">
+                <h2>Richtig oder Falsch?</h2>
+                <p>Überprüfe dein Verständnis — entscheide, ob die Aussage stimmt.</p>
+            </div>
+            <div class="generator-controls">
+                <div class="control-group">
+                    <label for="stmt-topic">Thema (optional)</label>
+                    <input type="text" id="stmt-topic" placeholder="z.B. Elektrochemie, Stöchiometrie...">
+                </div>
+                <div class="control-group">
+                    <label for="stmt-count">Anzahl Aussagen</label>
+                    <div class="count-selector">
+                        <button class="count-btn" onclick="adjustCount('stmt-count', -1)">−</button>
+                        <input type="number" id="stmt-count" value="6" min="3" max="12">
+                        <button class="count-btn" onclick="adjustCount('stmt-count', 1)">+</button>
+                    </div>
+                </div>
+                <button class="generate-btn" id="stmt-generate-btn" onclick="generateStatements()">
+                    <span class="btn-icon">✅</span>
+                    Aussagen generieren
+                </button>
+            </div>
+            <div class="statements-area" id="statements-area"></div>
+        </section>
+
+        <!-- ═══ EXPLORE VIEW ═══ -->
+        <section class="view" id="view-explore">
+            <div class="view-header">
+                <h2>Thema entdecken</h2>
+                <p>Erhalte eine umfassende Zusammenfassung zu jedem Thema aus deinem Schulbuch.</p>
+            </div>
+            <div class="generator-controls">
+                <div class="control-group full-width">
+                    <label for="explore-topic">Thema eingeben</label>
+                    <input type="text" id="explore-topic" placeholder="z.B. Redoxreaktionen, Säure-Base-Theorie, Elektrochemie...">
+                </div>
+                <button class="generate-btn" id="explore-generate-btn" onclick="exploreTopic()">
+                    <span class="btn-icon">🔬</span>
+                    Thema erforschen
+                </button>
+            </div>
+            <div class="topic-list" id="topic-list"></div>
+            <div class="explore-result" id="explore-result"></div>
+        </section>
+
+    </main>
+
+    <!-- ─── Loading Overlay ─── -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+        </div>
+        <p class="loading-text" id="loading-text">Wird generiert...</p>
+    </div>
+
+    <!-- ─── Toast Notifications ─── -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

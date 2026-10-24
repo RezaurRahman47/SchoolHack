@@ -1,0 +1,30 @@
+# Runtime / secrets
+.env
+*.log
+test_resp.json
+
+# Environments (multi-GB)
+.venv/
+.venv-v2/
+
+# The source PDF is not redistributed. The processed v2 index IS committed so a
+# fresh clone can run without the book.
+Inputs/
+processed_data/
+vector_db/
+vector_db_v2/
+
+# Commit only the runtime artifacts needed by the v2 server.
+processed_data_v2/*
+!processed_data_v2/chroma/
+!processed_data_v2/images/
+!processed_data_v2/text_chunks.json
+!processed_data_v2/images_captioned.json
+!processed_data_v2/images_indexed.json
+!processed_data_v2/images_manifest.json
+!processed_data_v2/build_stats.json
+
+# Python / macOS
+__pycache__/
+*.pyc
+.DS_Store

@@ -43,6 +43,28 @@ run.bat        # Windows (or ./run.sh on macOS / Linux)
 Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. For Claude-written hints and teacher summaries, copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`; without it, the built-in hints and summaries are used. See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
 </details>
 
+## 🎒 Full demo on a fresh laptop (teammates / hackathon)
+
+The textbook RAG index is committed, so a clone works **without the PDF**:
+
+```bash
+git clone <repo-url>
+cd SchoolHack
+./setup.sh                 # Python >= 3.10; creates both venvs
+# add your own key to vectorstore/.env
+./run_demo.sh              # RAG :8080 + SchoolHack :8000
+```
+
+Open <http://localhost:8000> → `admin` / `admin`. SQLite is seeded automatically.
+
+- First `setup.sh` downloads the two local models (~3.8 GB, one time). For the
+  demo, copy `~/.cache/huggingface/hub/models--google--embeddinggemma-2` and
+  `models--BAAI--bge-reranker-v2-m3` via USB and run `SKIP_MODELS=1 ./setup.sh`.
+- `vectorstore/.env` is **not** committed. Each person uses their own
+  `OPENROUTER_API_KEY`.
+- If your Mac stays home, see [scripts/remote_demo.md](scripts/remote_demo.md)
+  for Tailscale + SSH (`localhost` on the venue laptop) or Cloudflare Tunnel.
+
 ## ✨ What it does
 
 | | For students 🧒 | For teachers 👩‍🏫 |

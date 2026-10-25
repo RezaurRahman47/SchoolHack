@@ -1,0 +1,8 @@
+{# DE | EN switch. Import with: {% from "_lang_switch.html" import lang_switch with context %} #}
+{% macro lang_switch(extra='') %}
+  {% set back = (request.url.path ~ ('?' ~ request.url.query if request.url.query else ''))|urlencode %}
+  <div class="lang-switch {{ extra }}" role="group" aria-label="Sprache / Language" data-no-i18n>
+    <a href="/lang/de?next={{ back }}" hreflang="de" lang="de" class="{{ 'is-on' if lang != 'en' else '' }}" aria-current="{{ 'true' if lang != 'en' else 'false' }}">DE</a>
+    <a href="/lang/en?next={{ back }}" hreflang="en" lang="en" class="{{ 'is-on' if lang == 'en' else '' }}" aria-current="{{ 'true' if lang == 'en' else 'false' }}">EN</a>
+  </div>
+{% endmacro %}

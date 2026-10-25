@@ -26,6 +26,10 @@ _PREAMBLE = re.compile(
     r"|hier ist (?:die|eine) (?:kurze )?antwort\s*[:!.,;]?\s*"
     r"|kurz gesagt\s*[,:;!]\s*"
     r"|(?:a|antwort|die antwort(?: ist)?|lösung|buchkontext|kontext|merksatz)\s*[:!.,;]\s*"
+    # English (the app can be switched to English)
+    r"|(?:sure|of course|certainly|great question|good question)\s*[!,.:;]\s*"
+    r"|here(?:'s| is) (?:the|a) (?:short )?answer\s*[:!.,;]?\s*"
+    r"|(?:answer|the answer is|solution)\s*[:!.,;]\s*"
     r")+",
     re.IGNORECASE,
 )
@@ -42,6 +46,7 @@ _BOOK_REFUSAL_MARKERS = (
     "das buch sagt dazu nichts",
     "frag mich gern zu einem chemie-thema aus dem buch",
     "der chemie-tutor ist gerade nicht erreichbar",
+    "the chemistry tutor can't be reached",
 )
 
 # Generic "I cannot help with this" answers.  These may be safety refusals
@@ -63,6 +68,12 @@ _SOFT_REFUSAL_MARKERS = (
     "ich kann dir das nicht beantworten",
     "ich kann dir dabei nicht helfen",
     "es tut mir leid, aber",
+    "i can't answer",
+    "i cannot answer",
+    "i can't help with",
+    "i cannot help with",
+    "i'm sorry, but",
+    "i don't have information",
 )
 
 # Word-boundary check: substring matching would also hit "als kinetische

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import os
 import random
 import re
 from pathlib import Path
@@ -14,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import (agent, chat_llm, db, learning_profile, llm, subtopic_quizzes, subtopics_data,
+from . import (agent, chat_llm, db, i18n, learning_profile, llm, subtopic_quizzes, subtopics_data,
                vectorstore)
 from .chat_text import clean_answer, clean_topic, is_refusal, is_soft_refusal
 from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
@@ -24,8 +25,10 @@ from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
 BASE = Path(__file__).resolve().parent
 app = FastAPI(title="School Hack")
 # Keep the signed login cookie stable across page navigation and app restarts.
-# The demo session lasts 30 days; use a private environment secret for production.
-app.add_middleware(SessionMiddleware, secret_key="chemtutor-hackathon-demo", max_age=60 * 60 * 24 * 30,
+# The demo session lasts 30 days. A hosted copy sets SESSION_SECRET (render.yaml
+# generates one), because the fallback below is public in the repository.
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "chemtutor-hackathon-demo"),
+                   max_age=60 * 60 * 24 * 30,
                    same_site="lax")
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
@@ -46,6 +49,13 @@ def _startup() -> None:
     db.init()
 
 
+@app.middleware("http")
+async def _language(request: Request, call_next):
+    """Make the chosen language (cookie) available to the code of this request."""
+    i18n.set_current(request.cookies.get(i18n.COOKIE))
+    return await call_next(request)
+
+
 def role(request: Request) -> str | None:
     return request.session.get("role")
 
@@ -58,7 +68,8 @@ def need(request: Request, r: str):
 
 def render(request: Request, name: str, **ctx):
     return tpl.TemplateResponse(request, name, {
-        "role": role(request), "user": request.session.get("user"), "llm": llm.available(), **ctx
+        "role": role(request), "user": request.session.get("user"), "llm": llm.available(),
+        "lang": i18n.current(), **ctx
     })
 
 
@@ -163,6 +174,12 @@ def landing(request: Request):
     return render(request, "landing.html")
 
 
+@app.get("/archify", response_class=HTMLResponse)
+def archify(request: Request):
+    """How the app works, as two live diagrams (public, no login)."""
+    return render(request, "archify.html")
+
+
 @app.get("/login/{who}", response_class=HTMLResponse)
 def login_page(request: Request, who: str):
     if who not in USERS:
@@ -183,6 +200,17 @@ def login(request: Request, who: str, username: str = Form(...), password: str =
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", 303)
+
+
+@app.get("/lang/{code}")
+def set_language(code: str, next: str = "/"):
+    """Switch the app between German and English, then go back to the page."""
+    # Only local paths, so the link cannot be used to redirect elsewhere.
+    target = next if next.startswith("/") and not next.startswith("//") else "/"
+    resp = RedirectResponse(target, 303)
+    if code in i18n.LANGS:
+        resp.set_cookie(i18n.COOKIE, code, max_age=i18n.COOKIE_MAX_AGE, samesite="lax")
+    return resp
 
 
 # ---------------------------------------------------------------------------
@@ -269,14 +297,21 @@ _QUIZ_WORDS = (
     "test", "quiz", "übe", "übung", "aufgabe", "abfrage", "abfragen",
     "prüfe", "prüf", "frag mich", "stelle mir", "practice",
     "noch eine", "nächste frage",
+    # English (the app can be switched to English)
+    "practise", "exercise", "ask me", "another one", "next question",
 )
 _SUBJECT_WORDS = {
     "biologie": ("bio", "zelle", "dna", "gen", "photosynthese", "enzym", "evolution",
-                 "pflanze", "tier", "virus", "bakter", "mensch", "organ", "nerv", "blut"),
+                 "pflanze", "tier", "virus", "bakter", "mensch", "organ", "nerv", "blut",
+                 "cell", "photosynthesis", "enzyme", "plant", "animal", "human", "blood"),
     "physik": ("physik", "kraft", "energie", "strom", "spannung", "licht", "newton",
-               "geschwindigkeit", "elektron", "magnet", "wärme", "druck", "schall", "optik"),
+               "geschwindigkeit", "elektron", "magnet", "wärme", "druck", "schall", "optik",
+               "physics", "force", "energy", "current", "voltage", "light", "speed", "velocity",
+               "heat", "pressure", "sound", "optics"),
     "mathematik": ("mathe", "mathematik", "gleichung", "ableitung", "funktion", "geometrie",
-                   "prozent", "wahrscheinlichkeit", "rechne", "zahl"),
+                   "prozent", "wahrscheinlichkeit", "rechne", "zahl",
+                   "math", "equation", "derivative", "function", "geometry", "percent",
+                   "probability", "calculate", "solve"),
 }
 
 
@@ -414,14 +449,19 @@ def student_tutor(request: Request):
 
 def _skill_opening(sid: int, skill: str, focus: dict) -> tuple[str, dict]:
     """First tutor message of a subtopic chat: explanation + a code-made exercise."""
+    tail = " Probier diese Übung – nach einem Fehlversuch kannst du dir den Lösungsweg zeigen lassen."
     intro = chat_llm.skill_intro(learning_profile.focus_brief(focus))
-    if not intro:
+    if intro:
+        # The model already writes in the student's language; match it.
+        tail = i18n.pick(tail, " Try this exercise – after a wrong attempt you can show the worked solution.")
+    else:
         # No key / model down: still useful, from code-derived facts only.
+        # Kept German as a whole so the page can translate it (static/i18n/en.js).
         status = (f"Du stehst bei {focus['pc']} % ({focus['correct']} von {focus['attempts']} richtig)."
                   if focus["practised"] else "Diesen Baustein hast du noch nicht geübt.")
         intro = f"Hier üben wir „{focus['title']}“. {status}"
     question = _tutor_question(generate(skill, random.Random(), f"tutor-{random.randrange(10**9)}"), "chemie")
-    return f"{intro} Probier diese Übung – nach einem Fehlversuch kannst du dir den Lösungsweg zeigen lassen.", question
+    return f"{intro}{tail}", question
 
 
 @app.post("/api/tutor/skill/{skill}")
@@ -951,7 +991,8 @@ async def tutor_chat(request: Request):
         # Do not leave a promise of a question card that could not be created.
         answer = re.sub(
             r"(?i)\s*(?:hier ist (?:eine|deine) (?:kurze )?übungsfrage[^.!?]*[.!?]?|"
-            r"ich (?:erstelle|stelle) dir (?:eine|die) (?:kurze )?(?:übungsfrage|aufgabe)[^.!?]*[.!?]?)\s*",
+            r"ich (?:erstelle|stelle) dir (?:eine|die) (?:kurze )?(?:übungsfrage|aufgabe)[^.!?]*[.!?]?|"
+            r"here(?:'s| is) (?:a|your) (?:short )?(?:practice )?(?:question|exercise)[^.!?]*[.!?]?)\s*",
             " ", answer,
         ).strip()
         if not answer:

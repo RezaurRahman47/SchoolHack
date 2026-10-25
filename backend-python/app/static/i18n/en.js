@@ -322,6 +322,7 @@
     "Findet Lücken und sagt dir, was du als Nächstes üben solltest.": "Finds gaps and tells you what to practise next.",
     "Analyse starten": "Run analysis",
     "Analysiere …": "Analysing …",
+    "Analysiere Klassen-Daten …": "Analysing class data …",
     "Erneut analysieren": "Run again",
     "Gefundene Lücken": "Gaps found",
     "Empfohlene Maßnahmen": "Recommended actions",

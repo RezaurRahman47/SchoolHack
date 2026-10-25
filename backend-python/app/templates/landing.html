@@ -1,12 +1,42 @@
 {% extends "base.html" %}
+{% block head %}
+<style>
+  .landing-brand-icon { width: 3rem; height: 3rem; }
+  .landing-hero { min-height: 50vh; min-height: 50svh; display: flex; }
+  .landing-hero-inner {
+    --logo-half: 2.875rem;
+    padding-top: calc(25vh - var(--logo-half));
+    padding-top: calc(25svh - var(--logo-half));
+    padding-bottom: 2rem;
+  }
+  .landing-cards { margin-top: -2rem; }
+  .landing-subtitle { padding-bottom: .75rem; }
+  @media (max-width: 639px) {
+    .landing-hero-inner { --logo-half: 4.125rem; }
+  }
+  @media (min-width: 430px) and (max-width: 639px) {
+    .landing-hero-inner { --logo-half: 3rem; }
+  }
+  @media (min-width: 640px) {
+    .landing-brand-icon { width: 4rem; height: 4rem; }
+    .landing-hero-inner { --logo-half: 2rem; padding-bottom: 3rem; }
+    .landing-cards { margin-top: -3rem; }
+  }
+</style>
+{% endblock %}
 {% block content %}
-<section class="bg-ink-900 text-white hero-grid">
-  <div class="max-w-3xl mx-auto px-5 py-14 sm:py-20 text-center">
-    <h1 class="font-display text-4xl sm:text-6xl font-bold leading-tight">Chemie lernen.<br><span class="text-reagent-400">Schritt für Schritt.</span></h1>
-    <p class="text-slate-300 mt-5 text-xl">Klasse 9 · Berliner Lehrplan · mit KI-Tutor</p>
+<section class="landing-hero bg-ink-900 text-white hero-grid">
+  <div class="landing-hero-inner flex w-full max-w-3xl mx-auto flex-col px-5 text-center">
+    <div class="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+      <img src="/static/icon.svg" class="landing-brand-icon" alt="">
+      <span class="font-display text-4xl sm:text-5xl font-bold leading-none">School Hack <span class="text-reagent-400">Berlin</span></span>
+    </div>
+    <h1 class="font-display text-xl font-bold leading-tight mt-3">Wissenschaft lernen.<br><span class="text-reagent-400">Schritt für Schritt.</span></h1>
+    <div class="flex-1"></div>
+    <p class="landing-subtitle text-slate-300 text-xl mt-3">Klasse 9 · Berliner Lehrplan · mit KI-Tutor</p>
   </div>
 </section>
-<section class="max-w-3xl mx-auto px-5 -mt-8 grid sm:grid-cols-2 gap-5 pb-12">
+<section class="landing-cards max-w-3xl mx-auto px-5 grid sm:grid-cols-2 gap-5 pb-12">
   <a href="/login/student" class="card p-8 text-center hover:border-reagent-500 hover:shadow-lg transition">
     <div class="text-6xl">🧪</div>
     <div class="font-display text-2xl font-bold text-ink-900 mt-4">Ich bin Schüler·in</div>

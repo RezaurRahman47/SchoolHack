@@ -24,6 +24,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
   {% set path = request.url.path %}
+  {% if path != '/' %}
   <header class="bg-ink-900 text-white sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
       <a href="{{ '/teacher' if role == 'teacher' else '/student/home' if role == 'student' else '/' }}" class="flex shrink-0 items-center gap-2 font-display font-semibold text-lg whitespace-nowrap">
@@ -53,13 +54,11 @@
               <a href="/logout" class="profile-logout block px-4 py-2.5">Abmelden</a>
             </div>
           </details>
-        {% else %}
-          <a href="/login/student" class="navlink{{ ' is-active' if path.startswith('/login/student') else '' }}">Schüler·innen</a>
-          <a href="/login/teacher" class="navlink{{ ' is-active' if path.startswith('/login/teacher') else '' }}">Lehrkräfte</a>
         {% endif %}
       </nav>
     </div>
   </header>
+  {% endif %}
   <main class="flex-1">{% block content %}{% endblock %}</main>
   <footer class="text-xs text-slate-500 text-center py-6 px-4">
     School Hack · Klasse 9 · v1

@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% set p = profile %}
+{% set is_teacher = viewer == 'teacher' %}
+{% set who = p.student.name if p.student.name != 'admin' else 'Hanna' %}
+{% block title %}{{ 'Lernprofil ' ~ who if is_teacher else 'Mein Lernprofil' }} – School Hack{% endblock %}
+{% block head %}
+<style>
+  .pf-bar { height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+  .pf-bar > span { display: block; height: 100%; border-radius: inherit; }
+  .pf-bar-thin { height: 4px; }
+  .pf-kpi-value { font-family: "Space Grotesk", Inter, sans-serif; font-weight: 700; font-size: 2.1rem;
+                  line-height: 1.05; color: #0f1b2d; font-variant-numeric: tabular-nums; }
+  .pf-kpi-unit { font-size: 1rem; color: #94a3b8; font-weight: 600; }
+  .pf-kpi-label { margin-top: .35rem; font-size: .78rem; color: #64748b; }
+  .pf-note { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .55rem; border-radius: 999px;
+             background: #0f1b2d; color: #fff; font-size: .72rem; font-weight: 700; cursor: help; }
+  .pf-note b { color: #2dd4bf; }
+  .pf-weak { border: 1px solid #e2e8f0; border-radius: .9rem; padding: .9rem 1rem; background: #fff;
+             border-left-width: 4px; }
+  .pf-title { font-family: "Space Grotesk", Inter, sans-serif; font-weight: 700; color: #0f1b2d; line-height: 1.2;
+              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .pf-pc { font-family: "Space Grotesk", Inter, sans-serif; font-weight: 700; font-size: 1.5rem; line-height: 1;
+           font-variant-numeric: tabular-nums; }
+  .pf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .75rem; margin-top: .55rem;
+             font-size: .72rem; color: #64748b; }
+  .pf-root { margin-top: .55rem; font-size: .75rem; color: #334155; }
+  .pf-trend { display: inline-flex; align-items: center; gap: .2rem; font-weight: 700; cursor: help; }
+  .pf-trend.up { color: #16a34a; }
+  .pf-trend.down { color: #dc2626; }
+  .pf-trend.flat { color: #64748b; }
+  .pf-next { border: 1px solid #ccfbf1; border-radius: .9rem; background: #f0fdfa; padding: .8rem 1rem;
+             color: #0f1b2d; font-size: .88rem; }
+  .pf-next-k { font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #0d9488; }
+  .pf-topics { column-gap: 2rem; }
+  .pf-right { text-align: right; }
+  .pf-topic + .pf-topic { margin-top: 1.25rem; }
+  @media (min-width: 1024px) { .pf-topic:nth-child(2) { margin-top: 0; } }
+  .pf-topic-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .pf-topic-name { font-family: "Space Grotesk", Inter, sans-serif; font-weight: 700; color: #0f1b2d; }
+  .pf-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center;
+            gap: .15rem .6rem; padding: .5rem 0; border-top: 1px solid #f1f5f9; }
+  .pf-row:first-of-type { border-top: 0; }
+  .pf-row-name { font-size: .82rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pf-row-pc { font-size: .78rem; font-weight: 700; color: #0f1b2d; font-variant-numeric: tabular-nums;
+               min-width: 2.6rem; text-align: right; }
+  .pf-row .pf-bar { grid-column: 1 / -1; }
+  .pf-status { display: inline-flex; align-items: center; padding: .1rem .5rem; border-radius: 999px;
+               border: 1px solid; font-size: .64rem; font-weight: 700; white-space: nowrap; }
+  .pf-unit { display: inline-flex; border-radius: 999px; background: #0f1b2d; padding: .1rem .6rem;
+             font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #fff; }
+  .pf-test { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr) auto auto; align-items: center;
+             gap: .6rem; padding: .45rem 0; }
+  .pf-test-bar { position: relative; height: 10px; border-radius: 999px; background: #e2e8f0; overflow: visible; }
+  .pf-test-bar > span { display: block; height: 100%; border-radius: inherit; }
+  .pf-test-bar > i { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 2px; background: #0f1b2d; }
+  .pf-mistake { border-top: 1px solid #f1f5f9; padding: .7rem 0; }
+  .pf-mistake:first-child { border-top: 0; padding-top: 0; }
+  .pf-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .7rem; color: #64748b; }
+  .pf-dot { display: inline-block; width: .55rem; height: .55rem; border-radius: 999px; margin-right: .3rem;
+            vertical-align: middle; }
+  .card-highlight { border-color: #14b8a6; box-shadow: none; transition: border-color .15s ease, box-shadow .15s ease; }
+  .card-highlight:hover { border-color: #14b8a6; box-shadow: 0 0 0 1px #14b8a6, 0 10px 26px rgba(15, 27, 45, .10); }
+  @media (max-width: 639px) {
+    .pf-kpi-value { font-size: 1.65rem; }
+    .pf-pc { font-size: 1.25rem; }
+    .pf-test { grid-template-columns: 3rem minmax(0, 1fr) auto; }
+    .pf-test .pf-note { grid-column: 2 / -1; justify-self: start; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  {% if is_teacher %}
+  <a href="/teacher" class="text-sm font-semibold text-reagent-600">← Meine Klasse</a>
+  {% endif %}
+  <div class="flex flex-wrap items-end justify-between gap-3 {{ 'mt-2' if is_teacher else '' }}">
+    <div>
+      <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink-900">
+        {{ 'Lernprofil: ' ~ who if is_teacher else 'Dein Lernprofil' }}
+      </h1>
+      <div class="flex flex-wrap items-center gap-2 mt-2">
+        <span class="chip bg-slate-100 text-slate-600">Klasse {{ p.student.klasse }}</span>
+        {% if is_teacher %}
+          {% if p.student.is_demo %}<span class="chip bg-amber-100 text-amber-700">Beispieldaten</span>{% endif %}
+        {% else %}
+          <span class="chip" style="background:#f0fdfa;color:#0d9488">Nur dein Fortschritt</span>
+        {% endif %}
+        <span class="text-sm text-slate-500">Chemie · {{ p.tests }} {{ 'Test' if p.tests == 1 else 'Tests' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+    <div class="card p-5">
+      <div class="pf-kpi-value">{{ p.overall }}<span class="pf-kpi-unit"> %</span></div>
+      <div class="pf-kpi-label">Lernstand Chemie</div>
+      <div class="pf-bar pf-bar-thin mt-3"><span style="width:{{ p.overall }}%;background:#14b8a6"></span></div>
+    </div>
+    <div class="card p-5">
+      {% if p.latest %}
+      <div class="pf-kpi-value">{{ p.latest.score }}<span class="pf-kpi-unit">/30</span></div>
+      <div class="pf-kpi-label flex flex-wrap items-center gap-2">
+        Letzter Test
+        <span class="pf-note" title="Beispiel-Notenschlüssel: ab {{ p.pass_mark }}/30 = Note 4. Die Schule legt ihren eigenen Schlüssel fest.">Note <b>{{ p.latest.note.note }}</b></span>
+      </div>
+      <div class="text-xs font-semibold mt-2 {{ 'text-pass' if p.latest.passed else 'text-fail' }}">
+        {{ 'Bestanden' if p.latest.passed else 'Noch nicht bestanden' }}
+      </div>
+      {% else %}
+      <div class="pf-kpi-value">–</div>
+      <div class="pf-kpi-label">Noch kein Test</div>
+      {% endif %}
+    </div>
+    <div class="card p-5">
+      <div class="pf-kpi-value">{{ p.secure }}<span class="pf-kpi-unit">/{{ p.total }}</span></div>
+      <div class="pf-kpi-label">Bausteine sicher (ab 70 %)</div>
+    </div>
+    <div class="card p-5">
+      <div class="pf-kpi-value {{ 'text-fail' if p.gaps else '' }}">{{ p.gaps }}</div>
+      <div class="pf-kpi-label">Lücken unter {{ p.weak_line }} %</div>
+      {% if p.untouched %}
+      <div class="text-xs text-slate-400 mt-2">{{ p.untouched }} noch nicht geübt</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Where it gets stuck -->
+  <section class="card p-5 sm:p-6 mt-4" aria-labelledby="pf-weak-title">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 id="pf-weak-title" class="font-display text-2xl font-bold text-ink-900">Hier hakt es</h2>
+          <span class="chip" style="background:#f0fdfa;color:#0d9488">unter {{ p.weak_line }} % · wie im Lücken-Agent</span>
+        </div>
+        <p class="text-sm text-slate-500 mt-1">Nur geübte Bausteine – ohne Antworten gibt es noch keine Lücke.</p>
+      </div>
+      {% if not is_teacher %}
+      <form method="post" action="/student/test/new">
+        <button type="submit" class="btn btn-primary">Neuen Test starten</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="pf-next mt-4">
+      <div class="pf-next-k">Nächster Schritt</div>
+      <div class="mt-1">{{ p.next_step }}</div>
+    </div>
+
+    {% if p.weak %}
+    <div class="grid sm:grid-cols-2 gap-3 mt-4">
+      {% for s in p.weak %}
+      <article class="pf-weak" style="border-left-color:{{ s.fg }}">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="pf-title">{{ s.title }}</div>
+            <div class="text-xs text-slate-500 mt-1">{{ s.topic }}</div>
+          </div>
+          <div class="pf-right shrink-0">
+            <div class="pf-pc" style="color:{{ s.fg }}">{{ s.pc }}<span class="text-sm"> %</span></div>
+            <span class="pf-status mt-1" style="background:{{ s.bg }};border-color:{{ s.border }};color:{{ s.fg }}">{{ s.status }}</span>
+          </div>
+        </div>
+        <div class="pf-bar mt-3"><span style="width:{{ s.pc }}%;background:{{ s.fg }}"></span></div>
+        <div class="pf-meta">
+          <span class="num">{{ s.correct }} von {{ s.attempts }} richtig</span>
+          {% if s.trend %}
+          <span class="pf-trend {{ s.trend.dir }}" title="Trefferquote der letzten {{ p.trend_days }} Tage vs. davor, {{ s.trend.sample }}">{{ s.trend.arrow }} {{ s.trend.label }}</span>
+          {% endif %}
+          {% if s.chat %}<span>{{ s.chat }}× im Chat gefragt</span>{% endif %}
+        </div>
+        {% if s.root %}
+        <div class="pf-root">↳ Erst üben: <b>{{ s.root }}</b></div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-xl bg-green-50 border border-green-200 p-4 mt-4 text-sm text-ink-900">
+      Keine geübten Bausteine unter {{ p.weak_line }} %. 🎉
+    </div>
+    {% endif %}
+
+    {% if p.strong %}
+    <div class="flex flex-wrap items-center gap-2 mt-4 text-sm">
+      <span class="text-slate-500">Schon sicher:</span>
+      {% for s in p.strong %}
+      <span class="pf-status" style="background:{{ s.bg }};border-color:{{ s.border }};color:{{ s.fg }}">{{ s.title }} · {{ s.pc }} %</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- All building blocks -->
+  <section class="card p-5 sm:p-6 mt-4" aria-labelledby="pf-all-title">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 id="pf-all-title" class="font-display text-2xl font-bold text-ink-900">Alle Bausteine</h2>
+        <p class="text-sm text-slate-500 mt-1">Beherrschung je Baustein, nach Lehrplan-Einheit.</p>
+      </div>
+      <div class="pf-legend" aria-hidden="true">
+        <span><i class="pf-dot" style="background:#dc2626"></i>Lücke &lt; 45 %</span>
+        <span><i class="pf-dot" style="background:#d97706"></i>im Aufbau</span>
+        <span><i class="pf-dot" style="background:#16a34a"></i>sicher ab 70 %</span>
+        <span><i class="pf-dot" style="background:#cbd5e1"></i>noch nicht geübt</span>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 pf-topics mt-5">
+      {% for t in p.topics %}
+      <div class="pf-topic">
+        <div class="pf-topic-head">
+          <span class="pf-unit">Unit {{ loop.index }}</span>
+          <span class="pf-topic-name">{{ t.name }}</span>
+          <span class="text-sm font-bold num" style="color:{{ t.fg }}">{{ t.pc }} %</span>
+          {% if t.gaps %}<span class="chip bg-red-100 text-fail">{{ t.gaps }} {{ 'Lücke' if t.gaps == 1 else 'Lücken' }}</span>{% endif %}
+        </div>
+        <div class="mt-2">
+          {% for s in t.skills %}
+          <div class="pf-row">
+            <span class="pf-row-name" title="{{ s.title }}">{{ s.title }}</span>
+            {% if s.trend %}
+            <span class="pf-trend {{ s.trend.dir }} text-xs" title="Trefferquote der letzten {{ p.trend_days }} Tage vs. davor, {{ s.trend.sample }}">{{ s.trend.arrow }}</span>
+            {% else %}<span></span>{% endif %}
+            <span class="pf-row-pc" style="color:{{ s.fg }}">{{ s.pc ~ ' %' if s.practised else '–' }}</span>
+            <span class="pf-bar pf-bar-thin"><span style="width:{{ s.pc if s.practised else 0 }}%;background:{{ s.fg }}"></span></span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="grid lg:grid-cols-2 gap-4 mt-4">
+    <!-- Test history -->
+    <section class="card p-5 sm:p-6" aria-labelledby="pf-hist-title">
+      <h2 id="pf-hist-title" class="font-display text-2xl font-bold text-ink-900">Testverlauf</h2>
+      <p class="text-sm text-slate-500 mt-1">Letzte {{ p.history|length }} Tests · Strich = Bestehensgrenze {{ p.pass_mark }}/30</p>
+      {% if p.history %}
+      <div class="mt-3">
+        {% for h in p.history|reverse %}
+        <div class="pf-test">
+          <span class="text-xs text-slate-500 num">{{ h.date }}</span>
+          <span class="pf-test-bar"><span style="width:{{ h.pc }}%;background:{{ '#16a34a' if h.passed else '#dc2626' }}"></span><i style="left:{{ (100 * p.pass_mark / 30)|round(1) }}%"></i></span>
+          <span class="text-sm font-bold num text-ink-900">{{ h.score }}/30</span>
+          <span class="pf-note" title="Beispiel-Notenschlüssel: ab {{ p.pass_mark }}/30 = Note 4">Note <b>{{ h.note.note }}</b></span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-sm text-slate-400 mt-4">Noch kein Test abgeschlossen.</div>
+      {% endif %}
+    </section>
+
+    <!-- Recent mistakes -->
+    <section class="card p-5 sm:p-6" aria-labelledby="pf-err-title">
+      <h2 id="pf-err-title" class="font-display text-2xl font-bold text-ink-900">Letzte Fehler</h2>
+      <p class="text-sm text-slate-500 mt-1">Erster Versuch falsch – mit der richtigen Lösung.</p>
+      {% if p.mistakes %}
+      <div class="mt-3">
+        {% for m in p.mistakes %}
+        <div class="pf-mistake">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="chip bg-slate-100 text-slate-600">{{ m.title }}</span>
+            <span class="text-xs text-slate-400 num">{{ m.date }}</span>
+            {% if m.fixed %}<span class="chip bg-green-100 text-pass">später richtig ✓</span>{% endif %}
+          </div>
+          <div class="text-sm text-ink-900 mt-1">{{ m.prompt }}</div>
+          <div class="text-xs mt-1">
+            <span class="text-fail">{{ (m.given ~ ' ' ~ m.unit if m.given else 'keine Antwort')|trim }}</span>
+            <span class="text-slate-400">→</span>
+            <span class="text-pass font-semibold">{{ (m.answer ~ ' ' ~ m.unit)|trim }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-sm text-slate-400 mt-4">
+        {{ 'Beispieldaten speichern keine Einzelfragen.' if p.student.is_demo else 'Noch keine Fehler gespeichert.' }}
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if not is_teacher %}
+  <a href="/student/tutor" class="card mt-4 p-4 flex items-center gap-3 transition group card-highlight">
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-reagent-400" style="width: 2.5rem; height: 2.5rem;">✦</span>
+    <span class="min-w-0 flex-1">
+      <span class="block font-display font-bold text-ink-900 group-hover:text-reagent-600">Lücke mit dem KI-Tutor klären</span>
+      <span class="block text-xs text-slate-500">Frag nach einer Erklärung oder einer Übungsfrage.</span>
+    </span>
+    <span class="text-sm font-semibold text-reagent-600">Öffnen →</span>
+  </a>
+  {% endif %}
+
+  <p class="text-xs text-slate-500 text-center mt-6">
+    Alles aus den Antworten berechnet – bewertet wird im Code, nie von der KI.
+    Note nach Beispiel-Notenschlüssel (ab {{ p.pass_mark }}/30 = 4).
+  </p>
+</div>
+{% endblock %}

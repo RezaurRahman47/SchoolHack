@@ -81,6 +81,8 @@ unreachable or the key is missing.
 | Adaptive | Each answer updates per-skill mastery (Elo-style); new tests are weighted toward weak skills |
 | Teacher | KPIs, green/red score bars with pass line, pass/fail doughnut, right-vs-wrong per skill, weekly trend, mastery heatmap, class filter 9a/9b |
 | Lücken-Agent | 5-step workflow: load data → detect weak skills → trace root causes in the prerequisite graph → form support groups → recommend actions |
+| Lernprofil | Per student (`/student/profile`, teacher: `/teacher/student/{id}` from the "Lernprofile" list): weak skills under 60 % with evidence (*x von y richtig*), the weak prerequisite to fix first, 14-day trend, "im Chat gefragt", all 25 skills by unit, test history, last mistakes with the correct answer. Skills without answers show as *noch nicht geübt*, never as a gap |
+| Note | Example grade key (1–6) on the result page, profile and class list. The 4/5 line sits on the pass mark (20/30 = Note 4), so *bestanden* always means Note 4 or better. Not an official key — schools set their own (`NOTENSCHLUESSEL` in `questions.py`). Not shown for 5-question subtopic checks |
 | Mobile | Responsive layout + installable PWA, all assets bundled (no CDN needed) |
 
 Topics covered (Klasse 9), in curriculum order: Unit 1 *Klare Verhältnisse – Quantitative Betrachtungen*
@@ -98,6 +100,7 @@ app/
   questions.py   skill graph + 30 question templates + grading
   db.py          SQLite storage + demo class
   agent.py       teacher gap-finder agent
+  learning_profile.py  per-student profile (weak skills, trends, mistakes) — code only, no AI
   chat_llm.py    in-app chat model (OpenRouter) — the tutor without the RAG server
   vectorstore.py optional RAG/textbook client (sources + figures)
   llm.py         hints + teacher summary on OpenRouter (same key as chat)
@@ -118,6 +121,8 @@ Reset all data: delete the `data/` folder and restart.
 - [ ] Phone: layout readable, app installs to home screen
 - [ ] KI-Tutor answers a chemistry question with the RAG server **stopped**
 - [ ] KI-Tutor answers a chemistry question with the RAG server **running** (same answer — chat never waits for it)
+- [ ] Lernprofil: wrong answers in a test show up under "Letzte Fehler"; after the retry round they read "später richtig ✓"
+- [ ] Teacher → "Lernprofile" → a student: same Lernstand, score and Note as in the list
 - [ ] Note any wrong chemistry in a question (screenshot + test number)
 
 ## Known limits of v1

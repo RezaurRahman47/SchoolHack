@@ -14,11 +14,12 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import agent, chat_llm, db, llm, subtopic_quizzes, subtopics_data, vectorstore
+from . import (agent, chat_llm, db, learning_profile, llm, subtopic_quizzes, subtopics_data,
+               vectorstore)
 from .chat_text import clean_answer, clean_topic, is_refusal, is_soft_refusal
 from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
                         SUBTOPIC_TITLES, SUBTOPIC_COVERS, SUBTOPIC_ORDER,
-                        CURRICULUM_UNITS, build_test, generate, grade)
+                        CURRICULUM_UNITS, build_test, generate, grade, note_for)
 
 BASE = Path(__file__).resolve().parent
 app = FastAPI(title="School Hack")
@@ -94,11 +95,7 @@ RADAR_SWEEP = 26
 
 
 def _tone(p: float) -> tuple[str, str, str]:
-    if p < 0.45:
-        return "#fef2f2", "#fecaca", "#dc2626"
-    if p < 0.7:
-        return "#fffbeb", "#fde68a", "#d97706"
-    return "#f0fdf4", "#bbf7d0", "#16a34a"
+    return learning_profile.tone(p)
 
 
 def _radar_point(angle: float, radius: float) -> tuple[float, float]:
@@ -213,6 +210,28 @@ def settings(request: Request):
     if role(request) not in {"student", "teacher"}:
         return RedirectResponse("/login/student", 303)
     return render(request, "settings.html")
+
+
+@app.get("/student/profile", response_class=HTMLResponse)
+def student_profile(request: Request):
+    """The student's own learning profile (only their own data)."""
+    if (r := need(request, "student")):
+        return r
+    profile = learning_profile.build(_tutor_sid(request))
+    if not profile:
+        return RedirectResponse("/student/home", 303)
+    return render(request, "profile.html", profile=profile, viewer="student")
+
+
+@app.get("/teacher/student/{sid}", response_class=HTMLResponse)
+def teacher_student_profile(request: Request, sid: int):
+    """One student's learning profile for the teacher."""
+    if (r := need(request, "teacher")):
+        return r
+    profile = learning_profile.build(sid)
+    if not profile:
+        return RedirectResponse("/teacher", 303)
+    return render(request, "profile.html", profile=profile, viewer="teacher")
 
 
 @app.get("/student/chemie", response_class=HTMLResponse)
@@ -491,9 +510,12 @@ def result(request: Request, tid: int):
     is_subtopic = kind.startswith("subtopic:")
     total = len(test["questions"])
     pass_mark = 3 if is_subtopic else PASS_MARK
+    # The example grade key is made for the 30-question test; a 5-question
+    # subtopic check passes at 3/5, which would scale to a misleading Note 5.
+    note = None if is_subtopic else note_for(first, total)
     return render(request, "result.html", test=test, first=first, passed=first >= pass_mark,
                   pass_mark=pass_mark, total=total, round=last, remaining=len(wrong),
-                  last_total=len(last_rows), review=review, skill_rows=skill_rows)
+                  last_total=len(last_rows), review=review, skill_rows=skill_rows, note=note)
 
 
 @app.post("/api/hint")

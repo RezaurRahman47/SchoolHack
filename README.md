@@ -124,6 +124,7 @@ the same scripts inside WSL.
 | **Help** | Atomi's hints: a nudge first, the method second, never just the answer | 🤖 Gap finder: weak skills, likely causes, support groups, next steps |
 | **Feedback** | Instant ⭐, streaks, and an explanation for typical mistakes | "Where are they stuck?" chart, hardest topics first |
 | **Learning** | Only wrong questions come back, round after round | Filter by class (9a / 9b) |
+| **Profile** | *Mein Lernprofil*: where it gets stuck, what is secure, own tests and mistakes | One profile per student: gaps with evidence, likely cause, trend, Note (example key) |
 
 > [!IMPORTANT]
 > **Code grades, AI never does.** Every answer is checked in code. The model (OpenRouter) is optional and only phrases the chat, the hints and the teacher summary. It never sees student names.

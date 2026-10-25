@@ -7,7 +7,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .questions import SKILLS, VISIBLE_SKILLS, PASS_MARK
+from .questions import SKILLS, SUBTOPIC_TITLES, VISIBLE_SKILLS, PASS_MARK, note_for
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "chemtutor.db"
 
@@ -198,6 +198,76 @@ def student_tests(sid: int, limit: int = 10) -> list[dict]:
                      "WHERE student_id=? AND kind='test' ORDER BY id DESC LIMIT ?", (sid, limit)).fetchall()
     c.close()
     return [dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# per-student profile data (read-only; the profile itself is built in profile.py)
+# ---------------------------------------------------------------------------
+def get_student(sid: int) -> dict | None:
+    c = conn()
+    r = c.execute("SELECT id, name, klasse, is_demo FROM students WHERE id=?", (sid,)).fetchone()
+    c.close()
+    return dict(r) if r else None
+
+
+def mastery_detail(sid: int) -> dict[str, dict]:
+    """Mastery p plus the attempt counters update_mastery keeps per skill."""
+    c = conn()
+    rows = c.execute("SELECT skill, p, attempts, correct FROM mastery WHERE student_id=?", (sid,)).fetchall()
+    c.close()
+    return {r["skill"]: {"p": r["p"], "attempts": r["attempts"] or 0, "correct": r["correct"] or 0}
+            for r in rows}
+
+
+def first_attempts(sid: int) -> list[dict]:
+    """Every first-round answer of the full tests, oldest first (for trends)."""
+    c = conn()
+    rows = c.execute("SELECT a.skill, a.correct, a.created FROM answers a JOIN tests t ON a.test_id=t.id "
+                     "WHERE t.student_id=? AND t.kind='test' AND a.round=1 ORDER BY a.created, a.id",
+                     (sid,)).fetchall()
+    c.close()
+    return [dict(r) for r in rows]
+
+
+def recent_mistakes(sid: int, limit: int = 6) -> list[dict]:
+    """Latest wrong first-round answers that still have their question text.
+
+    Seeded example tests store no questions, so they never show up here.
+    ``fixed`` says whether a later round of the same test got it right.
+    """
+    c = conn()
+    rows = c.execute(
+        "SELECT a.test_id, a.qid, a.skill, a.given, a.created, t.questions, "
+        "EXISTS(SELECT 1 FROM answers b WHERE b.test_id=a.test_id AND b.qid=a.qid "
+        "       AND b.round>1 AND b.correct=1) AS fixed "
+        "FROM answers a JOIN tests t ON a.test_id=t.id "
+        "WHERE t.student_id=? AND a.round=1 AND a.correct=0 AND t.questions != '[]' "
+        "ORDER BY a.created DESC, a.id DESC LIMIT ?", (sid, limit * 4)).fetchall()
+    c.close()
+    out = []
+    for r in rows:
+        try:
+            questions = {q["id"]: q for q in json.loads(r["questions"] or "[]")}
+        except (TypeError, ValueError, KeyError):
+            continue
+        q = questions.get(r["qid"])
+        if not q:
+            continue
+        out.append({"skill": r["skill"], "prompt": q.get("prompt", ""), "given": r["given"],
+                    "answer": q.get("answer", ""), "unit": q.get("unit", ""),
+                    "created": r["created"], "fixed": bool(r["fixed"])})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def chat_counts(sid: int) -> dict[str, int]:
+    """How often the student asked the chemistry chat about each skill."""
+    c = conn()
+    rows = c.execute("SELECT skill, COUNT(*) n FROM chat_messages WHERE student_id=? AND role='user' "
+                     "GROUP BY skill", (sid,)).fetchall()
+    c.close()
+    return {r["skill"]: r["n"] for r in rows}
 
 
 def save_chat_message(sid: int, skill: str, role: str, message: str,
@@ -397,8 +467,11 @@ def class_overview(klasse: str | None = None) -> dict:
         f"WHERE t.student_id IN ({q})", ids)}
 
     mastery: dict[int, dict[str, float]] = {}
-    for r in c.execute(f"SELECT student_id, skill, p FROM mastery WHERE student_id IN ({q})", ids):
+    practised: dict[int, set[str]] = {}
+    for r in c.execute(f"SELECT student_id, skill, p, attempts FROM mastery WHERE student_id IN ({q})", ids):
         mastery.setdefault(r["student_id"], {})[r["skill"]] = r["p"]
+        if r["attempts"]:
+            practised.setdefault(r["student_id"], set()).add(r["skill"])
 
     skill_stats = {s: {"correct": 0, "wrong": 0} for s in VISIBLE_SKILLS}
     for r in c.execute(f"SELECT a.skill, SUM(a.correct) c, COUNT(*) n FROM answers a JOIN tests t ON a.test_id=t.id "
@@ -418,10 +491,21 @@ def class_overview(klasse: str | None = None) -> dict:
     for s in students:
         t = latest.get(s["id"])
         m = mastery.get(s["id"], {})
+        visible = {k: v for k, v in m.items()
+                   if k in VISIBLE_SKILLS and k in practised.get(s["id"], set())}
+        weakest = min(visible, key=visible.get) if visible else None
         rows.append({"id": s["id"], "name": "Du (admin)" if s["name"] == "admin" else s["name"],
                      "klasse": s["klasse"], "score": t["first_score"] if t else None,
                      "passed": (t["first_score"] >= PASS_MARK) if t else None,
-                     "mastery": m, "avg_mastery": round(100 * sum(m.values()) / max(len(m), 1))})
+                     "note": note_for(t["first_score"]) if t else None,
+                     "weakest": ({"skill": weakest,
+                                  "name": SUBTOPIC_TITLES.get(weakest) or SKILLS[weakest]["name"],
+                                  "p": round(100 * visible[weakest])} if weakest else None),
+                     "mastery": m, "avg_mastery": round(100 * sum(m.values()) / max(len(m), 1)),
+                     # Same "Lernstand" as the home radar and the profile: all
+                     # visible skills, untouched ones at the 0.3 start value.
+                     "lernstand": round(100 * sum(m.get(k, 0.3) for k in VISIBLE_SKILLS)
+                                        / max(len(VISIBLE_SKILLS), 1))})
     scored = [r for r in rows if r["score"] is not None]
     passed = sum(1 for r in scored if r["passed"])
     return {

@@ -228,6 +228,7 @@ sequenceDiagram
 | `backend-python/app/questions.py` | Skill graph, adaptive test assembly, grading and feedback. |
 | `backend-python/app/db.py` | SQLite schema, demo seeding, persistence, mastery updates, class analytics. |
 | `backend-python/app/agent.py` | Explainable teacher gap finder and suggested actions. |
+| `backend-python/app/learning_profile.py` | Per-student profile from mastery, first-round answers, tests and chat counts. Same thresholds as the radar (45 / 70 %) and the gap finder (60 %). |
 | `backend-python/app/chat_llm.py` | In-app chat model (OpenRouter): the KI-Tutor and chemistry chat without the RAG server. |
 | `backend-python/app/vectorstore.py` | Optional client for the RAG service: textbook passages and figures, with a fail-fast cooldown. |
 | `backend-python/app/llm.py` | Hints and teacher summary on OpenRouter (same key as the chat), built-in fallback. |

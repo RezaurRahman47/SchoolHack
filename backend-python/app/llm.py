@@ -9,7 +9,10 @@ _client = None
 
 
 def available() -> bool:
-    return bool(os.getenv("ANTHROPIC_API_KEY"))
+    # Treat the shipped placeholder ("sk-ant-...") as "not configured" so the
+    # Claude-powered extras fall back cleanly instead of failing on every call.
+    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    return key.startswith("sk-ant-") and "..." not in key and len(key) > 20
 
 
 def _get():
@@ -26,8 +29,8 @@ def ask(system: str, prompt: str, max_tokens: int = 600) -> str | None:
     if not available():
         return None
     try:
+        # NOTE: anthropic>=2.2 no longer accepts `temperature` on messages.create().
         msg = _get().messages.create(model=MODEL, max_tokens=max_tokens, system=system,
-                                     temperature=0.2,
                                      messages=[{"role": "user", "content": prompt}])
         return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
     except Exception as e:  # network/key problems must never break the lesson

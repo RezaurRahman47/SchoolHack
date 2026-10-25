@@ -1067,6 +1067,8 @@
         + (m[2] ? `You're at ${m[2]} % (${m[3]} of ${m[4]} right).` : "You haven't practised this building block yet.")
         + ' Try this exercise – after a wrong attempt you can show the worked solution.'),
     P(/^Merksatz: (.+)$/, 'Key fact: $1'),
+    // second hint in a test without a model (llm.tutor_hint)
+    P(/^Lösungsweg: (.+)$/, 'Solution: $1'),
 
     // ---- question engine (generated questions) ---------------------------------
     P(/^Welches Ion bildet ein (\S+)-Atom\?$/, 'Which ion does a $1 atom form?'),

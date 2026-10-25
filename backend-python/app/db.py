@@ -41,6 +41,9 @@ CREATE INDEX IF NOT EXISTS idx_tutor_msg_conv ON tutor_messages(conversation_id,
 FIRST = ["Lena", "Jonas", "Mia", "Elias", "Emilia", "Noah", "Hannah", "Paul", "Lea", "Ben", "Sophie", "Finn",
          "Amira", "Luca", "Zeynep", "Leon", "Clara", "Yusuf", "Marie", "Tim", "Aylin", "Felix", "Nora", "Can"]
 LAST = "ABCDEFGHIKLMNOPRSTUVWZYJ"
+DEMO_TEST_QUESTIONS = 30   # a test is 30 questions (see build_test / NOTE_TOTAL)
+DEMO_WEEKS = 6             # weekly tests per demo student
+DEMO_BOOST = 0.025         # improvement per week
 
 
 def conn() -> sqlite3.Connection:
@@ -70,11 +73,59 @@ def init() -> None:
         c.execute("ALTER TABLE tests ADD COLUMN kind TEXT DEFAULT 'test'")
     if c.execute("SELECT COUNT(*) FROM students").fetchone()[0] == 0:
         _seed(c)
+    _repair_demo_tests(c)
     c.commit()
     c.close()
 
 
+def _repair_demo_tests(c: sqlite3.Connection) -> None:
+    """Repair demo data written by the old seed, so score and progress agree.
+
+    The old seed wrote 50 answers per demo test (two per visible skill + filler)
+    and then clamped the score with ``min(30, ...)``.  ``first_score`` was
+    therefore not the number of correct answers: almost every demo student showed
+    "30/30 – bestanden" on the teacher dashboard while the same student's
+    Lernstand (mastery) — and their own answers — sat around 50 %.
+
+    A test has 30 questions, so keep one answer per visible skill plus five
+    spread over the remaining ones and score from exactly those rows.  The old
+    seed also stored the mastery of week 1 while scoring with the improvement of
+    week 6, so the level of the repaired students moves up by that step — the
+    same value the current seed stores as "level now".  Only seeded demo
+    students are touched; real test runs (``is_demo = 0``) already store
+    ``first_score = sum(correct)`` and are left alone.
+    """
+    rows = c.execute(
+        "SELECT t.id, t.student_id FROM tests t JOIN students s ON s.id = t.student_id "
+        "WHERE s.is_demo = 1 AND t.kind = 'test' AND "
+        "(SELECT COUNT(*) FROM answers a WHERE a.test_id = t.id AND a.round = 1) > ?",
+        (DEMO_TEST_QUESTIONS,)).fetchall()
+    for row in rows:
+        tid = row["id"]
+        ans = c.execute(
+            "SELECT id, correct FROM answers WHERE test_id=? AND round=1 ORDER BY id",
+            (tid,)).fetchall()
+        keep = [a["id"] for a in ans[:len(VISIBLE_SKILLS)]]
+        extra = DEMO_TEST_QUESTIONS - len(keep)
+        rest = [a["id"] for a in ans[len(VISIBLE_SKILLS):]]
+        if extra > 0 and rest:
+            keep += rest[::max(len(rest) // extra, 1)][:extra]
+        kept = set(keep)
+        marks = ",".join("?" * len(keep))
+        c.execute(f"DELETE FROM answers WHERE test_id=? AND round=1 AND id NOT IN ({marks})",
+                  (tid, *keep))
+        score = sum(a["correct"] for a in ans if a["id"] in kept)
+        c.execute("UPDATE tests SET first_score=?, final_round=? WHERE id=?",
+                  (score, 1 + (score < DEMO_TEST_QUESTIONS), tid))
+    students = sorted({row["student_id"] for row in rows})
+    if students:  # only on the first run: repaired tests no longer have > 30 answers
+        ids = ",".join("?" * len(students))
+        c.execute(f"UPDATE mastery SET p = MIN(0.97, p + ?) WHERE student_id IN ({ids})",
+                  (DEMO_BOOST * (DEMO_WEEKS - 1), *students))
+
+
 def _seed(c: sqlite3.Connection) -> None:
+    """Demo class: one logged-in student plus 24 classmates with history."""
     rng = random.Random(9)
     # the logged-in demo student
     c.execute("INSERT INTO students (name, klasse, is_demo) VALUES ('admin', '9b', 0)")
@@ -102,23 +153,33 @@ def _seed(c: sqlite3.Connection) -> None:
             probs[s] = p
             att = rng.randint(4, 10)
             cor = sum(rng.random() < p for _ in range(att))
-            c.execute("INSERT INTO mastery VALUES (?,?,?,?,?)", (stid, s, round(p, 3), att, cor))
-        # 6 weekly tests, slight improvement over time (30 questions each)
-        plan = list(VISIBLE_SKILLS) * 2
-        while len(plan) < 30:
-            plan.append(rng.choice(list(VISIBLE_SKILLS)))
-        for w in range(6):
-            boost = w * 0.025
-            score = sum(rng.random() < min(0.98, probs[s] + boost) for s in plan)
-            score = min(30, score)
-            created = (now - timedelta(weeks=5 - w, days=rng.randint(0, 2))).isoformat(timespec="minutes")
+            # p is the level *now*, i.e. after the last week's improvement, so the
+            # Lernstand on the home radar and the teacher dashboard agrees with the
+            # score of the latest test instead of trailing it.
+            level = min(0.97, p + DEMO_BOOST * (DEMO_WEEKS - 1))
+            c.execute("INSERT INTO mastery VALUES (?,?,?,?,?)", (stid, s, round(level, 3), att, cor))
+        # Weekly tests, slight improvement over time.  Each test is 30 questions —
+        # every visible skill once plus five drawn toward the weak skills, exactly
+        # the shape build_test() creates — and first_score is the number of correct
+        # answers stored below, never a scaled or capped one.
+        for w in range(DEMO_WEEKS):
+            boost = w * DEMO_BOOST
+            plan = list(VISIBLE_SKILLS)
+            weights = [1.0 - probs[s] + 0.05 for s in VISIBLE_SKILLS]
+            while len(plan) < DEMO_TEST_QUESTIONS:
+                plan.append(rng.choices(list(VISIBLE_SKILLS), weights)[0])
+            rng.shuffle(plan)
+            outcomes = [int(rng.random() < min(0.98, probs[s] + boost)) for s in plan]
+            score = sum(outcomes)  # out of DEMO_TEST_QUESTIONS
+            created = (now - timedelta(weeks=DEMO_WEEKS - 1 - w,
+                                       days=rng.randint(0, 2))).isoformat(timespec="minutes")
             c.execute("INSERT INTO tests (student_id, created, questions, first_score, final_round, status) "
-                      "VALUES (?,?,?,?,?,?)", (stid, created, "[]", score, 1 + (score < 30), "done"))
+                      "VALUES (?,?,?,?,?,?)",
+                      (stid, created, "[]", score, 1 + (score < DEMO_TEST_QUESTIONS), "done"))
             tid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
-            for i, s in enumerate(plan):  # one answer per question
-                ok = int(rng.random() < min(0.98, probs[s] + boost))
+            for qi, (skill, ok) in enumerate(zip(plan, outcomes)):  # one answer per question
                 c.execute("INSERT INTO answers (test_id, round, qid, skill, given, correct, created) "
-                          "VALUES (?,?,?,?,?,?,?)", (tid, 1, f"{s}{i}", s, "", ok, created))
+                          "VALUES (?,?,?,?,?,?,?)", (tid, 1, f"{skill}{qi}", skill, "", ok, created))
 
 
 # ---------------------------------------------------------------------------

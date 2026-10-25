@@ -62,8 +62,8 @@ cd backend-python
 ```
 
 All the following commands are typed inside this folder. If you type `ls`
-(macOS/Linux) or `dir` (Windows) you should see `app`, `requirements.txt`,
-`run.sh` and `.env.example`.
+(macOS/Linux) or `dir` (Windows) you should see `app`, `requirements.txt` and
+`run.sh`.
 
 ## Step 3 — Create a virtual environment
 

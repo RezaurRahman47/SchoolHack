@@ -4,6 +4,11 @@ This puts the School Hack web app (`backend-python/`) online with a public link,
 for example `https://schoolhack.onrender.com`, on Render's free plan. It takes
 about 10 minutes. You need a GitHub account; no credit card.
 
+**Fastest way:** click
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/RezaurRahman47/SchoolHack/tree/safick_v1),
+sign in with GitHub, paste the OpenRouter key when asked and click **Deploy**.
+Render reads everything else from `render.yaml`. The steps below are the manual way.
+
 What runs online: everything in the app (tests, subtopic quizzes, learning
 profile, teacher dashboard, gap finder, German and English). The AI tutor's free
 answers need an OpenRouter key (step 4). The textbook search server

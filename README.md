@@ -8,6 +8,16 @@ OpenRouter key.
 > If you have never started a Python project before, follow the steps in order and
 > copy the commands exactly as they are written.
 
+## Put it online (free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/RezaurRahman47/SchoolHack/tree/safick_v1)
+
+Click the button, sign in to Render with GitHub, paste your `OPENROUTER_API_KEY`
+when asked (optional) and click **Deploy**. After 2–4 minutes you get a public link
+such as `https://schoolhack.onrender.com` that anyone can open. It deploys the
+branch `safick_v1` with the settings in [`render.yaml`](render.yaml); details and
+the manual way are in [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).
+
 ---
 
 ## Before you start

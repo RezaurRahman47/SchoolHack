@@ -25,11 +25,11 @@ if [ "$MODE" = "full" ] && [ ! -x vectorstore/.venv-v2/bin/python ]; then
   exit 1
 fi
 
-if [ "$MODE" = "full" ] && lsof -ti :8080 >/dev/null 2>&1; then
+if [ "$MODE" = "full" ] && lsof -nP -iTCP:8080 -sTCP:LISTEN -t >/dev/null 2>&1; then
   echo "Port 8080 is already in use. Stop the old RAG server first."
   exit 1
 fi
-if lsof -ti :8000 >/dev/null 2>&1; then
+if lsof -nP -iTCP:8000 -sTCP:LISTEN -t >/dev/null 2>&1; then
   echo "Port 8000 is already in use. Stop the old SchoolHack server first."
   exit 1
 fi

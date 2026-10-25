@@ -174,6 +174,27 @@ Go to **<http://localhost:8000>** and log in:
 Good places to look: **KI-Tutor** (the chat), **Tests**, and **Profil → Mein
 Lernprofil**.
 
+**German or English:** use the **DE | EN** switch at the top right (on a phone:
+**Profil → Sprache**, or **Settings**). Everything switches, including test
+questions, answers and the AI tutor's replies. The choice is remembered.
+
+---
+
+## German and English (for developers)
+
+The app is written in German. English is added in the browser, so templates,
+questions and grading stay as they are:
+
+| File | What it does |
+|---|---|
+| `backend-python/app/static/i18n/en.js` | German → English dictionary, plus patterns for text with numbers or names |
+| `backend-python/app/static/i18n.js` | Swaps the shown text (also text added later by JavaScript, popups and chart labels). Form values stay German, so grading is unchanged |
+| `backend-python/app/i18n.py` | Remembers the language (cookie) and asks the AI model to answer in English |
+
+**Added new German text?** Add it to `en.js`: the exact German text as the key, the
+English as the value. To find anything missing, switch to EN, open the page and run
+`SH_I18N.missing()` in the browser console.
+
 ---
 
 ## Starting it again later

@@ -21,6 +21,7 @@ import uuid
 from collections import OrderedDict
 from pathlib import Path
 
+from . import i18n
 from .chat_text import clean_answer, is_refusal, is_soft_refusal
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -187,8 +188,22 @@ SUBJECT_LABELS = {
 # ---------------------------------------------------------------------------
 # transport
 # ---------------------------------------------------------------------------
+def _in_language(messages: list[dict]) -> list[dict]:
+    """Ask for English output when the student uses the app in English.
+
+    The yes/no answer checker is left alone: it must keep answering JA/NEIN.
+    """
+    if i18n.current() != "en" or not messages or messages[0].get("role") != "system":
+        return messages
+    system = str(messages[0].get("content") or "")
+    if "JA oder NEIN" in system:
+        return messages
+    return [{**messages[0], "content": system + i18n.EN_NOTE}, *messages[1:]]
+
+
 def _post_messages(model: str, messages: list[dict], max_tokens: int = 500,
                    temperature: float = 0.2) -> str:
+    messages = _in_language(messages)
     payload = {
         "model": model,
         "messages": messages,
@@ -290,6 +305,7 @@ _CACHE_LOCK = threading.Lock()
 
 
 def _cache_get(key: tuple[str, str, str]) -> dict | None:
+    key = (*key, i18n.current())  # a German answer must not be reused in English
     with _CACHE_LOCK:
         if key in _CHAT_CACHE:
             _CHAT_CACHE.move_to_end(key)
@@ -298,6 +314,7 @@ def _cache_get(key: tuple[str, str, str]) -> dict | None:
 
 
 def _cache_put(key: tuple[str, str, str], value: dict) -> None:
+    key = (*key, i18n.current())
     with _CACHE_LOCK:
         _CHAT_CACHE[key] = dict(value)
         while len(_CHAT_CACHE) > CHAT_CACHE_SIZE:

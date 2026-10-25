@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Settings – School Hack{% endblock %}
 {% block content %}
+{% from "_lang_switch.html" import lang_switch with context %}
 <div class="max-w-3xl mx-auto px-4 py-8">
   <p class="text-sm font-semibold uppercase tracking-wide text-reagent-600">Profil</p>
   <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink-900 mt-1">Settings</h1>
@@ -9,6 +10,11 @@
     <dl class="divide-y divide-slate-100">
       <div class="flex justify-between gap-4 py-3"><dt class="text-slate-500">Benutzername</dt><dd class="font-semibold text-ink-900">{{ user or '—' }}</dd></div>
       <div class="flex justify-between gap-4 py-3"><dt class="text-slate-500">Status</dt><dd class="font-semibold text-ink-900">{{ 'Lehrkraft' if role == 'teacher' else 'Schülerin' }}</dd></div>
+      <div class="flex flex-wrap items-center justify-between gap-4 py-3">
+        <dt><span class="block text-slate-500">Sprache</span>
+          <span class="block text-xs text-slate-400 mt-0.5">Die Sprache der ganzen App. Fragen und Antworten werden auch übersetzt.</span></dt>
+        <dd>{{ lang_switch('is-light') }}</dd>
+      </div>
     </dl>
   </section>
   <a href="{{ '/teacher' if role == 'teacher' else '/student/home' }}" class="btn btn-ghost mt-5">Zurück zur Startseite</a>

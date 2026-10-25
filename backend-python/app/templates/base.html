@@ -1,7 +1,12 @@
 <!doctype html>
-<html lang="de">
+<html lang="{{ lang|default('de') }}">
 <head>
   <meta charset="utf-8">
+  {% if lang == 'en' %}
+  {# English: translate the German pages in the browser (see static/i18n.js). #}
+  <script src="/static/i18n/en.js"></script>
+  <script src="/static/i18n.js"></script>
+  {% endif %}
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}School Hack{% endblock %}</title>
   <meta name="theme-color" content="#0f1b2d">
@@ -19,11 +24,26 @@
     .navlink.is-active:hover { color: #2dd4bf; background: none; }
     .profile-logout { color: rgba(220, 38, 38, .68); }
     .profile-logout:hover { color: #dc2626; background: #fef2f2; }
+    /* DE | EN switch */
+    .lang-switch { display: inline-flex; flex-shrink: 0; padding: 2px; border-radius: 999px; background: rgba(255,255,255,.1); }
+    .lang-switch a { padding: .15rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 700; line-height: 1.4; color: #cbd5e1; }
+    .lang-switch a:hover { color: #fff; }
+    .lang-switch a.is-on { background: #2dd4bf; color: #0f1b2d; }
+    .lang-switch.is-light { background: #e2e8f0; }
+    .lang-switch.is-light a { color: #475569; font-size: .85rem; padding: .3rem .85rem; }
+    .lang-switch.is-light a:hover { color: #0f1b2d; }
+    .lang-switch.is-light a.is-on { background: #0f1b2d; color: #fff; }
+    .lang-switch.is-floating { position: absolute; top: 1rem; right: 1rem; z-index: 40; }
+    .lang-switch.is-light.is-compact a { font-size: .75rem; padding: .15rem .55rem; }
+    /* English labels are a little longer; keep the header inside small phones. */
+    @media (max-width: 400px) { header .navlink { padding-left: .3rem; padding-right: .3rem; } }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
   {% set path = request.url.path %}
+  {% from "_lang_switch.html" import lang_switch with context %}
+  {% if path == '/' %}{{ lang_switch('is-floating') }}{% endif %}
   {% if path != '/' %}
   <header class="bg-ink-900 text-white sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -53,11 +73,16 @@
               <a href="/student/profile" class="block px-4 py-2.5 hover:bg-slate-50">Mein Lernprofil</a>
               {% endif %}
               <a href="/settings" class="block px-4 py-2.5 hover:bg-slate-50">Settings</a>
+              {# On phones the header has no room for the switch, so it lives here. #}
+              <div class="flex items-center justify-between gap-2 px-4 py-2 sm:hidden">
+                <span>Sprache</span>{{ lang_switch('is-light is-compact') }}
+              </div>
               <div class="my-1 border-t border-slate-100"></div>
               <a href="/logout" class="profile-logout block px-4 py-2.5">Abmelden</a>
             </div>
           </details>
         {% endif %}
+        <span class="ml-1 sm:ml-2 {{ 'hidden sm:inline-flex' if role else 'inline-flex' }}">{{ lang_switch() }}</span>
       </nav>
     </div>
   </header>

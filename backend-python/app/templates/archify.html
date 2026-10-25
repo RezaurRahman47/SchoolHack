@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+{% block title %}Archify – School Hack{% endblock %}
+{% block head %}
+<style>
+  /* Archify: the app explained as two live diagrams. Colours follow the app (ink + reagent teal). */
+  .ax-hero { background: #0f1b2d; color: #fff; }
+  .ax-hero p { color: #cbd5e1; }
+  .ax-how { display: grid; gap: .75rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.25rem; }
+  .ax-how div { border: 1px solid rgba(255,255,255,.12); border-radius: .9rem; padding: .7rem .85rem; font-size: .85rem; color: #e2e8f0; background: rgba(255,255,255,.04); }
+  .ax-how b { display: block; color: #2dd4bf; font-size: .95rem; margin-bottom: .15rem; }
+  @media (max-width: 640px) { .ax-how { grid-template-columns: 1fr; } }
+
+  .ax-lenses { display: grid; gap: .75rem; grid-template-columns: 1fr 1fr; }
+  .ax-lens { text-align: left; border: 2px solid #e2e8f0; background: #fff; border-radius: 1rem; padding: .85rem 1rem; transition: border-color .15s, box-shadow .15s; }
+  .ax-lens:hover { border-color: #5eead4; }
+  .ax-lens[aria-pressed="true"] { border-color: #14b8a6; box-shadow: 0 0 0 4px rgba(20,184,166,.15); }
+  .ax-lens b { display: block; font-family: "Space Grotesk", Inter, sans-serif; font-size: 1.1rem; color: #0f1b2d; }
+  .ax-lens span { font-size: .85rem; color: #64748b; }
+  @media (max-width: 560px) { .ax-lenses { grid-template-columns: 1fr; } }
+
+  .ax-bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+  .ax-flows { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .ax-flow { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: .4rem .9rem; font-size: .88rem; font-weight: 600; color: #334155; }
+  .ax-flow:hover { border-color: #14b8a6; color: #0f1b2d; }
+  .ax-flow[aria-pressed="true"] { background: #0f1b2d; border-color: #0f1b2d; color: #fff; }
+  .ax-tour { display: inline-flex; align-items: center; gap: .4rem; border-radius: 999px; padding: .45rem 1rem; font-weight: 700; font-size: .9rem; background: #14b8a6; color: #04211e; }
+  .ax-tour:hover { background: #2dd4bf; }
+
+  .ax-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+  .ax-svg { display: block; width: 100%; min-width: 760px; height: auto; }
+  .ax-svg .zone text { font: 700 11.5px Inter, sans-serif; letter-spacing: .09em; fill: #64748b; }
+  .ax-svg .node { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: opacity .2s; }
+  .ax-svg .node rect { fill: #fff; stroke: #cbd5e1; stroke-width: 1.6; transition: fill .2s, stroke .2s; }
+  .ax-svg .node .t { font: 700 14.5px "Space Grotesk", Inter, sans-serif; fill: #0f1b2d; }
+  .ax-svg .node .s { font: 500 11.5px Inter, sans-serif; fill: #64748b; }
+  .ax-svg .node .ico { font-size: 20px; }
+  .ax-svg .node:hover rect { stroke: #14b8a6; }
+  .ax-svg .node:focus-visible rect { stroke: #f59e0b; stroke-width: 3; }
+  .ax-svg .node.is-on rect { stroke: #14b8a6; stroke-width: 2.4; fill: #f0fdfa; }
+  .ax-svg .node.is-sel rect { stroke: #f59e0b; stroke-width: 3; fill: #fffbeb; }
+  .ax-svg .edge { transition: opacity .2s; }
+  .ax-svg .edge path { fill: none; stroke: #cbd5e1; stroke-width: 2; marker-end: url(#axArr); }
+  .ax-svg .edge text { font: 600 11px Inter, sans-serif; fill: #64748b; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 5px; stroke-linejoin: round; }
+  .ax-svg .edge text.st { text-anchor: start; }
+  .ax-svg.build .node { animation: axpop .45s cubic-bezier(.3, 1.4, .6, 1) both; animation-delay: calc(var(--i) * 40ms); }
+  .ax-svg.build .edge path { stroke-dasharray: var(--len); animation: axdraw .6s ease both; animation-delay: calc(var(--i) * 35ms + 300ms); }
+  .ax-svg .edge.is-on path, .ax-svg .edge.is-hl path { stroke: #14b8a6; stroke-width: 2.8; marker-end: url(#axArrOn); }
+  .ax-svg .edge.is-on text, .ax-svg .edge.is-hl text { fill: #0d9488; }
+  .ax-svg .edge.is-now path { stroke-dasharray: 8 6; animation: axflow .6s linear infinite; }
+  .ax-svg.hovering .node:not(.is-hl) { opacity: .35; }
+  .ax-svg.hovering .edge:not(.is-hl) { opacity: .2; }
+  .ax-svg .packet { fill: #f59e0b; stroke: #0f1b2d; stroke-width: 2; opacity: 0; }
+  @keyframes axpop { from { opacity: 0; transform: scale(.85); } }
+  @keyframes axdraw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+  @keyframes axflow { to { stroke-dashoffset: -14; } }
+  .ax-legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .78rem; color: #64748b; padding: .6rem .25rem 0; }
+  .ax-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: .35rem; }
+
+  .ax-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 900px) { .ax-grid { grid-template-columns: 1fr 1fr; } }
+  .ax-grid > *, .ax-diagram { min-width: 0; }
+  .ax-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #0d9488; }
+  .ax-stepno { display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: .7rem; background: #0f1b2d; color: #2dd4bf; font: 700 1rem "Space Grotesk", Inter, sans-serif; flex: none; }
+  .ax-dots { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; padding: 0; margin: 0; }
+  .ax-dots button { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: .25rem .7rem; font-size: .8rem; font-weight: 600; color: #64748b; }
+  .ax-dots button.done { border-color: #99f6e4; color: #0d9488; }
+  .ax-dots button[aria-current] { background: #14b8a6; border-color: #14b8a6; color: #04211e; }
+  .ax-nav { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .ax-nav button { flex: 1 1 110px; border-radius: .75rem; padding: .6rem .9rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #0f1b2d; }
+  .ax-nav button.primary { background: #0f1b2d; border-color: #0f1b2d; color: #fff; }
+  .ax-nav button:disabled { opacity: .4; cursor: default; }
+
+  .ax-chat { background: #0f1b2d; color: #fff; border-radius: 1rem; padding: 1.1rem; }
+  .ax-chat .sub { color: #94a3b8; font-size: .85rem; }
+  .ax-log { display: grid; gap: .6rem; max-height: 340px; overflow-y: auto; margin-top: .8rem; padding-right: .25rem; }
+  .ax-msg { display: flex; gap: .6rem; align-items: flex-start; animation: axin .25s ease both; }
+  .ax-msg .av { width: 2.1rem; height: 2.1rem; border-radius: .6rem; background: rgba(255,255,255,.1); display: grid; place-items: center; flex: none; font-size: 1.05rem; }
+  .ax-msg .bub { background: rgba(255,255,255,.08); border-radius: .25rem 1rem 1rem 1rem; padding: .5rem .75rem; font-size: .9rem; min-width: 0; overflow-wrap: anywhere; }
+  .ax-msg .who { display: block; color: #2dd4bf; font-size: .72rem; font-weight: 700; }
+  .ax-msg.me { flex-direction: row-reverse; }
+  .ax-msg.me .bub { background: #14b8a6; color: #04211e; border-radius: 1rem .25rem 1rem 1rem; }
+  .ax-msg.me .who { color: #04211e; }
+  .ax-msg.sys .bub { background: rgba(45,212,191,.12); }
+  @keyframes axin { from { opacity: 0; transform: translateY(5px); } }
+  .ax-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+  .ax-chips button { border-radius: 999px; padding: .3rem .75rem; font-size: .8rem; font-weight: 600; background: rgba(255,255,255,.1); color: #fff; }
+  .ax-chips button:hover { background: rgba(255,255,255,.2); }
+  .ax-ask { display: flex; gap: .5rem; margin-top: .7rem; }
+  .ax-ask input { flex: 1; min-width: 0; border-radius: .75rem; padding: .6rem .8rem; color: #0f1b2d; font-size: .95rem; border: 0; }
+  .ax-ask button { border-radius: .75rem; padding: .6rem 1rem; font-weight: 700; background: #14b8a6; color: #04211e; }
+  @media (prefers-reduced-motion: reduce) { .ax-svg *, .ax-svg.build *, .ax-msg { animation: none !important; } }
+</style>
+{% endblock %}
+{% block content %}
+{# Text comes in both languages from the data below (data-no-i18n: no second translation). #}
+<div data-no-i18n>
+  <section class="ax-hero hero-grid">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="inline-grid place-items-center rounded-xl bg-white/10 text-2xl" style="width:3rem;height:3rem">🗺️</span>
+        <div>
+          <h1 class="font-display text-3xl sm:text-4xl font-bold" id="ax-h1"></h1>
+          <p class="mt-1" id="ax-lead"></p>
+        </div>
+      </div>
+      <div class="ax-how" id="ax-how"></div>
+    </div>
+  </section>
+
+  <div class="max-w-6xl mx-auto px-4 py-6 space-y-4">
+    <div class="ax-lenses" role="group" id="ax-lenses"></div>
+    <div class="ax-bar">
+      <div class="ax-flows" role="group" id="ax-flows"></div>
+      <button type="button" class="ax-tour" id="ax-tour"></button>
+    </div>
+
+    <div class="card p-3 ax-diagram">
+      <div class="ax-scroll" id="ax-scroll"></div>
+      <div class="ax-legend" id="ax-legend"></div>
+    </div>
+
+    <div class="ax-grid">
+      <div class="card p-5 space-y-3">
+        <div class="flex items-start gap-3">
+          <span class="ax-stepno" id="ax-no">1</span>
+          <div class="min-w-0">
+            <div class="ax-kicker" id="ax-kicker"></div>
+            <h2 class="font-display text-2xl font-bold text-ink-900 leading-tight" id="ax-title"></h2>
+          </div>
+        </div>
+        <p class="text-slate-700" id="ax-text"></p>
+        <ol class="ax-dots" id="ax-dots"></ol>
+        <div class="ax-nav">
+          <button type="button" id="ax-prev"></button>
+          <button type="button" class="primary" id="ax-play"></button>
+          <button type="button" id="ax-next"></button>
+        </div>
+      </div>
+      <div class="ax-chat">
+        <div class="flex items-center gap-2"><span class="text-xl">🤖</span><h2 class="font-display text-xl font-bold" id="ax-chat-h"></h2></div>
+        <p class="sub" id="ax-chat-sub"></p>
+        <div class="ax-log" id="ax-log" aria-live="polite"></div>
+        <div class="ax-chips" id="ax-chips"></div>
+        <form class="ax-ask" id="ax-form"><input id="ax-in" autocomplete="off"><button type="submit" id="ax-send"></button></form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  const EN = {{ (lang == 'en')|tojson }};
+  const T = (de, en) => EN ? en : de;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---- page text ------------------------------------------------------------
+  const UI = {
+    h1: T('So funktioniert School Hack', 'How School Hack works'),
+    lead: T('Archify erklärt die App mit zwei lebenden Diagrammen – für alle verständlich, ohne Vorwissen.',
+            'Archify explains the app with two live diagrams – easy to follow, no background needed.'),
+    how: [[T('1. Tour ansehen', '1. Watch the tour'), T('Ein Klick, und Archify zeigt jeden Ablauf Schritt für Schritt.', 'One click and Archify plays every flow, step by step.')],
+          [T('2. Kästen antippen', '2. Tap any box'), T('Jeder Teil erklärt in einem Satz, was er tut.', 'Every part explains what it does in one sentence.')],
+          [T('3. Fragen stellen', '3. Ask a question'), T('Zum Beispiel: „Wer bewertet?“ oder „Wo sind die Daten?“', 'For example: “Who grades?” or “Where is the data?”')]],
+    lenses: { tech: [T('⚙️ So ist es gebaut', '⚙️ How it’s built'), T('Technik: Seiten, Daten, KI, Hosting', 'Technical: pages, data, AI, hosting')],
+              biz: [T('💼 Wem es hilft', '💼 Who it helps'), T('Business: Schüler·innen, Lehrkräfte, Schule', 'Business: students, teachers, school')] },
+    tour: T('▶ Tour starten', '▶ Start the tour'), stopTour: T('⏸ Tour stoppen', '⏸ Stop the tour'),
+    legend: [['#14b8a6', T('arbeitet gerade', 'working now')], ['#f59e0b', T('was gerade unterwegs ist', 'what is moving right now')], ['#cbd5e1', T('Verbindung', 'connection')]],
+    step: (i, n) => T(`Schritt ${i} von ${n}`, `Step ${i} of ${n}`),
+    part: T('Teil der App', 'Part of the app'),
+    prev: T('← Zurück', '← Back'), next: T('Weiter →', 'Next →'), play: T('▶ Abspielen', '▶ Play'), pause: T('⏸ Pause', '⏸ Pause'),
+    chatH: T('Archify-Agenten', 'Archify agents'),
+    chatSub: T('Jeder Teil der App erklärt selbst, was er gerade tut.', 'Each part of the app explains what it is doing.'),
+    ask: T('Frag Archify …', 'Ask Archify …'), send: T('Fragen', 'Ask'), you: T('Du', 'You'),
+    hello: T('Hallo, ich bin Archify! Starte die Tour, tippe auf einen Kasten oder frag mich etwas.',
+             'Hi, I’m Archify! Start the tour, tap a box, or ask me anything.'),
+    help: T('Das weiß ich nicht. Frag mich nach Tests, Bewertung, KI-Tutor, Daten, Lehrkraft, Lernprofil oder Hosting.',
+            'I don’t know that one. Ask me about tests, grading, the AI tutor, data, teachers, the learning profile or hosting.'),
+    chips: [T('Wer bewertet?', 'Who grades?'), T('Wie hilft der KI-Tutor?', 'How does the AI tutor help?'), T('Was sieht die Lehrkraft?', 'What does the teacher see?'),
+            T('Wo sind die Daten?', 'Where is the data?'), T('Wie ist es online?', 'How is it online?')],
+  };
+
+  // ---- diagram data --------------------------------------------------------
+  // Grid: 4 columns (node x = 35 + col·270, width 200), 4 rows (y = 72 + row·100, height 56).
+  const nd = (id, col, row, ico, t, s, about, h = 56) => ({ id, x: 35 + col * 270, y: 72 + row * 100, h, ico, t, s, about });
+  const ed = (id, from, to, d, lx, ly, label, cls = '') => ({ id, from, to, d, lx, ly, label, cls });
+  const st = (e, n, who, short, title, text, say) => ({ e, n, who, short, title, text, say });
+
+  const ARCH = {
+    tech: {
+      zones: [T('MENSCHEN', 'PEOPLE'), T('DIE APP (FASTAPI)', 'THE APP (FASTAPI)'), T('DATEN & KI', 'DATA & AI'), T('RUND UM DIE APP', 'AROUND THE APP')],
+      tints: ['#f0fdfa', '#f1f5f9', '#ecfeff', '#fffbeb'],
+      nodes: [
+        nd('student', 0, 0, '🧒', T('Schüler·in', 'Student'), T('im Browser oder Handy', 'browser or phone'), T('Lernt im Browser oder auf dem Handy: Tests, Kurztests, KI-Tutor und das eigene Lernprofil.', 'Learns in the browser or on a phone: tests, short tests, the AI tutor and their own learning profile.'), 156),
+        nd('teacher', 0, 3, '👩‍🏫', T('Lehrkraft', 'Teacher'), T('Klassen-Dashboard', 'class dashboard'), T('Sieht die ganze Klasse: Bestehensquote, Punkte, Lernprofile und den Lücken-Agenten.', 'Sees the whole class: pass rate, points, learning profiles and the gap finder.')),
+        nd('engine', 1, 0, '🧪', T('Fragen-Generator', 'Question engine'), T('neu bei jedem Test', 'fresh for every test'), T('Baut jede Frage aus Vorlagen mit neuen Zahlen. Schwache Bausteine kommen öfter dran.', 'Builds every question from templates with new numbers. Weak building blocks come up more often.')),
+        nd('grader', 1, 1, '✅', T('Bewertung', 'Grader'), T('im Code, nie per KI', 'in code, never by AI'), T('Prüft jede Antwort im Code und erkennt typische Fehler. Die KI bewertet nie.', 'Checks every answer in code and recognises typical mistakes. The AI never grades.')),
+        nd('tutor', 1, 2, '💬', T('KI-Tutor', 'AI tutor'), T('Chat + Übungen', 'chat + exercises'), T('Beantwortet Fragen zu Chemie, Bio, Physik und Mathe und gibt Übungen. Chemie-Übungen kommen vom Fragen-Generator.', 'Answers questions on chemistry, biology, physics and maths and gives exercises. Chemistry exercises come from the question engine.')),
+        nd('agent', 1, 3, '🤖', T('Lücken-Agent', 'Gap finder'), T('Lücken + Ursachen', 'gaps + causes'), T('Findet die schwächsten Bausteine der Klasse, ihre wahrscheinliche Ursache, Fördergruppen und Tipps.', 'Finds the class’s weakest building blocks, their likely cause, support groups and next steps.')),
+        nd('curriculum', 2, 0, '📘', T('Lehrplan', 'Curriculum'), T('6 Units, 25 Bausteine', '6 units, 25 skills'), T('Chemie Klasse 9/10 nach dem Berliner Rahmenlehrplan, mit Voraussetzungen zwischen den Bausteinen.', 'Grade 9/10 chemistry from the Berlin curriculum, with prerequisites between building blocks.')),
+        nd('db', 2, 1, '💾', T('Datenbank', 'Database'), T('SQLite · Lernstand', 'SQLite · progress'), T('Speichert Tests, Antworten, Lernstand und Chats. Bei jedem Neustart auf Render füllt sie sich mit Demodaten.', 'Stores tests, answers, progress and chats. On every Render restart it refills with demo data.')),
+        nd('profile', 2, 3, '📈', T('Lernprofil', 'Learning profile'), T('Stand, Trends, Fehler', 'level, trends, mistakes'), T('Alles aus echten Antworten berechnet: wo es hakt, was sicher sitzt, die letzten Fehler.', 'Calculated from real answers: where you’re stuck, what you’ve mastered, recent mistakes.')),
+        nd('ai', 2, 2, '✨', T('OpenRouter-KI', 'OpenRouter AI'), T('Modell aus CHAT_MODEL', 'model from CHAT_MODEL'), T('Ein KI-Modell bei OpenRouter. Der Schlüssel steht nur in den Render-Einstellungen, nie im Code.', 'An AI model on OpenRouter. The key lives only in Render’s settings, never in the code.')),
+        nd('github', 3, 0, '🐙', T('GitHub · main', 'GitHub · main'), T('der Code des Teams', 'the team’s code'), T('Der ganze Code liegt öffentlich auf GitHub, Branch main.', 'All the code is public on GitHub, branch main.')),
+        nd('render', 3, 1, '☁️', T('Render', 'Render'), T('kostenlose Webapp', 'free web app hosting'), T('Baut die App aus GitHub und stellt sie unter schoolhack.onrender.com online – kostenlos.', 'Builds the app from GitHub and puts it online at schoolhack.onrender.com – for free.')),
+        nd('fallback', 3, 2, '📦', T('Eingebaute Texte', 'Built-in text'), T('ohne KI-Schlüssel', 'works without a key'), T('Ohne Schlüssel laufen Tests, Tipps und Übungen trotzdem – mit festen Texten.', 'Without a key, tests, hints and exercises still work – with fixed texts.')),
+        nd('lang', 3, 3, '🌍', T('Deutsch · English', 'Deutsch · English'), T('Umschalter DE | EN', 'DE | EN switch'), T('Die ganze App gibt es auf Deutsch und Englisch, auch Fragen und KI-Antworten.', 'The whole app comes in German and English, including questions and AI answers.')),
+      ],
+      edges: [
+        ed('start', 'student', 'engine', 'M235 92 H303', 270, 84, T('starten', 'start')),
+        ed('qs', 'engine', 'student', 'M305 116 H237', 270, 134, T('Fragen', 'questions')),
+        ed('ans', 'student', 'grader', 'M235 192 H303', 270, 184, T('Antwort', 'answers')),
+        ed('fb', 'grader', 'student', 'M305 214 H237', 270, 232, T('Feedback', 'feedback')),
+        ed('hint', 'student', 'tutor', 'M135 228 V300 H303', 270, 292, T('fragt', 'asks')),
+        ed('uses', 'curriculum', 'engine', 'M575 100 H507', 540, 92, T('Bausteine', 'skills')),
+        ed('save', 'grader', 'db', 'M505 200 H573', 540, 192, T('speichert', 'saves')),
+        ed('ask', 'tutor', 'ai', 'M505 300 H573', 540, 292, T('fragt KI', 'asks AI')),
+        ed('off', 'ai', 'fallback', 'M775 300 H843', 810, 292, T('kein Key?', 'no key?')),
+        ed('deploy', 'github', 'render', 'M945 128 V170', 955, 154, T('baut', 'builds'), 'st'),
+        ed('run', 'teacher', 'agent', 'M235 392 H303', 270, 384, T('Analyse', 'analyse')),
+        ed('back', 'agent', 'teacher', 'M305 414 H237', 270, 432, T('Lücken', 'gaps')),
+        ed('reads', 'profile', 'agent', 'M575 400 H507', 540, 392, T('liest', 'reads')),
+      ],
+      flows: {
+        test: { name: T('Ein Test', 'Taking a test'), steps: [
+          st(['start', 'uses'], ['student', 'engine', 'curriculum'], 'engine', T('Test bauen', 'Build'), T('Ein frischer Test entsteht', 'A fresh test is built'),
+            T('Der Fragen-Generator nimmt die Bausteine aus dem Lehrplan und baut 30 neue Fragen mit neuen Zahlen. Schwache Bausteine kommen öfter dran.', 'The question engine takes the building blocks from the curriculum and builds 30 new questions with new numbers. Weak building blocks come up more often.'),
+            T('30 neue Fragen, passend zu deinem Stand.', '30 new questions, matched to your level.')),
+          st(['qs'], ['engine', 'student'], 'student', T('Fragen', 'Questions'), T('Eine Frage nach der anderen', 'One question at a time'),
+            T('Auswahlfragen oder Rechenaufgaben. Bei Bedarf gibt es einen Tipp.', 'Multiple choice or calculations. A hint is there if you need it.'),
+            T('Ich beantworte die Fragen in Ruhe.', 'I answer the questions at my own pace.')),
+          st(['ans'], ['student', 'grader'], 'grader', T('Prüfen', 'Check'), T('Der Code bewertet, nicht die KI', 'Code grades, not AI'),
+            T('Jede Antwort wird im Code geprüft – immer gleich fair. Typische Fehler wie „mal statt geteilt“ werden erkannt.', 'Every answer is checked in code – equally fair every time. Typical mistakes such as multiplying instead of dividing are recognised.'),
+            T('Geprüft in Millisekunden, ohne KI.', 'Checked in milliseconds, without AI.')),
+          st(['fb'], ['grader', 'student'], 'grader', T('Feedback', 'Feedback'), T('Sofort sehen, was falsch war', 'See right away what went wrong'),
+            T('Bestanden ab 20 von 30. Falsche Fragen kommen in der nächsten Runde noch einmal – mit Erklärung.', 'Pass with 20 of 30. Wrong questions come back in the next round – with an explanation.'),
+            T('Hier ist dein Ergebnis und was wir noch üben.', 'Here is your result and what we still practise.')),
+          st(['save'], ['grader', 'db'], 'db', T('Speichern', 'Save'), T('Der Lernstand wächst', 'Progress grows'),
+            T('Jede Antwort ändert den Lernstand des Bausteins. Daraus entstehen Lernprofil und Lehrkraft-Dashboard.', 'Every answer changes the building block’s progress. The learning profile and the teacher dashboard are built from it.'),
+            T('Gespeichert. Das Lernprofil ist schon aktuell.', 'Saved. The learning profile is already up to date.')),
+        ] },
+        tutor: { name: T('KI-Tutor', 'AI tutor'), steps: [
+          st(['hint'], ['student', 'tutor'], 'tutor', T('Fragen', 'Ask'), T('Eine Frage an den KI-Tutor', 'A question for the AI tutor'),
+            T('Frei fragen oder einen Chemie-Baustein wählen. Der Tutor kennt den Lernstand und die letzten Fehler.', 'Ask anything, or pick a chemistry building block. The tutor knows your progress and recent mistakes.'),
+            T('Frag mich ruhig – ich erkläre es kurz und klar.', 'Go ahead and ask – I’ll explain it briefly and clearly.')),
+          st(['ask'], ['tutor', 'ai'], 'ai', T('KI', 'AI'), T('Die KI formuliert die Antwort', 'The AI writes the answer'),
+            T('Das Modell aus CHAT_MODEL antwortet in höchstens drei Sätzen, auf Deutsch oder Englisch. Übungen für Chemie baut der Fragen-Generator, damit die Lösung stimmt.', 'The model set in CHAT_MODEL answers in at most three sentences, in German or English. Chemistry exercises come from the question engine, so the answer is always correct.'),
+            T('Kurz, verständlich, in deiner Sprache.', 'Short, clear, in your language.')),
+          st(['off'], ['ai', 'fallback'], 'fallback', T('Ohne Key', 'No key'), T('Ohne Schlüssel geht es weiter', 'It keeps working without a key'),
+            T('Ist kein OPENROUTER_API_KEY gesetzt, zeigt der Tutor einen Hinweis. Übungen, Tests und Tipps funktionieren trotzdem.', 'If no OPENROUTER_API_KEY is set, the tutor shows a notice. Exercises, tests and hints still work.'),
+            T('Kein Schlüssel? Dann übe ich mit festen Aufgaben weiter.', 'No key? Then we keep practising with built-in exercises.')),
+        ] },
+        teacher: { name: T('Lehrkraft-Analyse', 'Teacher analysis'), steps: [
+          st(['run'], ['teacher', 'agent'], 'teacher', T('Starten', 'Start'), T('Ein Klick auf „Analyse starten“', 'One click on “Run analysis”'),
+            T('Für alle Klassen oder nur 9a oder 9b.', 'For all classes, or only 9a or 9b.'),
+            T('Wo hakt es in meiner Klasse?', 'Where is my class stuck?')),
+          st(['reads'], ['profile', 'agent', 'db'], 'agent', T('Lesen', 'Read'), T('Der Agent liest die Lernprofile', 'The agent reads the learning profiles'),
+            T('Er sucht Bausteine unter 60 % und folgt dem Lehrplan rückwärts bis zur schwachen Voraussetzung.', 'It looks for building blocks below 60 % and follows the curriculum backwards to the weak prerequisite.'),
+            T('Ich folge den Voraussetzungen bis zur Ursache.', 'I follow the prerequisites back to the cause.')),
+          st(['back'], ['agent', 'teacher'], 'agent', T('Ergebnis', 'Result'), T('Lücken, Gruppen und Tipps', 'Gaps, groups and next steps'),
+            T('Die Lehrkraft bekommt die größten Lücken, Fördergruppen und konkrete Tipps für die nächste Stunde.', 'The teacher gets the biggest gaps, support groups and concrete steps for the next lesson.'),
+            T('Fertig: das plane ich für die nächste Stunde.', 'Done: here is what to plan for the next lesson.')),
+        ] },
+        online: { name: T('Wie es online ist', 'How it’s online'), steps: [
+          st(['deploy'], ['github', 'render'], 'render', T('Bauen', 'Build'), T('Render baut die App aus GitHub', 'Render builds the app from GitHub'),
+            T('Der Code liegt auf GitHub (Branch main). Render installiert ihn und startet die App – kostenlos.', 'The code is on GitHub (branch main). Render installs it and starts the app – for free.'),
+            T('Neue Version? Ein Klick in Render, und sie ist online.', 'New version? One click in Render and it’s online.')),
+          st([], ['render', 'db'], 'db', T('Daten', 'Data'), T('Frische Demodaten', 'Fresh demo data'),
+            T('Bei jedem Start legt die App die Datenbank an und füllt eine Demo-Klasse ein. Login: admin / admin.', 'On every start the app creates the database and fills in a demo class. Login: admin / admin.'),
+            T('Ich starte immer mit einer Demo-Klasse.', 'I always start with a demo class.')),
+          st(['ask'], ['ai', 'tutor'], 'ai', T('Schlüssel', 'Key'), T('Der KI-Schlüssel bleibt geheim', 'The AI key stays secret'),
+            T('OPENROUTER_API_KEY und CHAT_MODEL stehen nur in den Render-Einstellungen, nie im öffentlichen Code.', 'OPENROUTER_API_KEY and CHAT_MODEL live only in Render’s settings, never in the public code.'),
+            T('Mein Schlüssel steht in keinem Repository.', 'My key is in no repository.')),
+          st([], ['student', 'teacher', 'lang'], 'lang', T('Teilen', 'Share'), T('Ein Link für alle', 'One link for everyone'),
+            T('Jede·r öffnet schoolhack.onrender.com, auf Deutsch oder Englisch. Nach 15 Minuten Ruhe schläft die App und wacht beim nächsten Besuch in etwa einer Minute auf.', 'Anyone opens schoolhack.onrender.com, in German or English. After 15 quiet minutes the app sleeps and wakes up in about a minute on the next visit.'),
+            T('Hallo! Ich spreche Deutsch und Englisch.', 'Hello! I speak German and English.')),
+        ] },
+      },
+    },
+    biz: {
+      zones: [T('SCHÜLER·IN', 'STUDENT'), T('HILFE BEIM LERNEN', 'HELP WHILE LEARNING'), T('LEHRKRAFT', 'TEACHER'), T('SCHULE', 'SCHOOL')],
+      tints: ['#f0fdfa', '#fdf4ff', '#ecfdf5', '#fffbeb'],
+      nodes: [
+        nd('login', 0, 0, '🔑', T('Anmelden', 'Sign in'), T('Demo: admin / admin', 'demo: admin / admin'), T('Eine Anmeldung für Schüler·innen und Lehrkräfte.', 'One sign-in for students and teachers.')),
+        nd('home', 0, 1, '🕸️', T('Lernnetz', 'Learning web'), T('Radar über 4 Fächer', 'radar of 4 subjects'), T('Die Startseite zeigt auf einen Blick, wie weit man in jedem Fach ist.', 'The home page shows at a glance how far you are in each subject.')),
+        nd('test', 0, 2, '📝', T('Tests', 'Tests'), T('30er-Test + Kurztests', 'full + short tests'), T('Ein großer Test mit 30 Fragen oder 5-Fragen-Tests zu einem Thema.', 'A full test with 30 questions, or 5-question tests on one topic.')),
+        nd('result', 0, 3, '🏁', T('Ergebnis', 'Result'), T('bestanden ab 20 von 30', 'pass at 20 of 30'), T('Punkte, Note nach Beispiel-Schlüssel und was noch geübt wird.', 'Score, grade from an example scale and what to practise next.')),
+        nd('progress', 1, 1, '📈', T('Lernprofil', 'Learning profile'), T('wo es hakt', 'where you’re stuck'), T('Jede Antwort zählt. Das Profil zeigt Lücken, Trends und die letzten Fehler.', 'Every answer counts. The profile shows gaps, trends and recent mistakes.')),
+        nd('help', 1, 2, '💬', T('KI-Tutor', 'AI tutor'), T('erklärt + übt mit dir', 'explains + practises'), T('Erklärt in einfachen Worten und gibt passende Übungen – auch um 22 Uhr.', 'Explains in simple words and gives matching exercises – even at 10 pm.')),
+        nd('again', 1, 3, '🔁', T('Nochmal üben', 'Practise again'), T('nur die Fehler', 'only the mistakes'), T('Falsche Fragen kommen zurück, bis alles sitzt.', 'Wrong questions come back until everything is right.')),
+        nd('dash', 2, 0, '📊', T('Dashboard', 'Dashboard'), T('Punkte · Quote · Profile', 'scores · pass rate'), T('Bestehensquote, Punkte je Kind und alle Lernprofile auf einer Seite.', 'Pass rate, points per student and every learning profile on one page.')),
+        nd('gapf', 2, 1, '🤖', T('Lücken-Agent', 'Gap finder'), T('ein Klick', 'one click'), T('Findet die größten Lücken der Klasse und ihre Ursache.', 'Finds the class’s biggest gaps and their cause.')),
+        nd('groups', 2, 2, '👥', T('Fördergruppen', 'Support groups'), T('nach schwächstem Thema', 'by weakest topic'), T('Kinder mit derselben Lücke kommen in eine Gruppe.', 'Students with the same gap end up in one group.')),
+        nd('lesson', 2, 3, '🗓️', T('Nächste Stunde', 'Next lesson'), T('erst die Grundlagen', 'basics first'), T('Konkrete Schritte: erst die Voraussetzung, dann das Thema.', 'Concrete steps: the prerequisite first, then the topic.')),
+        nd('rlp', 3, 0, '📘', T('Lehrplan Berlin', 'Berlin curriculum'), T('Chemie Klasse 9/10', 'chemistry, grade 9/10'), T('Inhalte nach dem Rahmenlehrplan Berlin-Brandenburg.', 'Content from the Berlin-Brandenburg curriculum.')),
+        nd('privacy', 3, 1, '🔒', T('Fair & sicher', 'Fair & safe'), T('Bewertung nie per KI', 'AI never grades'), T('Der Code bewertet. Die KI hilft nur beim Erklären und sieht keine Noten.', 'Code does the grading. The AI only helps explain and never sees grades.')),
+        nd('online', 3, 2, '☁️', T('Kostenlos online', 'Free online'), T('ein Link für alle', 'one link for all'), T('Läuft kostenlos auf Render – jede·r kann es mit einem Link öffnen.', 'Runs free on Render – anyone can open it with one link.')),
+        nd('more', 3, 3, '🧬', T('Mehr Fächer', 'More subjects'), T('Mathe · Bio · Physik', 'maths · bio · physics'), T('Mathe, Biologie und Physik sind vorbereitet; der KI-Tutor kann sie schon.', 'Maths, biology and physics are planned; the AI tutor already covers them.')),
+      ],
+      edges: [
+        ed('b1', 'login', 'home', 'M135 128 V170', 145, 154, T('Start', 'start'), 'st'),
+        ed('b2', 'home', 'test', 'M135 228 V270', 145, 254, T('üben', 'practise'), 'st'),
+        ed('b3', 'test', 'help', 'M235 296 H303', 270, 288, T('Hilfe?', 'help?')),
+        ed('b4', 'test', 'result', 'M135 328 V370', 145, 354, T('fertig', 'done'), 'st'),
+        ed('b5', 'result', 'again', 'M235 400 H303', 270, 422, T('Fehler', 'mistakes')),
+        ed('b6', 'again', 'test', 'M305 384 H262 V318 H237', 252, 352, T('nochmal', 'again'), 'rot'),
+        ed('b7', 'test', 'progress', 'M235 280 H250 V200 H303', 280, 192, T('zählt', 'counts')),
+        ed('b8', 'progress', 'gapf', 'M505 200 H573', 540, 192, T('zeigt', 'shows')),
+        ed('b9', 'dash', 'gapf', 'M675 128 V170', 685, 154, T('1 Klick', '1 click'), 'st'),
+        ed('b10', 'gapf', 'groups', 'M675 228 V270', 685, 254, T('Gruppen', 'groups'), 'st'),
+        ed('b11', 'groups', 'lesson', 'M675 328 V370', 685, 354, T('plant', 'plans'), 'st'),
+        ed('b12', 'lesson', 'again', 'M575 400 H507', 540, 392, T('übt', 'practise')),
+        ed('b13', 'rlp', 'dash', 'M845 100 H777', 810, 92, T('Inhalte', 'content')),
+        ed('b14', 'gapf', 'privacy', 'M775 200 H843', 810, 192, T('fair', 'fair')),
+      ],
+      flows: {
+        student: { name: T('Lernreise', 'Student journey'), steps: [
+          st(['b1'], ['login', 'home'], 'home', T('Start', 'Start'), T('Anmelden und Überblick', 'Sign in and get an overview'),
+            T('Nach dem Anmelden zeigt das Lernnetz, wo man in jedem Fach steht.', 'After signing in, the learning web shows where you stand in each subject.'),
+            T('Willkommen! Hier siehst du deinen Stand.', 'Welcome! Here is where you stand.')),
+          st(['b2'], ['home', 'test'], 'test', T('Üben', 'Practise'), T('Ein Test oder ein Kurztest', 'A full test or a short test'),
+            T('30 Fragen für alles oder 5 Fragen zu einem Thema. Jeder Test ist neu.', '30 questions on everything, or 5 on one topic. Every test is new.'),
+            T('Neue Fragen bei jedem Start.', 'New questions every time.')),
+          st(['b3'], ['test', 'help'], 'help', T('Hilfe', 'Help'), T('Hängen bleiben ist erlaubt', 'Getting stuck is allowed'),
+            T('Der KI-Tutor erklärt in einfachen Worten und gibt eine passende Übung.', 'The AI tutor explains in simple words and gives a matching exercise.'),
+            T('Lass es uns gemeinsam anschauen.', 'Let’s look at it together.')),
+          st(['b7', 'b4'], ['test', 'progress', 'result'], 'result', T('Ergebnis', 'Result'), T('Ergebnis und Lernprofil', 'Result and learning profile'),
+            T('Jede Antwort zählt sofort fürs Lernprofil. Bestanden ab 20 von 30.', 'Every answer counts straight away for the learning profile. Pass with 20 of 30.'),
+            T('Geschafft! Hier ist, was gut lief.', 'Done! Here is what went well.')),
+          st(['b5', 'b6'], ['result', 'again', 'test'], 'again', T('Wiederholen', 'Repeat'), T('Nur die Fehler kommen wieder', 'Only mistakes come back'),
+            T('Falsche Fragen werden wiederholt, bis alles sitzt.', 'Wrong questions repeat until everything is right.'),
+            T('Nur noch die Fehler, dann sitzt es.', 'Just the mistakes, then you’ve got it.')),
+        ] },
+        teacher: { name: T('Lehrkraft', 'Teacher journey'), steps: [
+          st([], ['dash'], 'dash', T('Überblick', 'Overview'), T('Die Klasse auf einen Blick', 'The class at a glance'),
+            T('Bestehensquote, Punkte und alle Lernprofile – ohne Korrigieren.', 'Pass rate, points and every learning profile – no marking.'),
+            T('Alle Ergebnisse auf einer Seite.', 'All results on one page.')),
+          st(['b8', 'b9'], ['progress', 'dash', 'gapf'], 'gapf', T('Lücken', 'Gaps'), T('Ein Klick findet die Lücken', 'One click finds the gaps'),
+            T('Der Lücken-Agent liest die Lernprofile und findet die schwächsten Themen.', 'The gap finder reads the learning profiles and finds the weakest topics.'),
+            T('Ich prüfe alle Bausteine der Klasse.', 'I check every building block for the class.')),
+          st(['b10'], ['gapf', 'groups'], 'groups', T('Gruppen', 'Groups'), T('Fördergruppen', 'Support groups'),
+            T('Kinder mit derselben Lücke kommen zusammen.', 'Students with the same gap are grouped together.'),
+            T('Diese Kinder brauchen dasselbe.', 'These students need the same thing.')),
+          st(['b11', 'b12'], ['groups', 'lesson', 'again'], 'lesson', T('Planen', 'Plan'), T('Die nächste Stunde steht', 'The next lesson is planned'),
+            T('Erst die Voraussetzung, dann das Thema – und die Kinder üben gezielt weiter.', 'The prerequisite first, then the topic – and students keep practising exactly that.'),
+            T('Erst die Grundlage, dann das Thema.', 'Foundation first, then the topic.')),
+        ] },
+        value: { name: T('Wer hat was davon?', 'Who gains what'), steps: [
+          st(['b3', 'b5'], ['help', 'again'], 'help', T('Schüler·innen', 'Students'), T('Üben ohne Angst', 'Practise without fear'),
+            T('Fehler sind Übung, keine Strafe. Hilfe gibt es jederzeit.', 'Mistakes are practice, not punishment. Help is there any time.'),
+            T('Fehler sind okay – wir üben sie.', 'Mistakes are fine – we practise them.')),
+          st(['b8', 'b9'], ['progress', 'dash', 'gapf'], 'dash', T('Lehrkräfte', 'Teachers'), T('Lücken in einem Klick', 'Gaps in one click'),
+            T('Keine Stapel zum Korrigieren: die App zeigt, wo es hakt und was als Nächstes kommt.', 'No piles of marking: the app shows where students are stuck and what comes next.'),
+            T('Ich sehe sofort, wo ich ansetzen muss.', 'I see straight away where to start.')),
+          st(['b13', 'b14'], ['rlp', 'dash', 'gapf', 'privacy'], 'privacy', T('Schule', 'School'), T('Passend und fair', 'Aligned and fair'),
+            T('Inhalte nach dem Berliner Lehrplan. Bewertet wird im Code, nie von der KI.', 'Content from the Berlin curriculum. Grading is done in code, never by the AI.'),
+            T('Fair für alle, jedes Mal gleich.', 'Fair for everyone, the same every time.')),
+          st([], ['online', 'more'], 'online', T('Start', 'Start'), T('Kostenlos und sofort nutzbar', 'Free and ready to use'),
+            T('Ein Link, kein Installieren. Weitere Fächer sind vorbereitet.', 'One link, nothing to install. More subjects are planned.'),
+            T('Link öffnen, loslegen.', 'Open the link and start.')),
+        ] },
+      },
+    },
+  };
+
+  // questions are matched in the browser; nothing is sent anywhere
+  const INTENTS = [
+    { re: /bewert|grade|grading|note|fair|korrig/i, go: ['tech', 'test', 2], a: T('Der Code bewertet jede Antwort – nie die KI. So ist es jedes Mal gleich fair.', 'Code grades every answer – never the AI. That keeps it equally fair every time.') },
+    { re: /tutor|ki\b|\bai\b|chat|erklär|explain|openrouter|modell|model/i, go: ['tech', 'tutor', 0], a: T('Der KI-Tutor beantwortet Fragen und gibt Übungen. Chemie-Übungen baut der Fragen-Generator, damit die Lösung stimmt.', 'The AI tutor answers questions and gives exercises. Chemistry exercises come from the question engine, so the answer is always correct.') },
+    { re: /lehrkraft|lehrer|teacher|klasse|class|dashboard|lücke|gap/i, go: ['tech', 'teacher', 0], a: T('Die Lehrkraft sieht die ganze Klasse und findet mit einem Klick Lücken, Gruppen und Tipps.', 'The teacher sees the whole class and finds gaps, groups and next steps in one click.') },
+    { re: /daten|data|speicher|stored|datenschutz|privacy|sqlite|database/i, go: ['tech', 'test', 4], a: T('Alles liegt in einer SQLite-Datenbank der App. Die KI sieht keine Noten, und der Schlüssel steht nie im Code.', 'Everything lives in the app’s SQLite database. The AI never sees grades, and the key is never in the code.') },
+    { re: /online|render|github|host|deploy|link|kostenlos|free/i, go: ['tech', 'online', 0], a: T('Render baut die App kostenlos aus GitHub (Branch main) – ein Link für alle.', 'Render builds the app for free from GitHub (branch main) – one link for everyone.') },
+    { re: /profil|profile|lernstand|progress|trend/i, go: ['biz', 'student', 3], a: T('Das Lernprofil zeigt aus echten Antworten, wo es hakt und was sicher sitzt.', 'The learning profile shows from real answers where you’re stuck and what you’ve mastered.') },
+    { re: /test|frage|question|quiz|üben|practi/i, go: ['biz', 'student', 1], a: T('Es gibt 30-Fragen-Tests und 5-Fragen-Kurztests – jedes Mal neu.', 'There are 30-question tests and 5-question short tests – new every time.') },
+    { re: /sprache|language|english|deutsch/i, go: ['tech', 'online', 3], a: T('Die ganze App gibt es auf Deutsch und Englisch – oben rechts umschalten.', 'The whole app comes in German and English – switch at the top right.') },
+    { re: /schule|school|wert|value|warum|why|nutzen|benefit/i, go: ['biz', 'value', 0], a: T('Schüler·innen üben ohne Angst, Lehrkräfte sparen Zeit, die Schule bekommt Lehrplan und Fairness.', 'Students practise without fear, teachers save time, and the school gets curriculum fit and fairness.') },
+  ];
+
+  // ---- state -----------------------------------------------------------------
+  const S = { lens: 'tech', flow: 'test', step: 0, sel: null, timer: null, tour: false, raf: 0, built: null };
+  const A = () => ARCH[S.lens];
+  const node = id => A().nodes.find(n => n.id === id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function svgHtml() {
+    const a = A(), arrow = (id, c) => `<marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="${c}"/></marker>`;
+    return `<svg class="ax-svg${S.built !== S.lens ? ' build' : ''}" id="ax-svg" viewBox="0 0 1080 470" role="img" aria-label="${esc(UI.lenses[S.lens][0])}">
+      <defs>${arrow('axArr', '#cbd5e1')}${arrow('axArrOn', '#14b8a6')}</defs>
+      ${a.zones.map((z, i) => `<g class="zone"><rect x="${15 + i * 270}" y="16" width="240" height="440" rx="18" fill="${a.tints[i]}"/><text x="${35 + i * 270}" y="44">${esc(z)}</text></g>`).join('')}
+      ${a.edges.map((e, i) => `<g class="edge" data-edge="${e.id}" style="--i:${i}"><path d="${e.d}"/><text ${e.cls === 'st' ? 'class="st"' : ''} x="${e.lx}" y="${e.ly}"${e.cls === 'rot' ? ` transform="rotate(-90 ${e.lx} ${e.ly})"` : ''}>${esc(e.label)}</text></g>`).join('')}
+      ${a.nodes.map((n, i) => { const cy = n.y + n.h / 2; return `<g class="node" data-node="${n.id}" tabindex="0" role="button" aria-label="${esc(n.t)}" style="--i:${i}">
+        <rect x="${n.x}" y="${n.y}" width="200" height="${n.h}" rx="14"/><text class="ico" x="${n.x + 25}" y="${cy + 7}" text-anchor="middle">${n.ico}</text>
+        <text class="t" x="${n.x + 48}" y="${cy - 3}">${esc(n.t)}</text><text class="s" x="${n.x + 48}" y="${cy + 15}">${esc(n.s)}</text></g>`; }).join('')}
+      <circle class="packet" r="7" cx="-20" cy="-20"/></svg>`;
+  }
+
+  function render() {
+    $('ax-lenses').innerHTML = Object.entries(UI.lenses).map(([k, [t, s]]) =>
+      `<button type="button" class="ax-lens" data-lens="${k}" aria-pressed="${S.lens === k}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('');
+    $('ax-flows').innerHTML = Object.entries(A().flows).map(([k, f]) =>
+      `<button type="button" class="ax-flow" data-flow="${k}" aria-pressed="${S.flow === k}">${esc(f.name)}</button>`).join('');
+    $('ax-scroll').innerHTML = svgHtml();
+    const svg = $('ax-svg');
+    svg.querySelectorAll('.edge path').forEach(p => p.style.setProperty('--len', Math.ceil(p.getTotalLength())));
+    if (S.built !== S.lens) { S.built = S.lens; setTimeout(() => svg.classList.remove('build'), 1500); }
+    svg.querySelectorAll('.node').forEach(g => {
+      g.onclick = () => pick(g.dataset.node);
+      g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(g.dataset.node); } };
+      g.onmouseenter = g.onfocus = () => hover(g.dataset.node);
+      g.onmouseleave = g.onblur = () => hover(null);
+    });
+    document.querySelectorAll('[data-lens]').forEach(b => b.onclick = () => setLens(b.dataset.lens));
+    document.querySelectorAll('[data-flow]').forEach(b => b.onclick = () => { stopAll(); setFlow(b.dataset.flow); });
+    paint();
+  }
+
+  function paint() {
+    const svg = $('ax-svg'), f = A().flows[S.flow], s = f.steps[S.step], part = S.sel && node(S.sel);
+    svg.querySelectorAll('.is-on, .is-now, .is-sel').forEach(el => el.classList.remove('is-on', 'is-now', 'is-sel'));
+    f.steps.slice(0, S.step + 1).forEach(x => x.e.forEach(id => svg.querySelector(`[data-edge="${id}"]`).classList.add('is-on')));
+    s.e.forEach(id => svg.querySelector(`[data-edge="${id}"]`).classList.add('is-now'));
+    s.n.forEach(id => svg.querySelector(`[data-node="${id}"]`).classList.add('is-on'));
+    if (part) svg.querySelector(`[data-node="${part.id}"]`).classList.add('is-sel');
+    document.querySelectorAll('[data-flow]').forEach(b => b.setAttribute('aria-pressed', b.dataset.flow === S.flow));
+    $('ax-no').textContent = part ? part.ico : S.step + 1;
+    $('ax-kicker').textContent = part ? UI.part : `${f.name} · ${UI.step(S.step + 1, f.steps.length)}`;
+    $('ax-title').textContent = part ? part.t : s.title;
+    $('ax-text').textContent = part ? part.about : s.text;
+    $('ax-dots').innerHTML = f.steps.map((x, i) => `<li><button type="button" data-step="${i}" class="${i < S.step ? 'done' : ''}"${i === S.step && !part ? ' aria-current="step"' : ''}>${i + 1}. ${esc(x.short)}</button></li>`).join('');
+    $('ax-prev').disabled = S.step === 0 && !S.tour; $('ax-next').disabled = S.step === f.steps.length - 1 && !S.tour;
+    $('ax-play').textContent = S.timer && !S.tour ? UI.pause : UI.play;
+    $('ax-tour').textContent = S.tour ? UI.stopTour : UI.tour;
+    // phones: scroll the diagram to the part that is working
+    const sc = $('ax-scroll'), ids = part ? [part.id] : s.n;
+    if (sc.scrollWidth > sc.clientWidth + 4) { const k = svg.clientWidth / 1080, x = ids.reduce((a, id) => a + node(id).x + 100, 0) / ids.length; sc.scrollLeft = x * k - sc.clientWidth / 2; }
+  }
+
+  function packet(id) {
+    cancelAnimationFrame(S.raf);
+    const svg = $('ax-svg'), dot = svg.querySelector('.packet'); dot.style.opacity = 0;
+    if (!id || reduce) return;
+    const p = svg.querySelector(`[data-edge="${id}"] path`), len = p.getTotalLength(), t0 = performance.now();
+    const frame = now => { const k = Math.min(1, (now - t0) / 1000), pt = p.getPointAtLength(len * (1 - (1 - k) ** 2));
+      dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y); dot.style.opacity = k < 1 ? 1 : 0; if (k < 1) S.raf = requestAnimationFrame(frame); };
+    S.raf = requestAnimationFrame(frame);
+  }
+
+  function show(i, quiet) {
+    const f = A().flows[S.flow]; S.step = Math.max(0, Math.min(i, f.steps.length - 1)); S.sel = null;
+    const s = f.steps[S.step]; paint(); packet(s.e[0]);
+    if (!quiet) say(s.who, s.say);
+  }
+  function setFlow(k, quiet) { S.flow = k; S.sel = null; sys(`— ${A().flows[k].name} —`); show(0, quiet); }
+  function setLens(l) { if (S.lens === l) return; stopAll(); S.lens = l; S.flow = Object.keys(A().flows)[0]; S.step = 0; S.sel = null; render(); show(0); }
+  function pick(id) { stopAll(); S.sel = id; paint(); const n = node(id); say(id, n.about); }
+  function hover(id) {
+    const svg = $('ax-svg'); svg.querySelectorAll('.is-hl').forEach(el => el.classList.remove('is-hl'));
+    svg.classList.toggle('hovering', !!id); if (!id) return;
+    svg.querySelector(`[data-node="${id}"]`).classList.add('is-hl');
+    A().edges.filter(e => e.from === id || e.to === id).forEach(e => {
+      svg.querySelector(`[data-edge="${e.id}"]`).classList.add('is-hl');
+      svg.querySelector(`[data-node="${e.from === id ? e.to : e.from}"]`).classList.add('is-hl');
+    });
+  }
+
+  // play one flow, or the whole tour (all flows of this view, then the other view)
+  function stopAll() { clearInterval(S.timer); S.timer = null; S.tour = false; if ($('ax-svg')) paint(); }
+  function tick() {
+    const flows = Object.keys(A().flows), f = A().flows[S.flow];
+    if (S.step < f.steps.length - 1) return show(S.step + 1);
+    if (!S.tour) return stopAll();
+    const next = flows.indexOf(S.flow) + 1;
+    if (next < flows.length) return setFlow(flows[next]);
+    if (S.lens === 'tech') { const keep = S.tour; S.lens = 'biz'; S.flow = Object.keys(A().flows)[0]; S.step = 0; render(); S.tour = keep; sys(`— ${UI.lenses.biz[0]} —`); return show(0); }
+    stopAll();
+  }
+  function play() {
+    if (S.timer && !S.tour) return stopAll();
+    stopAll();
+    const f = A().flows[S.flow]; show(S.step >= f.steps.length - 1 || S.sel ? 0 : S.step + 1);
+    S.timer = setInterval(tick, 3400); paint();
+  }
+  function tour() {
+    if (S.tour) return stopAll();
+    stopAll(); S.lens = 'tech'; S.flow = 'test'; S.step = 0; render();
+    S.tour = true; sys(`— ${UI.lenses.tech[0]} —`); show(0);
+    S.timer = setInterval(tick, 3400); paint();
+    document.querySelector('.ax-diagram').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+
+  // ---- chat ------------------------------------------------------------------
+  function addMsg(ico, who, text, cls = '') {
+    const log = $('ax-log');
+    log.insertAdjacentHTML('beforeend', `<div class="ax-msg ${cls}"><span class="av" aria-hidden="true">${ico}</span><div class="bub"><span class="who">${esc(who)}</span>${esc(text)}</div></div>`);
+    while (log.children.length > 50) log.firstElementChild.remove();
+    log.scrollTop = log.scrollHeight;
+  }
+  const say = (id, text) => { const n = node(id); n ? addMsg(n.ico, n.t, text) : addMsg('🗺️', 'Archify', text, 'sys'); };
+  const sys = text => addMsg('🗺️', 'Archify', text, 'sys');
+  function ask(q) {
+    addMsg('🙋', UI.you, q, 'me');
+    const hit = INTENTS.find(r => r.re.test(q));
+    if (hit) { stopAll(); sys(hit.a); const [l, f, i] = hit.go; if (S.lens !== l) { S.lens = l; S.sel = null; render(); } S.flow = f; return show(i); }
+    for (const l of ['tech', 'biz']) {
+      const n = ARCH[l].nodes.find(n => q.toLowerCase().includes(n.t.toLowerCase()));
+      if (n) { if (S.lens !== l) { S.lens = l; S.flow = Object.keys(A().flows)[0]; render(); } return pick(n.id); }
+    }
+    sys(UI.help);
+  }
+
+  // ---- start -----------------------------------------------------------------
+  $('ax-h1').textContent = UI.h1; $('ax-lead').textContent = UI.lead;
+  $('ax-how').innerHTML = UI.how.map(([b, t]) => `<div><b>${esc(b)}</b>${esc(t)}</div>`).join('');
+  $('ax-legend').innerHTML = UI.legend.map(([c, t]) => `<span><i style="background:${c}"></i>${esc(t)}</span>`).join('');
+  $('ax-prev').textContent = UI.prev; $('ax-next').textContent = UI.next;
+  $('ax-chat-h').textContent = UI.chatH; $('ax-chat-sub').textContent = UI.chatSub;
+  $('ax-in').placeholder = UI.ask; $('ax-in').setAttribute('aria-label', UI.ask); $('ax-send').textContent = UI.send;
+  $('ax-chips').innerHTML = UI.chips.map((c, i) => `<button type="button" data-q="${i}">${esc(c)}</button>`).join('');
+  $('ax-chips').onclick = e => { const b = e.target.closest('[data-q]'); if (b) ask(UI.chips[+b.dataset.q]); };
+  $('ax-form').onsubmit = e => { e.preventDefault(); const v = $('ax-in').value.trim(); if (v) { $('ax-in').value = ''; ask(v); } };
+  $('ax-prev').onclick = () => { stopAll(); show(S.step - 1); };
+  $('ax-next').onclick = () => { stopAll(); show(S.step + 1); };
+  $('ax-play').onclick = play;
+  $('ax-tour').onclick = tour;
+  $('ax-dots').onclick = e => { const b = e.target.closest('[data-step]'); if (b) { stopAll(); show(+b.dataset.step); } };
+  // deep link for screenshots: /archify#biz/teacher/2
+  const [l, f, i] = location.hash.slice(1).split('/');
+  if (ARCH[l]) { S.lens = l; if (ARCH[l].flows[f]) S.flow = f; S.step = +i || 0; }
+  sys(UI.hello);
+  render(); show(S.step);
+})();
+</script>
+{% endblock %}

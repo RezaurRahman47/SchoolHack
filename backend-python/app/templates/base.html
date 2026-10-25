@@ -89,7 +89,8 @@
   {% endif %}
   <main class="flex-1">{% block content %}{% endblock %}</main>
   <footer class="text-xs text-slate-500 text-center py-6 px-4">
-    School Hack · Klasse 9 · v1
+    School Hack · Klasse 9 · v1 ·
+    <a href="/archify" class="font-semibold text-reagent-600 hover:underline">🗺️ So funktioniert’s</a>
   </footer>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});

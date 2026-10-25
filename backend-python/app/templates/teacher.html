@@ -90,8 +90,7 @@
       <button id="runAgent" class="btn btn-primary shrink-0 text-xl">Analyse starten</button>
     </div>
     <div id="agentOut" class="p-4 sm:p-5 hidden">
-      <ol id="trace" class="grid sm:grid-cols-5 gap-2 text-xs"></ol>
-      <div id="agentBody" class="hidden mt-5 space-y-5">
+      <div id="agentBody" class="hidden space-y-5">
         <div class="rounded-xl bg-teal-50 border border-teal-100 p-4 text-ink-900" id="agentSummary"></div>
         <div><h3 class="font-display font-semibold text-ink-900 mb-2">Gefundene Lücken</h3><div id="gaps" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div></div>
         <div class="grid lg:grid-cols-2 gap-4">
@@ -177,16 +176,9 @@ document.querySelectorAll('#classTabs button').forEach(b => b.addEventListener('
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 document.getElementById('runAgent').addEventListener('click', async (e) => {
   const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Analysiere …';
-  const out = document.getElementById('agentOut'), tr = document.getElementById('trace'), body = document.getElementById('agentBody');
+  const out = document.getElementById('agentOut'), body = document.getElementById('agentBody');
   out.classList.remove('hidden'); body.classList.add('hidden');
-  const steps = ['Klassendaten laden','Schwächen erkennen','Ursachen im Skill-Graph suchen','Fördergruppen bilden','Maßnahmen empfehlen'];
-  tr.innerHTML = steps.map((s, i) => `<li id="st${i}" class="rounded-lg border border-slate-200 p-2 text-slate-400"><div class="font-semibold">${i+1}. ${s}</div><div class="det mt-1">wartet …</div></li>`).join('');
-  const res = fetch('/api/agent' + (current ? `?klasse=${current}` : ''), { method: 'POST' }).then(r => r.json());
-  for (let i = 0; i < steps.length; i++) { await new Promise(r => setTimeout(r, 350));
-    const li = document.getElementById('st'+i); li.className = 'rounded-lg border border-teal-200 bg-teal-50 p-2 text-ink-900'; li.querySelector('.det').textContent = 'läuft …'; }
-  const d = await res;
-  d.trace.forEach((t, i) => { const li = document.getElementById('st'+i); if (!li) return;
-    li.className = 'rounded-lg border border-green-200 bg-green-50 p-2 text-ink-900'; li.querySelector('.det').textContent = '✓ ' + t.detail; });
+  const d = await fetch('/api/agent' + (current ? `?klasse=${current}` : ''), { method: 'POST' }).then(r => r.json());
   document.getElementById('agentSummary').innerHTML = `<div class="text-xs font-semibold text-reagent-600 mb-1">ZUSAMMENFASSUNG</div>${esc(d.summary)}`;
   document.getElementById('gaps').innerHTML = d.gaps.map(g => `<div class="rounded-xl border ${g.severity==='hoch'?'border-red-200 bg-red-50':'border-amber-200 bg-amber-50'} p-3">
       <div class="flex justify-between gap-2"><span class="font-semibold text-ink-900 text-sm">${esc(g.name)}</span><span class="chip ${g.severity==='hoch'?'bg-red-100 text-fail':'bg-amber-100 text-amber-700'}">${g.severity}</span></div>

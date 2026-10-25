@@ -174,6 +174,12 @@ def landing(request: Request):
     return render(request, "landing.html")
 
 
+@app.get("/archify", response_class=HTMLResponse)
+def archify(request: Request):
+    """How the app works, as two live diagrams (public, no login)."""
+    return render(request, "archify.html")
+
+
 @app.get("/login/{who}", response_class=HTMLResponse)
 def login_page(request: Request, who: str):
     if who not in USERS:

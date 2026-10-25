@@ -5,7 +5,7 @@ for example `https://schoolhack.onrender.com`, on Render's free plan. It takes
 about 10 minutes. You need a GitHub account; no credit card.
 
 **Fastest way:** click
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/RezaurRahman47/SchoolHack/tree/safick_v1),
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/RezaurRahman47/SchoolHack/tree/main),
 sign in with GitHub, paste the OpenRouter key when asked and click **Deploy**.
 Render reads everything else from `render.yaml`. The steps below are the manual way.
 
@@ -28,7 +28,7 @@ Go to <https://render.com>, click **Get Started**, and sign in with **GitHub**.
 | Field | Value |
 |---|---|
 | Name | `schoolhack` (becomes part of the link; pick another if it is taken) |
-| Branch | `safick_v1` |
+| Branch | `main` |
 | Root Directory | `backend-python` |
 | Runtime / Language | Python 3 |
 | Build Command | `pip install -r requirements.txt` |
@@ -44,6 +44,10 @@ Under **Environment Variables** add:
 | `PYTHON_VERSION` | `3.12.7` |
 | `SESSION_SECRET` | click **Generate** |
 | `OPENROUTER_API_KEY` | your key from <https://openrouter.ai/keys> (step 4) |
+| `CHAT_MODEL` | `z-ai/glm-5.3-flash` (the model the team uses; optional) |
+
+**Already deployed?** Open the **schoolhack** web service in Render → **Environment**
+→ **Edit** → add or change the variables → **Save, rebuild, and deploy**.
 
 ## 4. The OpenRouter key (for the AI tutor)
 
@@ -64,7 +68,7 @@ Click **Deploy Web Service**. The first build takes 2–4 minutes. When the log 
   minutes before you present.
 - **Demo data resets** after every deploy or restart (the free plan has no
   permanent disk). The demo class is created again automatically.
-- **Updating:** after pushing to `safick_v1`, click **Manual Deploy → Deploy latest
+- **Updating:** after pushing to `main`, click **Manual Deploy → Deploy latest
   commit** in Render. (A service made from a public repository URL does not
   redeploy on its own.)
 - **One-click alternative:** if the repository owner connects it to Render, use

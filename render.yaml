@@ -1,5 +1,5 @@
 # Render Blueprint: hosts the School Hack web app (backend-python) on the free plan.
-# Render → New → Blueprint → this repository, branch safick_v1. See docs/DEPLOY_RENDER.md.
+# Render → New → Blueprint → this repository, branch main. See docs/DEPLOY_RENDER.md.
 #
 # Free plan notes: the service sleeps after 15 minutes without visits (the next
 # visit takes about a minute), and the SQLite demo data starts fresh after each
@@ -10,7 +10,7 @@ services:
     name: schoolhack
     runtime: python
     plan: free
-    branch: safick_v1
+    branch: main
     rootDir: backend-python
     buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -26,3 +26,6 @@ services:
       # Without it everything works except free AI tutor answers.
       - key: OPENROUTER_API_KEY
         sync: false
+      # Which OpenRouter model answers the AI tutor (the team's choice).
+      - key: CHAT_MODEL
+        value: z-ai/glm-5.3-flash

@@ -21,7 +21,7 @@
   .radar-right { right: 0; top: 50%; transform: translateY(-50%); }
   .radar-bottom { left: 50%; bottom: 0; transform: translateX(-50%); }
   .radar-left { left: 0; top: 50%; transform: translateY(-50%); }
-  .radar-tip { position: absolute; z-index: 10; width: 240px; padding: 6px; opacity: 0; visibility: hidden;
+  .radar-tip { position: absolute; z-index: 10; width: 280px; padding: 6px; opacity: 0; visibility: hidden;
                pointer-events: none; transition: opacity .12s ease, visibility .12s ease; }
   .radar-label:hover .radar-tip, .radar-label:focus .radar-tip { opacity: 1; visibility: visible; pointer-events: auto; }
   .radar-top .radar-tip { top: 100%; left: 50%; transform: translateX(-50%); }
@@ -36,13 +36,22 @@
   .radar-label.is-locked .radar-tip-total { color: #94a3b8; }
   .radar-tip-sub { margin-top: .15rem; font-size: .62rem; font-weight: 600; letter-spacing: .03em;
                    color: #94a3b8; text-transform: uppercase; }
-  .radar-tip-row { display: grid; grid-template-columns: 1fr auto; gap: .1rem .5rem; margin-top: .35rem; }
+  .radar-tip-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .1rem .5rem; margin-top: .35rem; }
   .radar-tip-row-name { font-size: .7rem; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .radar-tip-row-pc { font-size: .68rem; font-weight: 700; color: #0f1b2d; }
   .radar-tip-bar { grid-column: 1 / -1; height: 4px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
   .radar-tip-bar > span { display: block; height: 100%; border-radius: inherit; }
   .radar-tip-empty { margin-top: .3rem; font-size: .72rem; color: #94a3b8; }
   .radar-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .25rem .9rem; }
+  .card-highlight {
+    border-color: #14b8a6;
+    box-shadow: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .card-highlight:hover {
+    border-color: #14b8a6;
+    box-shadow: 0 0 0 1px #14b8a6, 0 10px 26px rgba(15, 27, 45, .10);
+  }
   @media (max-width: 639px) {
     .radar-wrap { max-width: 360px; }
     .radar-label { min-width: 0; padding: .3rem .45rem; font-size: .64rem; gap: .05rem; border-radius: .7rem; }
@@ -52,7 +61,7 @@
     .radar-bottom { bottom: -6px; }
     .radar-left { left: -6px; }
     .radar-right { right: -6px; }
-    .radar-tip { width: min(220px, calc(100vw - 5rem)); }
+    .radar-tip { width: min(280px, calc(100vw - 2rem)); }
     .radar-left .radar-tip { left: 0; right: auto; top: 50%; transform: translateY(-50%); }
     .radar-right .radar-tip { right: 0; left: auto; top: 50%; transform: translateY(-50%); }
   }
@@ -141,6 +150,7 @@
             <div class="radar-tip-sub">Hauptbereiche</div>
             {% for u in a.units %}
             <div class="radar-tip-row">
+              <span class="inline-flex rounded-full bg-ink-900 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">Unit {{ loop.index }}</span>
               <span class="radar-tip-row-name">{{ u.short }}</span>
               <span class="radar-tip-row-pc">{{ u.pc }} %</span>
               <span class="radar-tip-bar"><span style="width:{{ u.pc }}%;background:{{ u.color }}"></span></span>
@@ -162,8 +172,8 @@
     </p>
   </section>
 
-  <a href="/student/tutor" class="card mt-6 p-4 flex items-center gap-3 hover:border-reagent-500 hover:shadow-sm transition group">
-    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-reagent-400">✦</span>
+  <a href="/student/tutor" class="card mt-6 p-4 flex items-center gap-3 transition group card-highlight">
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-reagent-400" style="width: 2.5rem; height: 2.5rem;">✦</span>
     <span class="min-w-0 flex-1">
       <span class="block font-display font-bold text-ink-900 group-hover:text-reagent-600">KI-Tutor</span>
       <span class="block text-xs text-slate-500">Naturwissenschaften fragen, verstehen, üben.</span>
@@ -174,7 +184,7 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
     {% for s in subjects %}
       {% if s.active %}
-      <a href="/student/{{ s.slug }}" class="card p-5 hover:border-reagent-500 hover:shadow-md transition group">
+      <a href="/student/{{ s.slug }}" class="card p-5 transition group card-highlight">
         <div class="text-5xl">{{ s.icon }}</div>
         <div class="font-display font-bold text-xl text-ink-900 mt-3 group-hover:text-reagent-600">{{ s.name }}</div>
         <div class="text-sm text-slate-500">{{ s.desc }}</div>

@@ -53,6 +53,11 @@
   .tutor-shell {
     display: flex;
     flex: 1;
+    width: 100%;
+    /* Same centered content rails as the navbar (max-w-6xl px-4). */
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
     min-height: 0;
     min-width: 0;
     background: var(--tutor-bg);
@@ -427,12 +432,27 @@
   }
 
   .tutor-conv-del {
-    width: 1.7rem;
-    flex-shrink: 0;
+    position: absolute;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    max-width: 16px;
+    max-height: 16px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
     border: 0;
     background: transparent;
     color: #94a3b8;
     font-size: 1rem;
+    line-height: 1;
     cursor: pointer;
     border-radius: .5rem;
     opacity: 0;
@@ -467,6 +487,8 @@
     display: flex;
     flex-direction: column;
     background: var(--tutor-bg);
+    /* Right boundary of the chat screen, aligned with the navbar's profile button. */
+    border-right: 1px solid var(--tutor-line);
   }
 
   .tutor-menu-btn {
@@ -496,11 +518,19 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     scroll-behavior: smooth;
+    /* Keep the right chat rail aligned with the navbar on classic-scrollbar platforms. */
+    scrollbar-width: none;
+  }
+
+  .tutor-thread::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 
   .tutor-messages {
-    max-width: 760px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
     padding: 1.4rem 1rem 0;
     display: flex;
     flex-direction: column;
@@ -672,16 +702,18 @@
   }
 
   .tutor-chat-tools {
-    max-width: 760px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: .45rem;
   }
 
   .tutor-composer {
-    max-width: 760px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
     display: flex;
     align-items: flex-end;
     gap: .45rem;
@@ -742,8 +774,8 @@
   }
 
   .tutor-composer-note {
-    max-width: 760px;
-    margin: .45rem auto 0;
+    max-width: none;
+    margin: .45rem 0 0;
     text-align: center;
     font-size: .64rem;
     color: #94a3b8;
@@ -1936,7 +1968,6 @@
   });
 
   renderSidebar();
-  updateUrl();
 
   const params = new URLSearchParams(window.location.search);
   const cParam = params.get('c');
@@ -1946,10 +1977,9 @@
   } else if (subjectParam && SUBJECT_LABELS[subjectParam]) {
     currentSubject = subjectParam;
     newChat(true);
-  } else if (conversations.length) {
-    loadConversation(conversations[0].id);
   } else {
     showWelcome(true);
+    updateUrl();
     input.focus();
   }
 }) ();

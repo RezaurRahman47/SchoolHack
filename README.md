@@ -43,7 +43,38 @@ run.bat        # Windows (or ./run.sh on macOS / Linux)
 Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. For Claude-written hints and teacher summaries, copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`; without it, the built-in hints and summaries are used. See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
 </details>
 
+## 🐳 Docker (recommended for teammates)
+
+If `setup.sh` / the Windows venv steps are painful, run the whole stack
+(app **:8000** + RAG **:8080**) with Docker Desktop. No Python, virtualenv or
+model download on the host:
+
+```bash
+# The KI-Tutor currently lives on anil-dev, NOT on main:
+git clone --depth 1 --branch anil-dev https://github.com/RezaurRahman47/SchoolHack.git
+cd SchoolHack
+cp .env.example .env      # set OPENROUTER_API_KEY=sk-or-...
+docker compose up --build
+```
+
+Open <http://localhost:8000> → `admin` / `admin` → **KI-Tutor**. The first start
+builds the images and downloads the ~3.8 GB models **once** into a Docker volume;
+later starts take seconds. `docker compose down` keeps models and the SQLite
+database, `docker compose down -v` deletes both.
+
+Don't open `backend-python/app/templates/tutor.html` directly — it is a Jinja
+template and only works through the running app.
+
+Full guide, port overrides, offline model transfer and troubleshooting:
+**[docs/DOCKER.md](docs/DOCKER.md)**.
+
 ## 🎒 Full demo on a fresh laptop (teammates / hackathon)
+
+> [!IMPORTANT]
+> The current student portal, AI tutor and RAG overhaul lives on the
+> **`anil-dev`** branch. A plain `git clone` checks out `main`, which does **not**
+> contain `tutor.html`. Add `--branch anil-dev` until `anil-dev` is merged into
+> `main`.
 
 The textbook RAG index is committed, so a clone works **without the PDF**:
 
@@ -207,7 +238,10 @@ SchoolHack/
 ├── website/index.html          the standalone app (UI, questions, grading, gap finder, Archify)
 ├── backend-python/             FastAPI + SQLite version with student and teacher portals
 │   └── app/                    main.py · questions.py · db.py · agent.py · llm.py · templates/ · static/
+├── Dockerfile                  multi-target image: "app" (:8000) and "rag" (:8080)
+├── docker-compose.yml          one command for the full Docker stack
 ├── docs/
+│   ├── DOCKER.md               Docker setup, offline models, troubleshooting
 │   ├── business-flow.md        student journey, teacher journey, who gains what
 │   ├── technical-flow.md       architecture, sequences, where data lives
 │   └── images/                 screenshots used in the README

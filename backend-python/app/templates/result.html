@@ -4,15 +4,13 @@
 <div class="max-w-2xl mx-auto px-4 py-8">
   <div class="card p-8 text-center border-2 {{ 'border-green-300' if passed else 'border-red-300' }}">
     <div class="text-6xl">{{ '🎉' if passed else '💪' }}</div>
-    <div class="font-display text-7xl font-bold num mt-3 {{ 'text-pass' if passed else 'text-fail' }}">{{ first }}<span class="text-3xl text-slate-400">/30</span></div>
+    <div class="font-display text-7xl font-bold num mt-3 {{ 'text-pass' if passed else 'text-fail' }}">{{ first }}<span class="text-3xl text-slate-400">/{{ total }}</span></div>
     <div class="font-display text-2xl font-bold mt-2 {{ 'text-pass' if passed else 'text-fail' }}">{{ 'Bestanden!' if passed else 'Noch nicht bestanden' }}</div>
     <div class="text-slate-500 mt-1">Bestanden ab {{ pass_mark }}</div>
   </div>
 
-  {% if remaining %}
-  <a href="/student/test/{{ test.id }}" class="btn btn-dark w-full text-xl mt-5">{{ remaining }} Frage(n) wiederholen →</a>
-  {% else %}
-  <div class="rounded-xl bg-green-50 border-2 border-green-200 p-5 mt-5 text-center text-xl font-semibold text-ink-900">Alle 30 Fragen richtig ✓</div>
+  {% if not remaining %}
+  <div class="rounded-xl bg-green-50 border-2 border-green-200 p-5 mt-5 text-center text-xl font-semibold text-ink-900">Alle {{ total }} Fragen richtig ✓</div>
   {% endif %}
 
   {% if review %}
@@ -20,12 +18,20 @@
   <div class="space-y-3 mt-3">
     {% for r in review[:5] %}
     <div class="card p-5">
-      <p class="font-semibold text-ink-900">{{ r.q.prompt }}</p>
+      <div class="flex items-start gap-2">
+        <span class="mt-0.5 shrink-0 text-red-600" aria-hidden="true">❗</span>
+        <p class="font-semibold text-ink-900">{{ r.q.prompt }}</p>
+      </div>
       {% if r.feedback %}<p class="text-slate-700 mt-2">💡 {{ r.feedback }}</p>{% endif %}
     </div>
     {% endfor %}
   </div>
   {% endif %}
-  <a href="/student/chemie" class="btn btn-ghost w-full mt-8">Zurück zu Chemie</a>
+  <div class="flex flex-col sm:flex-row gap-3 mt-8">
+    <a href="/student/chemie" class="btn btn-ghost flex-1"><span aria-hidden="true">←</span> Zurück zu Chemie</a>
+    {% if remaining %}
+    <a href="/student/test/{{ test.id }}" class="btn btn-dark flex-1">{{ remaining }} Frage(n) wiederholen →</a>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

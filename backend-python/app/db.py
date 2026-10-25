@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS mastery (
     PRIMARY KEY (student_id, skill));
 CREATE TABLE IF NOT EXISTS tests (
     id INTEGER PRIMARY KEY, student_id INTEGER, created TEXT, questions TEXT,
-    first_score INTEGER, final_round INTEGER DEFAULT 1, status TEXT DEFAULT 'open');
+    first_score INTEGER, final_round INTEGER DEFAULT 1, status TEXT DEFAULT 'open',
+    kind TEXT DEFAULT 'test');
 CREATE TABLE IF NOT EXISTS answers (
     id INTEGER PRIMARY KEY, test_id INTEGER, round INTEGER, qid TEXT, skill TEXT,
     given TEXT, correct INTEGER, created TEXT);
@@ -59,6 +60,9 @@ def init() -> None:
     conv_cols = {row["name"] for row in c.execute("PRAGMA table_info(tutor_conversations)").fetchall()}
     if "sort_order" not in conv_cols:
         c.execute("ALTER TABLE tutor_conversations ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+    test_cols = {row["name"] for row in c.execute("PRAGMA table_info(tests)").fetchall()}
+    if "kind" not in test_cols:
+        c.execute("ALTER TABLE tests ADD COLUMN kind TEXT DEFAULT 'test'")
     if c.execute("SELECT COUNT(*) FROM students").fetchone()[0] == 0:
         _seed(c)
     c.commit()
@@ -142,10 +146,11 @@ def update_mastery(sid: int, skill: str, correct: bool) -> None:
     c.close()
 
 
-def create_test(sid: int, questions: list[dict]) -> int:
+def create_test(sid: int, questions: list[dict], kind: str = "test") -> int:
     c = conn()
-    c.execute("INSERT INTO tests (student_id, created, questions) VALUES (?,?,?)",
-              (sid, datetime.now().isoformat(timespec="minutes"), json.dumps(questions, ensure_ascii=False)))
+    c.execute("INSERT INTO tests (student_id, created, questions, kind) VALUES (?,?,?,?)",
+              (sid, datetime.now().isoformat(timespec="minutes"),
+               json.dumps(questions, ensure_ascii=False), kind))
     tid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
     c.commit()
     c.close()
@@ -189,8 +194,8 @@ def update_test(tid: int, **kw) -> None:
 
 def student_tests(sid: int, limit: int = 10) -> list[dict]:
     c = conn()
-    rows = c.execute("SELECT id, created, first_score, final_round, status FROM tests WHERE student_id=? "
-                     "ORDER BY id DESC LIMIT ?", (sid, limit)).fetchall()
+    rows = c.execute("SELECT id, created, first_score, final_round, status FROM tests "
+                     "WHERE student_id=? AND kind='test' ORDER BY id DESC LIMIT ?", (sid, limit)).fetchall()
     c.close()
     return [dict(r) for r in rows]
 
@@ -387,8 +392,9 @@ def class_overview(klasse: str | None = None) -> dict:
 
     # latest finished test per student
     latest = {r["student_id"]: dict(r) for r in c.execute(
-        f"SELECT t.* FROM tests t JOIN (SELECT student_id, MAX(id) mid FROM tests WHERE status='done' "
-        f"GROUP BY student_id) x ON t.id = x.mid WHERE t.student_id IN ({q})", ids)}
+        f"SELECT t.* FROM tests t JOIN (SELECT student_id, MAX(id) mid FROM tests "
+        f"WHERE status='done' AND kind='test' GROUP BY student_id) x ON t.id = x.mid "
+        f"WHERE t.student_id IN ({q})", ids)}
 
     mastery: dict[int, dict[str, float]] = {}
     for r in c.execute(f"SELECT student_id, skill, p FROM mastery WHERE student_id IN ({q})", ids):
@@ -396,15 +402,15 @@ def class_overview(klasse: str | None = None) -> dict:
 
     skill_stats = {s: {"correct": 0, "wrong": 0} for s in VISIBLE_SKILLS}
     for r in c.execute(f"SELECT a.skill, SUM(a.correct) c, COUNT(*) n FROM answers a JOIN tests t ON a.test_id=t.id "
-                       f"WHERE t.student_id IN ({q}) AND a.round=1 GROUP BY a.skill", ids):
+                       f"WHERE t.student_id IN ({q}) AND t.kind='test' AND a.round=1 GROUP BY a.skill", ids):
         if r["skill"] in skill_stats:
             skill_stats[r["skill"]] = {"correct": r["c"], "wrong": r["n"] - r["c"]}
 
     # weekly pass rate trend
     trend = []
     for r in c.execute(f"SELECT strftime('%Y-%W', created) wk, AVG(first_score >= ?) pr, AVG(first_score) avg "
-                       f"FROM tests WHERE status='done' AND student_id IN ({q}) GROUP BY wk ORDER BY wk",
-                       (PASS_MARK, *ids)):
+                       f"FROM tests WHERE status='done' AND kind='test' AND student_id IN ({q}) "
+                       f"GROUP BY wk ORDER BY wk", (PASS_MARK, *ids)):
         trend.append({"week": r["wk"], "pass_rate": round(100 * r["pr"]), "avg": round(r["avg"], 1)})
     c.close()
 

@@ -1,0 +1,41 @@
+# Git / editor metadata
+.git
+.gitignore
+.gitattributes
+.github
+.agents
+.claude
+.vscode
+.DS_Store
+**/.DS_Store
+
+# Python environments and caches (multi-GB, rebuilt inside the image)
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.venv-v2
+**/.pytest_cache
+
+# Secrets: passed at runtime with env_file, never baked into an image
+.env
+.env.*
+backend-python/.env
+vectorstore/.env
+
+# Local-only data and the source PDF (the committed v2 index is enough)
+backend-python/data
+vectorstore/Inputs
+vectorstore/processed_data
+vectorstore/vector_db
+vectorstore/vector_db_v2
+vectorstore/test_resp.json
+
+# Not needed in the containers
+website
+docs
+README.md
+LICENSE
+scripts/screenshots.js
+scripts/check_setup.py
+scripts/remote_demo.md
+scripts/tunnel.sh

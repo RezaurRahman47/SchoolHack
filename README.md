@@ -37,30 +37,39 @@ Requires Python 3.10 or newer.
 
 ```bash
 cd backend-python
+cp .env.example .env   # add OPENROUTER_API_KEY=sk-or-... for the chat
 run.bat        # Windows (or ./run.sh on macOS / Linux)
 ```
 
-Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. For Claude-written hints and teacher summaries, copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`; without it, the built-in hints and summaries are used. See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
+Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. **One server is enough for the KI-Tutor**: with an `OPENROUTER_API_KEY` the chat answers from the app itself. The RAG service on :8080 is optional and only adds textbook sources, pages and figures. For Claude-written hints and teacher summaries, set `ANTHROPIC_API_KEY` too; without it, the built-in hints and summaries are used. See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
 </details>
 
 ## 🐳 Docker (recommended for teammates)
 
-If `setup.sh` / the Windows venv steps are painful, run the whole stack
-(app **:8000** + RAG **:8080**) with Docker Desktop. No Python, virtualenv or
-model download on the host:
+If `setup.sh` / the Windows venv steps are painful, run the app with Docker
+Desktop — no Python, virtualenv or model download on the host.
 
 ```bash
 # The KI-Tutor currently lives on anil-dev, NOT on main:
 git clone --depth 1 --branch anil-dev https://github.com/RezaurRahman47/SchoolHack.git
 cd SchoolHack
 cp .env.example .env      # set OPENROUTER_API_KEY=sk-or-...
+docker compose up --build app     # app :8000 only — chat works
+```
+
+Open <http://localhost:8000> → `admin` / `admin` → **KI-Tutor**.
+
+Want the textbook sources, pages and figures as well? Add the RAG service
+(app **:8000** + RAG **:8080**):
+
+```bash
 docker compose up --build
 ```
 
-Open <http://localhost:8000> → `admin` / `admin` → **KI-Tutor**. The first start
-builds the images and downloads the ~3.8 GB models **once** into a Docker volume;
-later starts take seconds. `docker compose down` keeps models and the SQLite
-database, `docker compose down -v` deletes both.
+The RAG image downloads ~3.8 GB of models **once** into a Docker volume; later
+starts take seconds. `docker compose down` keeps models and the SQLite database,
+`docker compose down -v` deletes both. You can also start the RAG service later
+with `docker compose up -d rag` — the app picks it up on its own.
 
 Don't open `backend-python/app/templates/tutor.html` directly — it is a Jinja
 template and only works through the running app.
@@ -79,14 +88,21 @@ Full guide, port overrides, offline model transfer and troubleshooting:
 The textbook RAG index is committed, so a clone works **without the PDF**:
 
 ```bash
-git clone https://github.com/RezaurRahman47/SchoolHack.git
+git clone --branch anil-dev https://github.com/RezaurRahman47/SchoolHack.git
 cd SchoolHack
 ./setup.sh                 # Python >= 3.10; creates both venvs
-# add your own key to vectorstore/.env
+# add your own key to vectorstore/.env or backend-python/.env
 ./run_demo.sh              # RAG :8080 + SchoolHack :8000
 ```
 
 Open <http://localhost:8000> → `admin` / `admin`. SQLite is seeded automatically.
+
+Only want the chat, without the RAG service and its 3.8 GB of models? Start just
+the app:
+
+```bash
+./run_demo.sh app          # app :8000 only; chat answers from the in-app model
+```
 
 **Windows:** `setup.sh` and `run_demo.sh` are macOS/Linux only. Use the native
 PowerShell commands in [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), or run
@@ -254,21 +270,25 @@ SchoolHack/
 
 ## 🎒 Run the full demo locally
 
-This starts the complete stack on **one laptop**: FastAPI + SQLite, the local RAG
-service (ChromaDB + EmbeddingGemma 2 + reranker), and the web UI. The textbook
-index is already committed, so **the PDF is not needed**. No tunnel is needed
-when everything runs on the same machine.
+This starts the complete stack on **one laptop**: FastAPI + SQLite, the web UI and
+— optionally — the local RAG service (ChromaDB + EmbeddingGemma 2 + reranker) for
+textbook sources and figures. The textbook index is already committed, so **the
+PDF is not needed**. No tunnel is needed when everything runs on the same
+machine.
+
+Chat alone needs only the app plus an `OPENROUTER_API_KEY` (see
+`./run_demo.sh app` below); the RAG service is what needs the 3.8 GB of models.
 
 ### What runs where
 
 | Component | Port | Location in the clone |
 |---|---:|---|
 | SchoolHack web app | **8000** | `backend-python/` |
-| RAG API + chat | **8080** | `vectorstore/server.py` |
+| RAG API (optional: textbook sources) | **8080** | `vectorstore/server.py` |
 | Vector store (ChromaDB) | — | `vectorstore/processed_data_v2/chroma/` |
 | Textbook images | — | `vectorstore/processed_data_v2/images/` |
 | SQLite database | — | `backend-python/data/chemtutor.db` (created on first start) |
-| Local models (~3.8 GB) | — | `~/.cache/huggingface/hub` (downloaded once) |
+| Local models (~3.8 GB, RAG only) | — | `~/.cache/huggingface/hub` (downloaded once) |
 
 The vector store is **21 MB** and contains 243 text chunks + 162 indexed images
 (729 vectors, collection `chemie_rag_v2`). The 3.8 GB model cache is separate
@@ -277,16 +297,18 @@ from Git and is downloaded on first setup.
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/RezaurRahman47/SchoolHack.git
+git clone --branch anil-dev https://github.com/RezaurRahman47/SchoolHack.git
 cd SchoolHack
 python3 --version          # must be 3.10 or newer
 ./setup.sh                 # one time: venvs, packages, .env, models
-nano vectorstore/.env      # add OPENROUTER_API_KEY=sk-or-...
+nano backend-python/.env   # add OPENROUTER_API_KEY=sk-or-... (chat needs it)
 ./run_demo.sh              # every time: RAG :8080 + app :8000
+# or, without the RAG service and its models:
+./run_demo.sh app          # app :8000 only; chat still works, no book sources
 ```
 
 Open <http://localhost:8000> and sign in with `admin` / `admin`.
-Press `Ctrl+C` to stop both servers.
+Press `Ctrl+C` to stop the server(s).
 
 - If `./setup.sh` says “permission denied”:
   `chmod +x setup.sh run_demo.sh vectorstore/run.sh`.
@@ -344,7 +366,9 @@ OPENROUTER_API_KEY=sk-or-...
 The default `RAG_BASE=http://localhost:8080/api` is correct for a local demo.
 `backend-python\.env` is optional unless you also want the Claude-written hints.
 
-**5. Models (one time, ~3.8 GB)**
+**5. Models for the RAG service (optional, one time, ~3.8 GB)**
+
+Only needed for textbook sources and figures. Chat works without it.
 
 ```powershell
 vectorstore\.venv-v2\Scripts\python.exe scripts\download_models.py
@@ -353,7 +377,7 @@ vectorstore\.venv-v2\Scripts\python.exe scripts\download_models.py
 To skip this at the venue, copy the two Hugging Face folders from the Mac to
 `%USERPROFILE%\.cache\huggingface\hub\`.
 
-**6. Start RAG — PowerShell window 1**
+**6. Start RAG (optional) — PowerShell window 1**
 
 Open a PowerShell window in the `SchoolHack` folder:
 
@@ -367,7 +391,7 @@ $env:RAG_IMAGE_VLM_CHECK="0"
 
 Health check: <http://localhost:8080/api/status>
 
-**7. Start SchoolHack — PowerShell window 2**
+**7. Start SchoolHack — PowerShell window 2 (or window 1, if you skipped step 6)**
 
 Open a second PowerShell window in the `SchoolHack` folder:
 
@@ -429,12 +453,13 @@ answers. Without a valid key the app still runs; the AI tutor then shows a short
 - [ ] `git clone` on the presentation laptop
 - [ ] Python >= 3.10 available
 - [ ] `setup.sh` / Windows venv steps completed
-- [ ] `vectorstore/.env` contains a working `OPENROUTER_API_KEY`
-- [ ] models downloaded, or the two Hugging Face cache folders copied via USB
-- [ ] ports 8000 and 8080 free
-- [ ] `run_demo.sh` / the two PowerShell windows running
+- [ ] `backend-python/.env` (or `vectorstore/.env`) has a working `OPENROUTER_API_KEY`
+- [ ] `./run_demo.sh app` starts the chat — **no RAG server needed**
+- [ ] for textbook sources: models downloaded, or the two Hugging Face cache folders copied via USB
+- [ ] ports 8000 (and 8080, for the RAG server) free
+- [ ] `run_demo.sh` / the PowerShell windows running
 - [ ] <http://localhost:8000> opens; `admin` / `admin` works
-- [ ] one RAG question answered with a source and (optionally) an image
+- [ ] one KI-Tutor question answered with a source and (optionally) an image
 
 ### If the Mac stays at home
 

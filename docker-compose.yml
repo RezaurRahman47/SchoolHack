@@ -54,9 +54,13 @@ services:
       - app_data:/app/data
     ports:
       - "${APP_PORT:-8000}:8000"
+    # The RAG service is optional: `docker compose up app` starts the app alone
+    # (chat uses the in-app model), plain `docker compose up` adds the textbook
+    # sources and figures.
     depends_on:
       rag:
         condition: service_healthy
+        required: false
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/login/student', timeout=5)"]
       interval: 10s

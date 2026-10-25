@@ -149,6 +149,37 @@ In the Python version the same flow runs on the server: `GET /api/teacher/overvi
 </details>
 
 <details>
+<summary><b>💬 KI-Tutor chat</b>: one server, the RAG service only adds sources</summary>
+<br>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor S as 🧒 Student
+    participant API as FastAPI (main.py)
+    participant R as 🔎 RAG service :8080 (optional)
+    participant M as ✨ OpenRouter (chat_llm.py)
+
+    S->>API: POST /api/tutor/chat
+    API->>R: "reachable?" — skipped for 60 s after a failure
+    alt RAG service answers
+        R-->>API: Grounded answer + textbook pages and figures
+    else RAG service is down
+        API->>M: full conversation + prompt rules
+        M-->>API: Short answer (+ optional quiz request)
+    end
+    API-->>S: answer · sources · images · optional practice question
+```
+
+Chat never depends on the RAG service: `chat_llm.py` calls OpenRouter from the
+app itself, so one server and one `OPENROUTER_API_KEY` are enough. When the
+service is running, its grounded answer and textbook pages win; when it stops,
+the app switches to the in-app model within `RAG_FAILURE_COOLDOWN` (60 s) and
+switches back on its own.
+
+</details>
+
+<details>
 <summary><b>🐍 Python version</b>: request routes</summary>
 <br>
 
@@ -179,13 +210,14 @@ sequenceDiagram
 
 ## Where data lives
 
-| Data | Website | Python version | Sent to Claude? |
+| Data | Website | Python version | Sent to an LLM? |
 |---|---|---|---|
 | Stars, streak, mastery, tests | `localStorage` (`sh_state_v1`) | SQLite | ❌ |
 | Language choice | `localStorage` (`sh_lang`) | n/a | ❌ |
 | Student names | Demo names in code | SQLite | ❌ never |
-| Question, answer, method (for a hint) | in memory | in memory | ✅ only if Claude is available |
-| Skill names + class percentages (summary) | in memory | in memory | ✅ only if Claude is available |
+| Question, answer, method (for a hint) | in memory | in memory | ✅ Claude, only if a key is available |
+| Skill names + class percentages (summary) | in memory | in memory | ✅ Claude, only if a key is available |
+| Chat message + conversation history | in memory | SQLite + request | ✅ OpenRouter (in-app chat); the textbook passages it retrieves stay local |
 
 ## Components
 
@@ -196,5 +228,7 @@ sequenceDiagram
 | `backend-python/app/questions.py` | Skill graph, adaptive test assembly, grading and feedback. |
 | `backend-python/app/db.py` | SQLite schema, demo seeding, persistence, mastery updates, class analytics. |
 | `backend-python/app/agent.py` | Explainable teacher gap finder and suggested actions. |
+| `backend-python/app/chat_llm.py` | In-app chat model (OpenRouter): the KI-Tutor and chemistry chat without the RAG server. |
+| `backend-python/app/vectorstore.py` | Optional client for the RAG service: textbook passages and figures, with a fail-fast cooldown. |
 | `backend-python/app/llm.py` | Optional Claude integration with local fallback. |
 | `backend-python/app/templates/`, `static/` | Server-rendered pages, styles, charts, icons and PWA files. |

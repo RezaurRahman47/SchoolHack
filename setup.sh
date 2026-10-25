@@ -49,13 +49,17 @@ fi
 [ -f vectorstore/.env ] || cp vectorstore/.env.example vectorstore/.env
 [ -f backend-python/.env ] || cp backend-python/.env.example backend-python/.env
 
-if grep -q '^OPENROUTER_API_KEY=sk-or-\.\.\.' vectorstore/.env 2>/dev/null; then
+if grep -q '^OPENROUTER_API_KEY=sk-or-\.\.\.' vectorstore/.env 2>/dev/null \
+   && grep -q '^OPENROUTER_API_KEY=sk-or-\.\.\.' backend-python/.env 2>/dev/null; then
   echo
-  echo "!! Add your OpenRouter key to vectorstore/.env before the demo:"
+  echo "!! Add your OpenRouter key before the demo, in either file:"
+  echo "   vectorstore/.env  or  backend-python/.env"
   echo "   OPENROUTER_API_KEY=sk-or-..."
 fi
 
 # --- models ---------------------------------------------------------------
+# Only the optional RAG service (textbook sources) needs these; chat works
+# without them. Skip with: SKIP_MODELS=1 ./setup.sh
 if [ "${SKIP_MODELS:-0}" != "1" ]; then
   echo "Downloading/caching embedding + reranker models (~3.8 GB, one time) ..."
   vectorstore/.venv-v2/bin/python scripts/download_models.py || {
@@ -70,4 +74,6 @@ vectorstore/.venv-v2/bin/python scripts/check_setup.py || true
 
 echo
 echo "Setup done."
-echo "Next: put your OpenRouter key in vectorstore/.env, then run ./run_demo.sh"
+echo "Next: put your OpenRouter key in vectorstore/.env or backend-python/.env, then:"
+echo "  ./run_demo.sh        full stack (chat + textbook sources, uses :8080)"
+echo "  ./run_demo.sh app    app only   (chat without the RAG server)"

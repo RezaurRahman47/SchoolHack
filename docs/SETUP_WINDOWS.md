@@ -48,7 +48,7 @@ Put your key in that file:
 OPENROUTER_API_KEY=sk-or-...
 ```
 
-Optionally:
+Optionally (the same key can go here instead — the app reads both files):
 
 ```powershell
 Copy-Item backend-python\.env.example backend-python\.env
@@ -56,8 +56,13 @@ notepad backend-python\.env
 ```
 
 The default `RAG_BASE=http://localhost:8080/api` is correct for a local demo.
+The RAG server is optional: chat also works with just `backend-python` running
+(no textbook sources or figures).
 
-## 4. Download the local models (one time, ~3.8 GB)
+## 4. (Optional) Download the local models (one time, ~3.8 GB)
+
+Only needed for the RAG/textbook server. Skip it if you just want chat — the
+tutor answers without the index.
 
 ```powershell
 vectorstore\.venv-v2\Scripts\python.exe scripts\download_models.py
@@ -71,7 +76,7 @@ models--google--embeddinggemma-2
 models--BAAI--bge-reranker-v2-m3
 ```
 
-## 5. Start the RAG server (window 1)
+## 5. (Optional) Start the RAG server (window 1)
 
 ```powershell
 cd vectorstore
@@ -87,9 +92,9 @@ $env:RAG_IMAGE_VLM_CHECK="0"
 Leave this window open. Health check:
 <http://localhost:8080/api/status>
 
-## 6. Start SchoolHack (window 2)
+## 6. Start SchoolHack
 
-Open a **second** PowerShell window:
+Open a **second** PowerShell window (or the first one, if you skipped step 5):
 
 ```powershell
 cd SchoolHack\backend-python

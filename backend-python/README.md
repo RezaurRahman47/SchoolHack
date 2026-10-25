@@ -18,27 +18,31 @@ Then open **http://localhost:8000**.
 
 Login for both portals: **admin / admin**
 
-### AI tutor (RAG) — recommended
+### AI tutor
 
 The AI tutor page at `/student/tutor` answers chemistry, biology, physics and
-mathematics questions. Chemistry answers use the local textbook index; other
-subjects use general model knowledge. The tutor can also add interactive
-practice questions: chemistry questions come from the deterministic question
-engine, other subjects use a validated AI-generated question.
+mathematics questions. It works out of the box with one OpenRouter key:
 
-Start the local service on port 8080 before using the tutor:
+```bash
+cp .env.example .env     # then put OPENROUTER_API_KEY=sk-or-... into .env
+```
+
+The tutor then answers from the model's knowledge, and chemistry questions for
+the practice card still come from the deterministic question engine.
+
+**Optional:** the RAG service on port 8080 adds textbook passages and figures to
+chemistry answers. Chat works with or without it.
 
 ```bash
 cd ../vectorstore
 ./run.sh
 ```
 
-Without it, the tutor shows a short "tutor unavailable" message (no book
-passages, no images). Health check:
+The app picks the textbook mode up automatically while the service answers, and
+falls back to the in-app model when it is down — no restart needed. The RAG URL
+is configurable, so moving it to a VPS later needs no code change:
+`RAG_BASE=https://rag.example.com/api` in `.env`. Health check:
 `curl http://localhost:8080/api/status`.
-
-The RAG URL is configurable, so moving to a VPS later needs no code change:
-`RAG_BASE=https://rag.example.com/api` in `.env`.
 
 ## Use it on your phone
 
@@ -52,14 +56,20 @@ The RAG URL is configurable, so moving to a VPS later needs no code change:
 For a link that works anywhere (team testing without same Wi-Fi), deploy the folder to Render / Railway / Fly.io
 with the start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, or run `ngrok http 8000`.
 
-## Turn on the Claude tutor (optional)
-
-Without a key, the app works fully with built-in hints. With a key, the tutor gives Socratic hints and the
-teacher agent writes its summary with Claude.
+## Keys at a glance (optional)
 
 ```bash
-cp .env.example .env     # then put your key into .env
+cp .env.example .env     # then fill in what you need
 ```
+
+| Key | What it turns on |
+|---|---|
+| `OPENROUTER_API_KEY` | the KI-Tutor and the chemistry chat (**required for chat**) |
+| `ANTHROPIC_API_KEY` | Claude-written Socratic hints and the teacher summary (optional; the built-in hints work without it) |
+
+`CHAT_MODEL` overrides the chat model (default `google/gemma-4-31b-it`).
+`RAG_FAILURE_COOLDOWN` sets how many seconds the app skips a failed RAG service
+(default `60`) before probing it again.
 
 ## What's in v1
 
@@ -89,6 +99,8 @@ app/
   questions.py   skill graph + 30 question templates + grading
   db.py          SQLite storage + demo class
   agent.py       teacher gap-finder agent
+  chat_llm.py    in-app chat model (OpenRouter) — the tutor without the RAG server
+  vectorstore.py optional RAG/textbook client (sources + figures)
   llm.py         Claude API wrapper (optional)
   templates/     Jinja2 HTML pages
   static/        Tailwind CSS, Chart.js, fonts, icons, PWA files
@@ -105,6 +117,8 @@ Reset all data: delete the `data/` folder and restart.
 - [ ] Teacher login → charts load → 9a / 9b filter → "Analyse starten" shows gaps and groups
 - [ ] Student login cannot open `/teacher`
 - [ ] Phone: layout readable, app installs to home screen
+- [ ] KI-Tutor answers a chemistry question with the RAG server **stopped** (no textbook sources shown)
+- [ ] KI-Tutor answers a chemistry question with the RAG server **running** (sources/pages shown)
 - [ ] Note any wrong chemistry in a question (screenshot + test number)
 
 ## Known limits of v1

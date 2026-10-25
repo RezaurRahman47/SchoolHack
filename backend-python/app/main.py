@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import os
 import random
 import re
 from pathlib import Path
@@ -24,8 +25,10 @@ from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
 BASE = Path(__file__).resolve().parent
 app = FastAPI(title="School Hack")
 # Keep the signed login cookie stable across page navigation and app restarts.
-# The demo session lasts 30 days; use a private environment secret for production.
-app.add_middleware(SessionMiddleware, secret_key="chemtutor-hackathon-demo", max_age=60 * 60 * 24 * 30,
+# The demo session lasts 30 days. A hosted copy sets SESSION_SECRET (render.yaml
+# generates one), because the fallback below is public in the repository.
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "chemtutor-hackathon-demo"),
+                   max_age=60 * 60 * 24 * 30,
                    same_site="lax")
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")

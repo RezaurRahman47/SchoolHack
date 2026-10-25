@@ -17,7 +17,8 @@ You need two things.
 **1. Python 3.10 or newer.** Open a terminal and check:
 
 ```bash
-python3 --version
+python3 --version                # macOS / Linux
+python --version                 # Windows
 ```
 
 If it prints `Python 3.10` (or higher), you are ready. If it says
@@ -25,7 +26,10 @@ If it prints `Python 3.10` (or higher), you are ready. If it says
 
 - **macOS:** `brew install python@3.12` — or download it from <https://www.python.org/downloads/>
 - **Windows:** download it from <https://www.python.org/downloads/> and **tick
-  "Add Python to PATH"** during the installation.
+  "Add Python to PATH"** during the installation. Then close the terminal, open a
+  new one and run `python --version` again.
+
+> On Windows the command is `python`, not `python3`. Every step below shows both.
 
 **2. An OpenRouter API key** — this is what the AI tutor uses:
 
@@ -48,7 +52,8 @@ cd SchoolHack
 ```
 
 No Git installed? Open the GitHub page, click the green **Code** button →
-**Download ZIP**, unzip it, and open a terminal in that folder instead.
+**Download ZIP**, unzip it and open a terminal in the unzipped folder (for example
+`SchoolHack-main`) instead of running the two lines above.
 
 ## Step 2 — Go into the app folder
 
@@ -58,7 +63,7 @@ cd backend-python
 
 All the following commands are typed inside this folder. If you type `ls`
 (macOS/Linux) or `dir` (Windows) you should see `app`, `requirements.txt`,
-`run.sh`.
+`run.sh` and `.env.example`.
 
 ## Step 3 — Create a virtual environment
 
@@ -66,10 +71,14 @@ A *virtual environment* is a private box for this project's packages. It keeps t
 project separate from the rest of your computer, and you only create it once:
 
 ```bash
-python3 -m venv .venv
+python3 -m venv .venv            # macOS / Linux
 ```
 
-On Windows the command is the same.
+```powershell
+python -m venv .venv             # Windows
+```
+
+This creates the folder `backend-python/.venv` — you never have to touch it.
 
 ## Step 4 — Turn the virtual environment on
 
@@ -101,7 +110,8 @@ about 10 seconds).
 
 ## Step 6 — Add your API key
 
-Create your personal settings file from the example:
+You are still in the `backend-python` folder. Create your personal settings file
+from the example file:
 
 ```bash
 cp .env.example .env             # macOS / Linux
@@ -111,7 +121,22 @@ cp .env.example .env             # macOS / Linux
 copy .env.example .env           # Windows
 ```
 
-Open the new `.env` file in any text editor and put your key after the `=`:
+The full path of this new file is:
+
+```
+SchoolHack/backend-python/.env
+```
+
+Open it in a text editor and put your key behind `OPENROUTER_API_KEY=`:
+
+- `code .env` — VS Code
+- `open -e .env` — TextEdit (macOS)
+- `notepad .env` — Notepad (Windows)
+
+Or edit it right in the terminal: `nano .env`, type or paste the line, then press
+`Ctrl + O`, `Enter` and `Ctrl + X`.
+
+The line must look exactly like this, only with your own key instead of `...`:
 
 ```
 OPENROUTER_API_KEY=sk-or-v1-...your own key here...
@@ -153,20 +178,24 @@ Lernprofil**.
 
 ## Starting it again later
 
-Steps 3–6 are one-time only. To start the app another day:
+Steps 2–6 (venv, packages, key) are one-time only. To start the app another day,
+open a new terminal and run:
 
 ```bash
-cd SchoolHack/backend-python
-source .venv/bin/activate        # .venv\Scripts\activate  on Windows
+cd SchoolHack/backend-python        # the folder you cloned or unzipped
+source .venv/bin/activate           # .venv\Scripts\activate   on Windows
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
+If you are already inside the project folder, skip the first line and use
+`cd backend-python`.
+
 ---
 
-## Shortcut: one command instead of steps 3–7
+## Shortcut: one script instead of steps 3–5 and 7
 
-The project ships small start scripts that create the venv, install the
-dependencies and read `.env` for you:
+The project also ships start scripts that create the venv, install the packages
+and create `.env` from the example:
 
 ```bash
 ./run.sh                         # from the backend-python folder (macOS / Linux)
@@ -174,15 +203,19 @@ dependencies and read `.env` for you:
 
 On Windows, double-click `run.bat`.
 
+You still add your key once (Step 6) — both scripts print a reminder if the key is
+still missing.
+
 ---
 
 ## If something goes wrong
 
 | What you see | What to do |
 |---|---|
-| `python3: command not found` | Python is not installed — see **Before you start** |
+| `python3: command not found` | Python is not installed — or you are on Windows, where the command is `python` (see **Before you start**) |
 | `command not found: uvicorn` | The venv is not active → `source .venv/bin/activate`, or always use `python -m uvicorn ...` |
 | Chat answers *"Der KI-Tutor ist gerade nicht erreichbar."* | The key in `backend-python/.env` is missing or wrong — or the OpenRouter account has no credit |
+| You cannot find `.env` | It sits next to `requirements.txt`: `SchoolHack/backend-python/.env` (Step 6) |
 | `Address already in use` (port 8000) | Another program is already using port 8000 → close it, or start with `--port 8001` and open <http://localhost:8001> |
 | The page looks old after an update | Hard reload the browser: `Cmd + Shift + R` (Mac) / `Ctrl + Shift + R` (Windows) |
 | `ModuleNotFoundError: No module named 'app'` | You are in the wrong folder → `cd backend-python` and run the command there |

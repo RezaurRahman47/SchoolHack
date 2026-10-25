@@ -1455,7 +1455,7 @@
   }};
   const initialSubject = {{ initial_subject| tojson }};
   const SUBJECT_LABELS = {{ tutor_labels| tojson }};
-  const CURRICULUM = {{ curriculum| tojson }};
+  const CURRICULUM = {{ (curriculum or [])| tojson }};
   const SKILL_INFO = new Map();
   (Array.isArray(CURRICULUM) ? CURRICULUM : []).forEach(u => (u.skills || []).forEach(s =>
     SKILL_INFO.set(s.id, { ...s, unit: u.unit, unitName: u.name })));

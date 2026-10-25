@@ -99,8 +99,9 @@ echo "Starting SchoolHack on :8000 ..."
     . ./.env
     set +a
   fi
-  # Use `python -m` so a moved venv (stale console-script shebang) still works.
-  exec .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+  # `python -m` so a moved venv (stale console-script shebang) still works;
+  # --reload so an edit to the code or a template applies without a restart.
+  exec .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ) &
 APP_PID=$!
 

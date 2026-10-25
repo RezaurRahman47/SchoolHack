@@ -1,6 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Lehrkraft-Dashboard – School Hack{% endblock %}
-{% block head %}<script src="/static/chart.umd.min.js"></script>{% endblock %}
+{% block head %}<script src="/static/chart.umd.min.js"></script>
+<style>
+  .sp-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 7.5rem minmax(0, 1.5fr) 1rem;
+            align-items: center; gap: .75rem; padding: .65rem .75rem; border-radius: .75rem;
+            border: 1px solid transparent; transition: border-color .15s ease, background .15s ease; }
+  .sp-row:hover, .sp-row:focus-visible { border-color: #14b8a6; background: #f0fdfa; outline: none; }
+  .sp-row + .sp-row { margin-top: .15rem; }
+  .sp-head { font-size: .64rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8;
+             padding-top: 0; padding-bottom: .35rem; }
+  .sp-head:hover { border-color: transparent; background: none; }
+  .sp-name { font-weight: 600; color: #0f1b2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sp-bar { height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+  .sp-bar > span { display: block; height: 100%; border-radius: inherit; }
+  .sp-weak { display: flex; align-items: baseline; gap: .45rem; min-width: 0; font-size: .75rem; color: #334155; }
+  .sp-weak-pc { flex: none; color: #0f1b2d; }
+  .sp-weak-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sp-note { display: inline-flex; align-items: center; gap: .25rem; padding: .1rem .45rem; border-radius: 999px;
+             background: #0f1b2d; color: #fff; font-size: .66rem; font-weight: 700; }
+  .sp-note b { color: #2dd4bf; }
+  .sp-go { color: #0d9488; font-weight: 700; }
+  .sp-mlabel { display: none; flex: none; font-size: .64rem; font-weight: 700; letter-spacing: .04em;
+               text-transform: uppercase; color: #94a3b8; }
+  @media (max-width: 639px) {
+    .sp-row { grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .75rem; }
+    .sp-row > .sp-col-bar { grid-column: 1 / -1; grid-row: 3; }
+    .sp-row > .sp-col-weak { grid-column: 1 / -1; }
+    .sp-row > .sp-go, .sp-head { display: none; }
+    .sp-mlabel { display: inline; }
+  }
+</style>
+{% endblock %}
 {% block content %}
 <div class="max-w-6xl mx-auto px-4 py-6">
   <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
@@ -36,6 +66,15 @@
     </div>
   </div>
 
+  <!-- Per-student learning profiles -->
+  <div class="card p-5 mt-4">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="font-display font-bold text-xl text-ink-900">Lernprofile <span class="font-normal text-slate-500 text-base">schwächster Lernstand zuerst</span></h2>
+      <span class="text-xs text-slate-500">Note nach Beispiel-Notenschlüssel (ab {{ pass_mark }}/30 = 4)</span>
+    </div>
+    <div class="mt-3" id="studentList" role="list" aria-label="Lernprofile der Klasse"></div>
+  </div>
+
   <!-- Skills -->
   <div class="card p-5 mt-4">
     <h2 class="font-display font-bold text-xl text-ink-900">Wo hakt es? <span class="font-normal text-slate-500 text-base">richtig vs. falsch je Thema</span></h2>
@@ -46,7 +85,7 @@
   <div class="card mt-4 overflow-hidden">
     <div class="bg-ink-900 text-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div><div class="flex items-center gap-2"><span class="text-xl">🤖</span><h2 class="font-display font-bold text-2xl">Lücken-Agent</h2>
-        <span class="chip bg-white/10 text-reagent-400">{{ 'Claude' if llm else 'Regelbasiert' }}</span></div>
+        <span class="chip bg-white/10 text-reagent-400">{{ 'KI-Modell' if llm else 'Regelbasiert' }}</span></div>
         <p class="text-slate-300">Findet Lücken und sagt dir, was du als Nächstes üben solltest.</p></div>
       <button id="runAgent" class="btn btn-primary shrink-0 text-xl">Analyse starten</button>
     </div>
@@ -104,6 +143,29 @@ async function load(k='') {
     options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} %` } } },
       scales: { x: { stacked: true, max: 100, ticks: { callback: v => v + ' %' }, grid: { color: '#eef2f7' } }, y: { stacked: true, grid: { display: false }, ticks: { font: { size: 14 } } } } } });
 
+  renderStudents(d.students);
+}
+
+// Same thresholds as the student radar and profile: < 45 % gap, < 70 % building, else secure.
+const toneFg = pc => pc < 45 ? RED : pc < 70 ? '#d97706' : GREEN;
+function renderStudents(students) {
+  const rows = [...students].sort((a, b) => a.lernstand - b.lernstand);
+  const head = `<div class="sp-row sp-head" aria-hidden="true"><span>Schüler·in</span><span>Lernstand</span>
+    <span>Letzter Test</span><span>Schwächster Baustein</span><span></span></div>`;
+  document.getElementById('studentList').innerHTML = head + rows.map(s => {
+    const fg = toneFg(s.lernstand);
+    const test = s.score === null ? '<span class="text-xs text-slate-400">kein Test</span>'
+      : `<span class="flex items-center gap-2"><b class="num text-sm ${s.passed ? 'text-pass' : 'text-fail'}">${s.score}/30</b>`
+        + (s.note ? `<span class="sp-note">Note <b>${s.note.note}</b></span>` : '') + '</span>';
+    const weak = s.weakest ? `<span class="sp-mlabel">Schwächster:</span><b class="num sp-weak-pc">${s.weakest.p} %</b><span class="sp-weak-name" title="${esc(s.weakest.name)}">${esc(s.weakest.name)}</span>` : '<span class="text-slate-400">–</span>';
+    return `<a role="listitem" class="sp-row" href="/teacher/student/${encodeURIComponent(s.id)}" aria-label="Lernprofil von ${esc(s.name)} öffnen">
+      <span class="sp-name">${esc(s.name)} <span class="chip bg-slate-100 text-slate-600 ml-1">${esc(s.klasse)}</span></span>
+      <span class="sp-col-bar flex items-center gap-2"><span class="sp-mlabel">Lernstand</span><span class="sp-bar flex-1"><span style="width:${s.lernstand}%;background:${fg}"></span></span>
+        <b class="num text-xs" style="color:${fg}">${s.lernstand} %</b></span>
+      ${test}
+      <span class="sp-col-weak sp-weak">${weak}</span>
+      <span class="sp-go" aria-hidden="true">→</span></a>`;
+  }).join('');
 }
 
 let current = '';

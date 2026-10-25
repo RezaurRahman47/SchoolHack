@@ -14,11 +14,12 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import agent, db, llm, subtopic_quizzes, subtopics_data, vectorstore
+from . import (agent, chat_llm, db, learning_profile, llm, subtopic_quizzes, subtopics_data,
+               vectorstore)
 from .chat_text import clean_answer, clean_topic, is_refusal, is_soft_refusal
 from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
                         SUBTOPIC_TITLES, SUBTOPIC_COVERS, SUBTOPIC_ORDER,
-                        CURRICULUM_UNITS, build_test, generate, grade)
+                        CURRICULUM_UNITS, build_test, generate, grade, note_for)
 
 BASE = Path(__file__).resolve().parent
 app = FastAPI(title="School Hack")
@@ -94,11 +95,7 @@ RADAR_SWEEP = 26
 
 
 def _tone(p: float) -> tuple[str, str, str]:
-    if p < 0.45:
-        return "#fef2f2", "#fecaca", "#dc2626"
-    if p < 0.7:
-        return "#fffbeb", "#fde68a", "#d97706"
-    return "#f0fdf4", "#bbf7d0", "#16a34a"
+    return learning_profile.tone(p)
 
 
 def _radar_point(angle: float, radius: float) -> tuple[float, float]:
@@ -213,6 +210,28 @@ def settings(request: Request):
     if role(request) not in {"student", "teacher"}:
         return RedirectResponse("/login/student", 303)
     return render(request, "settings.html")
+
+
+@app.get("/student/profile", response_class=HTMLResponse)
+def student_profile(request: Request):
+    """The student's own learning profile (only their own data)."""
+    if (r := need(request, "student")):
+        return r
+    profile = learning_profile.build(_tutor_sid(request))
+    if not profile:
+        return RedirectResponse("/student/home", 303)
+    return render(request, "profile.html", profile=profile, viewer="student")
+
+
+@app.get("/teacher/student/{sid}", response_class=HTMLResponse)
+def teacher_student_profile(request: Request, sid: int):
+    """One student's learning profile for the teacher."""
+    if (r := need(request, "teacher")):
+        return r
+    profile = learning_profile.build(sid)
+    if not profile:
+        return RedirectResponse("/teacher", 303)
+    return render(request, "profile.html", profile=profile, viewer="teacher")
 
 
 @app.get("/student/chemie", response_class=HTMLResponse)
@@ -389,7 +408,40 @@ def student_tutor(request: Request):
     return render(request, "tutor.html",
                   conversations=db.list_tutor_conversations(sid),
                   initial_subject=_tutor_subject(request.query_params.get("subject")),
-                  tutor_labels=TUTOR_SUBJECT_LABELS)
+                  tutor_labels=TUTOR_SUBJECT_LABELS,
+                  curriculum=learning_profile.curriculum(sid))
+
+
+def _skill_opening(sid: int, skill: str, focus: dict) -> tuple[str, dict]:
+    """First tutor message of a subtopic chat: explanation + a code-made exercise."""
+    intro = chat_llm.skill_intro(learning_profile.focus_brief(focus))
+    if not intro:
+        # No key / model down: still useful, from code-derived facts only.
+        status = (f"Du stehst bei {focus['pc']} % ({focus['correct']} von {focus['attempts']} richtig)."
+                  if focus["practised"] else "Diesen Baustein hast du noch nicht geübt.")
+        intro = f"Hier üben wir „{focus['title']}“. {status}"
+    question = _tutor_question(generate(skill, random.Random(), f"tutor-{random.randrange(10**9)}"), "chemie")
+    return f"{intro} Probier diese Übung – nach einem Fehlversuch kannst du dir den Lösungsweg zeigen lassen.", question
+
+
+@app.post("/api/tutor/skill/{skill}")
+def tutor_skill_open(request: Request, skill: str):
+    """Open (or start) the student's chat for one chemistry subtopic."""
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    if skill not in VISIBLE_SKILLS:
+        return JSONResponse({"error": "unknown skill"}, 404)
+    sid = _tutor_sid(request)
+    cid = db.find_skill_conversation(sid, skill)
+    if cid is None:
+        focus = learning_profile.skill_focus(sid, skill)
+        if not focus:
+            return JSONResponse({"error": "unknown skill"}, 404)
+        cid = db.create_tutor_conversation(sid, "chemie", focus["title"][:80], skill=skill)
+        message, question = _skill_opening(sid, skill, focus)
+        db.add_tutor_message(cid, "assistant", message, question)
+    conversation = db.get_tutor_conversation(cid, sid)
+    return conversation
 
 
 @app.post("/student/test/new")
@@ -491,9 +543,12 @@ def result(request: Request, tid: int):
     is_subtopic = kind.startswith("subtopic:")
     total = len(test["questions"])
     pass_mark = 3 if is_subtopic else PASS_MARK
+    # The example grade key is made for the 30-question test; a 5-question
+    # subtopic check passes at 3/5, which would scale to a misleading Note 5.
+    note = None if is_subtopic else note_for(first, total)
     return render(request, "result.html", test=test, first=first, passed=first >= pass_mark,
                   pass_mark=pass_mark, total=total, round=last, remaining=len(wrong),
-                  last_total=len(last_rows), review=review, skill_rows=skill_rows)
+                  last_total=len(last_rows), review=review, skill_rows=skill_rows, note=note)
 
 
 @app.post("/api/hint")
@@ -511,7 +566,7 @@ async def hint(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# RAG / vectorstore endpoints
+# Chat answers (model) + optional RAG extras (figures, quizzes)
 # ---------------------------------------------------------------------------
 @app.get("/api/rag-context")
 def rag_context(request: Request, skill: str = "", query: str = ""):
@@ -532,22 +587,19 @@ def rag_context(request: Request, skill: str = "", query: str = ""):
 
 @app.post("/api/rag-chat")
 async def rag_chat(request: Request):
-    """Ask the Chemie RAG chat endpoint and return the grounded answer."""
+    """Chat answer straight from the model (same as the KI-Tutor path)."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
     body = await request.json()
     question = body.get("question", "").strip()
     if not question:
         return JSONResponse({"error": "question required"}, 400)
-    result = await run_in_threadpool(vectorstore.rag_chat, question)
-    if result is None:
-        return JSONResponse({"error": "RAG server unavailable"}, 503)
-    return result
+    return await run_in_threadpool(chat_llm.chat, question)
 
 
 @app.get("/api/rag-image/{filename}")
 def rag_image(request: Request, filename: str):
-    """Proxy textbook images from the RAG server (works from phones too)."""
+    """Proxy textbook figures from the optional RAG server (works from phones too)."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
     fetched = vectorstore.fetch_image(filename)
@@ -587,7 +639,11 @@ MAX_CHAT_CHARS = 600
 
 @app.post("/api/subtopic/chat")
 async def subtopic_chat(request: Request):
-    """Save student question, query RAG vectorstore, persist conversation, and return answer."""
+    """Save the student's question, answer it with the model, and store both.
+
+    The model answers directly; the RAG service is never consulted here, so a
+    subtopic chat works with no second server running.
+    """
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
     try:
@@ -623,16 +679,15 @@ async def subtopic_chat(request: Request):
     # 1. Save user question in DB
     db.save_chat_message(sid, skill, "user", msg)
 
-    # 2. One retrieval + one short answer from the v2 RAG server.
-    #    The skill name is passed as a topic hint, never concatenated into the
-    #    search query (that used to pollute the embedding).
+    # 2. One short answer from the model. The skill name is passed as a topic
+    #    hint, never concatenated into the question.
     sub_info = subtopics_data.get_subtopic_data(skill) or {}
     # The page keeps its core principle in the browser (subtopics_data is
     # intentionally empty now); accept it as a grounded fallback.
     core = clean_topic(body.get("core_principle"), fallback="", max_len=1200)
     if not core:
         core = str(sub_info.get("core_principle") or "")[:1200]
-    chat_resp = await run_in_threadpool(vectorstore.rag_chat, msg, skill_name, core)
+    chat_resp = await run_in_threadpool(chat_llm.chat, msg, skill_name, core)
 
     answer = ""
     sources: list[dict] = []
@@ -656,13 +711,6 @@ async def subtopic_chat(request: Request):
 
     if not answer:
         sources, images = [], []
-        fallback_prompt = (f"Lernabschnitt (nur Hinweis): {skill_name}\n"
-                           + (f"Merksatz: {core}\n" if core else "")
-                           + f"Frage: {msg}")
-        fallback = await run_in_threadpool(llm.ask, llm.CHAT_SYSTEM, fallback_prompt, 240)
-        answer = clean_answer(fallback or "")
-        if is_refusal(answer):
-            answer = ""
 
     if not answer and core:
         answer = clean_answer(f"Merksatz: {core}")
@@ -815,6 +863,13 @@ async def tutor_chat(request: Request):
         if not conversation:
             return JSONResponse({"error": "not found"}, 404)
 
+    # A subtopic chat (sidebar "Chemie") stays on its curriculum building block.
+    # Everything else is a free chat and lands under "Allgemein".
+    focus_skill = (conversation or {}).get("skill") or ""
+    focus = learning_profile.skill_focus(sid, focus_skill) if focus_skill else None
+    if focus:
+        subject = "chemie"
+
     if is_new:
         cid = db.create_tutor_conversation(sid, subject, _title_from(message))
 
@@ -822,17 +877,27 @@ async def tutor_chat(request: Request):
     model_history = []
     for item in history:
         content = str(item.get("message") or "").strip()
-        if item.get("question"):
-            content += f"\n[Übungsfrage: {item['question'].get('prompt', '')}]"
+        q = item.get("question")
+        if q:
+            content += f"\n[Übungsfrage: {q.get('prompt', '')}"
+            if focus:
+                # The engine's answer is reliable (code-computed); it lets the
+                # model explain the real solution instead of re-deriving one.
+                content += (f" | Lösung vom Code, nur zum Erklären, nicht ungefragt verraten: "
+                            f"{q.get('answer', '')} {q.get('unit', '')}".rstrip())
+            content += "]"
         model_history.append({"role": item["role"], "content": content})
 
     db.add_tutor_message(cid, "user", message)
 
     chemistry_skills = [{"id": skill, "name": info["name"], "topic": info["topic"]}
                         for skill, info in SKILLS.items()]
+    # Always one direct request to the OpenRouter model — no retrieval step in
+    # front of it, so chat cannot depend on another server being up.
     response = await run_in_threadpool(
-        vectorstore.tutor_chat, message, model_history,
+        chat_llm.tutor_chat, message, model_history,
         subject if subject != "science" else "", chemistry_skills,
+        learning_profile.focus_brief(focus) if focus else "", focus_skill if focus else "",
     )
 
     answer = ""
@@ -863,6 +928,10 @@ async def tutor_chat(request: Request):
             quiz_skill = str(quiz_request["skill"])[:80]
     if wants_quiz and quiz_subject == "science":
         quiz_subject = _detect_subject(message)
+    if focus:
+        # In a subtopic chat every exercise is for that subtopic, whatever the
+        # model suggested.
+        quiz_subject, quiz_skill = "chemie", focus_skill
 
     question = None
     if quiz_request or wants_quiz:
@@ -874,7 +943,7 @@ async def tutor_chat(request: Request):
                 question = _tutor_question(engine_question, "chemie")
         elif quiz_subject in {"biologie", "physik", "mathematik"}:
             generated = await run_in_threadpool(
-                vectorstore.science_question, quiz_subject, quiz_topic
+                chat_llm.science_question, quiz_subject, quiz_topic
             )
             question = _valid_ai_question(generated, quiz_subject, quiz_topic)
 
@@ -905,6 +974,7 @@ async def tutor_chat(request: Request):
         "conversation_id": cid,
         "title": conversation["title"] if conversation else _title_from(message),
         "subject": subject,
+        "skill": (conversation or {}).get("skill"),
         "answer": answer,
         "question": question,
         "sources": sources,

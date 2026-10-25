@@ -98,7 +98,7 @@ flowchart TD
     class D,E,F,G,H,I agent
 ```
 
-The summary at the top of the result uses Claude only when it is available (on claude.ai, or with `ANTHROPIC_API_KEY` in the Python version). Otherwise the code writes it. Either way, Claude only receives skill names and percentages, never student names.
+The summary at the top of the result is written by the model only when a key is available (on claude.ai, or with `OPENROUTER_API_KEY` in the Python version). Otherwise the code writes it. Either way, the model only receives skill names and percentages, never student names.
 
 </details>
 

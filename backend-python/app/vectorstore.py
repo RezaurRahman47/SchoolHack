@@ -6,6 +6,10 @@ http://localhost:8080/api/ (Option B — REST API from the chemie-vectorstore sk
 Falls back gracefully if the server is unreachable — every call returns an empty
 result rather than raising, so SchoolHack keeps working without the RAG server.
 
+The RAG service is optional: the tutor answers from the in-app model
+(``app/chat_llm.py``) whenever this is down, and picks the textbook sources and
+figures back up as soon as the service answers again.
+
 ⚠️ The vectorstore uses clip-ViT-B-32 (512-dim) embeddings. Never bypass the
    REST API and use a different model or queries will return garbage.
 """
@@ -13,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Literal
 
 import urllib.request
@@ -29,6 +34,25 @@ TIMEOUT = 20  # first v2 query loads the embedding + reranker models
 CHAT_TIMEOUT = 45  # answer model + optional image check can exceed the search timeout
 GENERATE_TIMEOUT = 180  # LLM generators (quiz / flashcards / statements) are slow
 
+# After a connection error, stop retrying for a while. Without this every chat
+# message would wait for a TCP timeout before the in-app model answers.
+FAILURE_COOLDOWN = float(os.getenv("RAG_FAILURE_COOLDOWN", "60"))
+_last_failure = 0.0
+
+
+def _mark_down() -> None:
+    global _last_failure
+    _last_failure = time.monotonic()
+
+
+def _mark_up() -> None:
+    global _last_failure
+    _last_failure = 0.0
+
+
+def _recently_down() -> bool:
+    return bool(_last_failure) and (time.monotonic() - _last_failure) < FAILURE_COOLDOWN
+
 
 def _post(path: str, payload: dict, timeout: int = TIMEOUT) -> dict | None:
     """POST to the RAG server; return parsed JSON or None on any error."""
@@ -39,9 +63,22 @@ def _post(path: str, payload: dict, timeout: int = TIMEOUT) -> dict | None:
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read())
+            result = json.loads(resp.read())
+        _mark_up()
+        return result
     except urllib.error.URLError as exc:
+        # Connection-level failure (refused, DNS, no route, connect timeout).
         log.debug("RAG server unreachable: %s", exc)
+        _mark_down()
+        return None
+    except TimeoutError as exc:
+        # The server accepted the connection but was slow (for example the
+        # first query loads the local models). It is alive, so keep using it.
+        log.debug("RAG server too slow: %s", exc)
+        return None
+    except OSError as exc:
+        log.debug("RAG connection error: %s", exc)
+        _mark_down()
         return None
     except Exception as exc:
         log.warning("RAG request failed: %s", exc)
@@ -54,7 +91,21 @@ def _get(path: str) -> dict | None:
     req = urllib.request.Request(url, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            return json.loads(resp.read())
+            result = json.loads(resp.read())
+        _mark_up()
+        return result
+    except urllib.error.URLError as exc:
+        log.debug("RAG server unreachable: %s", exc)
+        _mark_down()
+        return None
+    except TimeoutError as exc:
+        # Alive but slow — do not treat it as down.
+        log.debug("RAG server too slow: %s", exc)
+        return None
+    except OSError as exc:
+        log.debug("RAG connection error: %s", exc)
+        _mark_down()
+        return None
     except Exception as exc:
         log.debug("RAG GET failed: %s", exc)
         return None
@@ -87,9 +138,21 @@ def fetch_image(filename: str) -> tuple[bytes, str] | None:
 # ---------------------------------------------------------------------------
 
 def is_available() -> bool:
-    """Return True if the RAG server is reachable."""
+    """Return True if the RAG server is reachable (one HTTP round trip)."""
     result = _get("/status")
     return result is not None
+
+
+def reachable() -> bool:
+    """Cheap gate for the optional RAG path.
+
+    Unlike :func:`is_available` this skips the network call while the server is
+    known to be down, so chat falls back to the in-app model immediately instead
+    of waiting for a connection timeout on every message.
+    """
+    if _recently_down():
+        return False
+    return is_available()
 
 
 def search_text(query: str, n_results: int = 5) -> list[dict]:
@@ -128,7 +191,7 @@ def rag_context_for_skill(skill_name: str, n_text: int = 4, n_images: int = 2) -
           "query": str,
         }
     """
-    if not is_available():
+    if not reachable():
         return {"available": False, "text_chunks": [], "images": [], "query": skill_name}
 
     text_chunks = search_text(skill_name, n_text)

@@ -7,6 +7,13 @@
     <div class="font-display text-7xl font-bold num mt-3 {{ 'text-pass' if passed else 'text-fail' }}">{{ first }}<span class="text-3xl text-slate-400">/{{ total }}</span></div>
     <div class="font-display text-2xl font-bold mt-2 {{ 'text-pass' if passed else 'text-fail' }}">{{ 'Bestanden!' if passed else 'Noch nicht bestanden' }}</div>
     <div class="text-slate-500 mt-1">Bestanden ab {{ pass_mark }}</div>
+    {% if note %}
+    <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+      <span class="chip bg-ink-900 text-white" title="Beispiel-Notenschlüssel: ab {{ pass_mark }}/{{ total }} = Note 4. Die Schule legt ihren eigenen Schlüssel fest.">Note <span class="text-reagent-400">{{ note.note }}</span> · {{ note.label }}</span>
+      <span class="text-xs text-slate-400">Beispiel-Notenschlüssel</span>
+    </div>
+    {% endif %}
+    <a href="/student/profile" class="inline-block text-sm font-semibold text-reagent-600 mt-4">Zum Lernprofil →</a>
   </div>
 
   {% if not remaining %}

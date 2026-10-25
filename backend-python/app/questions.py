@@ -821,3 +821,28 @@ def grade(q: dict, given: str) -> tuple[bool, str | None]:
 
 
 PASS_MARK = 20
+
+# Example grade key (Note 1–6) for the 30-question practice test.  The 4/5 line
+# sits exactly on PASS_MARK, so "bestanden" always means Note 4 or better.  This
+# is NOT an official Berlin key: schools set their own in the Fachkonferenz, so
+# the UI labels it as an example.  (min points out of 30, note, label)
+NOTENSCHLUESSEL = (
+    (28, 1, "sehr gut"),
+    (25, 2, "gut"),
+    (23, 3, "befriedigend"),
+    (PASS_MARK, 4, "ausreichend"),
+    (10, 5, "mangelhaft"),
+    (0, 6, "ungenügend"),
+)
+NOTE_TOTAL = 30
+
+
+def note_for(score: int | None, total: int = NOTE_TOTAL) -> dict | None:
+    """Map a score to the example grade key; scaled if the test is not 30 long."""
+    if score is None or total <= 0:
+        return None
+    points = score * NOTE_TOTAL / total
+    for minimum, note, label in NOTENSCHLUESSEL:
+        if points >= minimum:
+            return {"note": note, "label": label}
+    return {"note": 6, "label": "ungenügend"}

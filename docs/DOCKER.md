@@ -12,6 +12,11 @@ that `run_demo.sh` starts, on Windows, macOS (Intel/Apple Silicon) and Linux:
 The app reaches the RAG service inside the Compose network at
 `http://rag:8080/api`; you do not need to edit any code.
 
+**The `rag` service is optional.** It only adds textbook sources and figures to
+chemistry answers. `docker compose up app` starts the app alone (chat uses the
+in-app model), plain `docker compose up` runs the full stack. Swapping between
+them needs no rebuild and no restart of the app.
+
 ## Prerequisites
 
 - Docker Desktop (or Docker Engine + Compose v2.24+)

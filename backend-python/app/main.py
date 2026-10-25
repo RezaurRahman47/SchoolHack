@@ -408,7 +408,40 @@ def student_tutor(request: Request):
     return render(request, "tutor.html",
                   conversations=db.list_tutor_conversations(sid),
                   initial_subject=_tutor_subject(request.query_params.get("subject")),
-                  tutor_labels=TUTOR_SUBJECT_LABELS)
+                  tutor_labels=TUTOR_SUBJECT_LABELS,
+                  curriculum=learning_profile.curriculum(sid))
+
+
+def _skill_opening(sid: int, skill: str, focus: dict) -> tuple[str, dict]:
+    """First tutor message of a subtopic chat: explanation + a code-made exercise."""
+    intro = chat_llm.skill_intro(learning_profile.focus_brief(focus))
+    if not intro:
+        # No key / model down: still useful, from code-derived facts only.
+        status = (f"Du stehst bei {focus['pc']} % ({focus['correct']} von {focus['attempts']} richtig)."
+                  if focus["practised"] else "Diesen Baustein hast du noch nicht geübt.")
+        intro = f"Hier üben wir „{focus['title']}“. {status}"
+    question = _tutor_question(generate(skill, random.Random(), f"tutor-{random.randrange(10**9)}"), "chemie")
+    return f"{intro} Probier diese Übung – nach einem Fehlversuch kannst du dir den Lösungsweg zeigen lassen.", question
+
+
+@app.post("/api/tutor/skill/{skill}")
+def tutor_skill_open(request: Request, skill: str):
+    """Open (or start) the student's chat for one chemistry subtopic."""
+    if role(request) != "student":
+        return JSONResponse({"error": "login"}, 401)
+    if skill not in VISIBLE_SKILLS:
+        return JSONResponse({"error": "unknown skill"}, 404)
+    sid = _tutor_sid(request)
+    cid = db.find_skill_conversation(sid, skill)
+    if cid is None:
+        focus = learning_profile.skill_focus(sid, skill)
+        if not focus:
+            return JSONResponse({"error": "unknown skill"}, 404)
+        cid = db.create_tutor_conversation(sid, "chemie", focus["title"][:80], skill=skill)
+        message, question = _skill_opening(sid, skill, focus)
+        db.add_tutor_message(cid, "assistant", message, question)
+    conversation = db.get_tutor_conversation(cid, sid)
+    return conversation
 
 
 @app.post("/student/test/new")
@@ -826,6 +859,13 @@ async def tutor_chat(request: Request):
         if not conversation:
             return JSONResponse({"error": "not found"}, 404)
 
+    # A subtopic chat (sidebar "Chemie") stays on its curriculum building block.
+    # Everything else is a free chat and lands under "Allgemein".
+    focus_skill = (conversation or {}).get("skill") or ""
+    focus = learning_profile.skill_focus(sid, focus_skill) if focus_skill else None
+    if focus:
+        subject = "chemie"
+
     if is_new:
         cid = db.create_tutor_conversation(sid, subject, _title_from(message))
 
@@ -833,8 +873,15 @@ async def tutor_chat(request: Request):
     model_history = []
     for item in history:
         content = str(item.get("message") or "").strip()
-        if item.get("question"):
-            content += f"\n[Übungsfrage: {item['question'].get('prompt', '')}]"
+        q = item.get("question")
+        if q:
+            content += f"\n[Übungsfrage: {q.get('prompt', '')}"
+            if focus:
+                # The engine's answer is reliable (code-computed); it lets the
+                # model explain the real solution instead of re-deriving one.
+                content += (f" | Lösung vom Code, nur zum Erklären, nicht ungefragt verraten: "
+                            f"{q.get('answer', '')} {q.get('unit', '')}".rstrip())
+            content += "]"
         model_history.append({"role": item["role"], "content": content})
 
     db.add_tutor_message(cid, "user", message)
@@ -846,6 +893,7 @@ async def tutor_chat(request: Request):
     response = await run_in_threadpool(
         chat_llm.tutor_chat, message, model_history,
         subject if subject != "science" else "", chemistry_skills,
+        learning_profile.focus_brief(focus) if focus else "", focus_skill if focus else "",
     )
 
     answer = ""
@@ -876,6 +924,10 @@ async def tutor_chat(request: Request):
             quiz_skill = str(quiz_request["skill"])[:80]
     if wants_quiz and quiz_subject == "science":
         quiz_subject = _detect_subject(message)
+    if focus:
+        # In a subtopic chat every exercise is for that subtopic, whatever the
+        # model suggested.
+        quiz_subject, quiz_skill = "chemie", focus_skill
 
     question = None
     if quiz_request or wants_quiz:
@@ -918,6 +970,7 @@ async def tutor_chat(request: Request):
         "conversation_id": cid,
         "title": conversation["title"] if conversation else _title_from(message),
         "subject": subject,
+        "skill": (conversation or {}).get("skill"),
         "answer": answer,
         "question": question,
         "sources": sources,

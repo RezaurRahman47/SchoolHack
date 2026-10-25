@@ -60,6 +60,11 @@ def init() -> None:
     conv_cols = {row["name"] for row in c.execute("PRAGMA table_info(tutor_conversations)").fetchall()}
     if "sort_order" not in conv_cols:
         c.execute("ALTER TABLE tutor_conversations ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+    if "skill" not in conv_cols:
+        # A conversation tied to one curriculum subtopic (sidebar group "Chemie").
+        # NULL = a free chat, shown under "Allgemein".
+        c.execute("ALTER TABLE tutor_conversations ADD COLUMN skill TEXT")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_tutor_conv_skill ON tutor_conversations(student_id, skill)")
     test_cols = {row["name"] for row in c.execute("PRAGMA table_info(tests)").fetchall()}
     if "kind" not in test_cols:
         c.execute("ALTER TABLE tests ADD COLUMN kind TEXT DEFAULT 'test'")
@@ -229,11 +234,12 @@ def first_attempts(sid: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def recent_mistakes(sid: int, limit: int = 6) -> list[dict]:
+def recent_mistakes(sid: int, limit: int = 6, skill: str | None = None) -> list[dict]:
     """Latest wrong first-round answers that still have their question text.
 
     Seeded example tests store no questions, so they never show up here.
     ``fixed`` says whether a later round of the same test got it right.
+    ``skill`` narrows it to one curriculum subtopic (for the tutor chat).
     """
     c = conn()
     rows = c.execute(
@@ -242,7 +248,8 @@ def recent_mistakes(sid: int, limit: int = 6) -> list[dict]:
         "       AND b.round>1 AND b.correct=1) AS fixed "
         "FROM answers a JOIN tests t ON a.test_id=t.id "
         "WHERE t.student_id=? AND a.round=1 AND a.correct=0 AND t.questions != '[]' "
-        "ORDER BY a.created DESC, a.id DESC LIMIT ?", (sid, limit * 4)).fetchall()
+        "AND (? IS NULL OR a.skill=?) "
+        "ORDER BY a.created DESC, a.id DESC LIMIT ?", (sid, skill, skill, limit * 4)).fetchall()
     c.close()
     out = []
     for r in rows:
@@ -324,25 +331,34 @@ def clear_chat_history(sid: int, skill: str) -> None:
 # AI tutor conversations
 # ---------------------------------------------------------------------------
 def create_tutor_conversation(sid: int, subject: str = "science",
-                              title: str = "Neue Unterhaltung") -> int:
+                              title: str = "Neue Unterhaltung", skill: str | None = None) -> int:
     c = conn()
     now = datetime.now().isoformat(timespec="seconds")
     position = c.execute(
         "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM tutor_conversations WHERE student_id=?",
         (sid,)
     ).fetchone()[0]
-    c.execute("INSERT INTO tutor_conversations (student_id, subject, title, created, updated, sort_order) "
-              "VALUES (?,?,?,?,?,?)", (sid, subject, title, now, now, position))
+    c.execute("INSERT INTO tutor_conversations (student_id, subject, title, created, updated, sort_order, skill) "
+              "VALUES (?,?,?,?,?,?,?)", (sid, subject, title, now, now, position, skill))
     cid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
     c.commit()
     c.close()
     return cid
 
 
+def find_skill_conversation(sid: int, skill: str) -> int | None:
+    """The student's conversation for one curriculum subtopic, if it exists."""
+    c = conn()
+    row = c.execute("SELECT id FROM tutor_conversations WHERE student_id=? AND skill=? "
+                    "ORDER BY id LIMIT 1", (sid, skill)).fetchone()
+    c.close()
+    return row["id"] if row else None
+
+
 def list_tutor_conversations(sid: int, limit: int = 50) -> list[dict]:
     c = conn()
     rows = c.execute(
-        "SELECT c.id, c.title, c.subject, c.created, c.updated, "
+        "SELECT c.id, c.title, c.subject, c.skill, c.created, c.updated, "
         "  (SELECT m.message FROM tutor_messages m "
         "   WHERE m.conversation_id=c.id ORDER BY m.id DESC LIMIT 1) AS preview "
         "FROM tutor_conversations c WHERE c.student_id=? "
@@ -393,7 +409,7 @@ def get_tutor_messages(cid: int, sid: int, limit: int = 50) -> list[dict]:
 def get_tutor_conversation(cid: int, sid: int) -> dict | None:
     c = conn()
     row = c.execute(
-        "SELECT id, student_id, subject, title, created, updated "
+        "SELECT id, student_id, subject, skill, title, created, updated "
         "FROM tutor_conversations WHERE id=? AND student_id=?", (cid, sid)
     ).fetchone()
     c.close()

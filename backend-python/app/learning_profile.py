@@ -142,7 +142,7 @@ def build(sid: int) -> dict | None:
         pre_weak = [x for x in VISIBLE_SKILLS[row["id"]]["pre"]
                     if x in skills and skills[x]["practised"] and skills[x]["p"] < WEAK + 0.05]
         root = min(pre_weak, key=lambda x: skills[x]["p"]) if pre_weak else None
-        weak.append({**row, "root": skills[root]["title"] if root else None})
+        weak.append({**row, "root": skills[root]["title"] if root else None, "root_id": root})
 
     strong = sorted((s for s in skills.values() if s["practised"] and s["p"] >= SECURE),
                     key=lambda s: -s["p"])[:3]
@@ -185,8 +185,12 @@ def build(sid: int) -> dict | None:
         next_step = f"Keine Lücke unter {round(100 * WEAK)} % – weiter so und die sicheren Bausteine wach halten."
 
     values = [s["p"] for s in skills.values()]
+    # The tutor starts where the next step points: the weak prerequisite first.
+    tutor_skill = (weak[0]["root_id"] or weak[0]["id"]) if weak else None
     return {
         "student": student,
+        "tutor_skill": tutor_skill,
+        "tutor_title": skills[tutor_skill]["title"] if tutor_skill else None,
         "overall": round(100 * sum(values) / len(values)) if values else 0,
         "secure": sum(1 for s in skills.values() if s["practised"] and s["p"] >= SECURE),
         "gaps": sum(1 for s in skills.values() if is_weak(s)),
@@ -199,3 +203,58 @@ def build(sid: int) -> dict | None:
         "weak_line": round(100 * WEAK), "trend_days": TREND_DAYS,
         "pass_mark": PASS_MARK,
     }
+
+
+def curriculum(sid: int) -> list[dict]:
+    """The chemistry curriculum for the tutor sidebar: units → subtopics + level."""
+    profile = build(sid)
+    if not profile:
+        return []
+    weak_ids = {w["id"] for w in profile["weak"]}
+    return [{
+        "unit": i + 1, "name": t["name"], "pc": t["pc"], "fg": t["fg"], "gaps": t["gaps"],
+        "skills": [{"id": s["id"], "title": s["title"], "pc": s["pc"], "fg": s["fg"],
+                    "practised": s["practised"], "status": s["status"],
+                    "weak": s["id"] in weak_ids} for s in t["skills"]],
+    } for i, t in enumerate(profile["topics"])]
+
+
+def skill_focus(sid: int, skill: str) -> dict | None:
+    """What the tutor needs to know about one subtopic for this student.
+
+    Only code-derived facts: level, evidence, the weak prerequisite and the
+    latest mistakes with their correct answers — so the model explains the
+    student's real error instead of guessing one.
+    """
+    if skill not in VISIBLE_SKILLS:
+        return None
+    profile = build(sid)
+    if not profile:
+        return None
+    row = next((s for t in profile["topics"] for s in t["skills"] if s["id"] == skill), None)
+    if not row:
+        return None
+    weak = next((w for w in profile["weak"] if w["id"] == skill), None)
+    unit = next((i + 1 for i, t in enumerate(profile["topics"]) if t["name"] == row["topic"]), None)
+    mistakes = db.recent_mistakes(sid, limit=3, skill=skill)
+    return {
+        **row, "unit": unit, "root": weak["root"] if weak else None,
+        "is_weak": bool(weak), "mistakes": mistakes,
+    }
+
+
+def focus_brief(focus: dict) -> str:
+    """The focus as plain facts for the model's system prompt (no names)."""
+    lines = [f"Fokus-Baustein: {focus['title']} ({focus['name']}), Einheit {focus['unit']}: {focus['topic']}."]
+    if focus["practised"]:
+        lines.append(f"Stand des Schülers: {focus['pc']} % Beherrschung ({focus['status']}), "
+                     f"{focus['correct']} von {focus['attempts']} Testfragen richtig.")
+    else:
+        lines.append("Der Schüler hat diesen Baustein noch nicht geübt.")
+    if focus.get("root"):
+        lines.append(f"Schwache Voraussetzung: {focus['root']} – bei Bedarf kurz mit erklären.")
+    for m in focus.get("mistakes") or []:
+        given = m["given"] or "keine Antwort"
+        lines.append(f"Fehler im Test: „{m['prompt']}“ – Antwort: {given}; richtig: "
+                     f"{m['answer']} {m['unit']}".strip())
+    return "\n".join(lines)

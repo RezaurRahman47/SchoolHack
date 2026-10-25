@@ -169,6 +169,13 @@ sequenceDiagram
     API-->>S: answer · optional practice question
 ```
 
+**Two kinds of chats.** A chat in the sidebar group *Chemie · Lehrplan* belongs to one
+curriculum subtopic (`tutor_conversations.skill`). `POST /api/tutor/skill/{skill}` opens it,
+or creates it with an explanation of the student's latest test mistake (facts from
+`learning_profile.skill_focus`) plus an exercise from the question engine. In that chat the
+model gets the same facts and the code-computed answers, and every exercise is for that
+subtopic. Every other chat has no skill and is listed under *Allgemein*.
+
 The chat goes straight to the model: no retrieval step in front of it, so no
 second server can block it. `chat_llm.py` needs one `OPENROUTER_API_KEY` and
 nothing else; hints (`llm.py`) and the teacher summary use the same key and

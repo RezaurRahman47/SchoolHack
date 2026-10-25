@@ -300,6 +300,241 @@
     display: none;
   }
 
+  /* Chemie group: the curriculum (units → subtopics) */
+  .tutor-unit + .tutor-unit {
+    margin-top: .2rem;
+  }
+
+  .tutor-unit-head {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    width: 100%;
+    padding: .4rem .45rem;
+    border: 0;
+    border-radius: .55rem;
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .15s;
+  }
+
+  .tutor-unit-head:hover {
+    background: #fff;
+  }
+
+  .tutor-unit-head:focus-visible {
+    outline: 2px solid var(--tutor-accent-bright);
+    outline-offset: -1px;
+  }
+
+  .tutor-unit-pill {
+    flex: none;
+    border-radius: 999px;
+    background: var(--tutor-ink);
+    padding: .08rem .45rem;
+    font-size: .52rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .tutor-unit-name {
+    min-width: 0;
+    flex: 1;
+    font-family: "Space Grotesk", Inter, sans-serif;
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--tutor-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tutor-unit-pc {
+    flex: none;
+    font-size: .64rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tutor-unit .tutor-conv-group-chevron {
+    margin-left: 0;
+    width: 14px;
+    height: 14px;
+  }
+
+  .tutor-unit.is-closed .tutor-conv-group-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .tutor-unit-body {
+    margin: .1rem 0 .3rem;
+  }
+
+  .tutor-unit.is-closed .tutor-unit-body {
+    display: none;
+  }
+
+  .tutor-skill {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: .6rem;
+    transition: background .15s, border-color .15s;
+  }
+
+  .tutor-skill:hover {
+    background: #fff;
+  }
+
+  .tutor-skill.is-active {
+    background: #fff;
+    border-color: var(--tutor-accent-bright);
+    box-shadow: 0 1px 2px rgba(15, 27, 45, .06);
+  }
+
+  .tutor-skill-open {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex: 1;
+    min-width: 0;
+    padding: .38rem .5rem .38rem .55rem;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: .6rem;
+  }
+
+  .tutor-skill-open:focus-visible {
+    outline: 2px solid var(--tutor-accent-bright);
+    outline-offset: -1px;
+  }
+
+  .tutor-skill-dot {
+    flex: none;
+    width: .42rem;
+    height: .42rem;
+    border-radius: 999px;
+  }
+
+  .tutor-skill-title {
+    min-width: 0;
+    flex: 1;
+    font-size: .72rem;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tutor-skill.has-chat .tutor-skill-title {
+    font-weight: 600;
+    color: var(--tutor-ink);
+  }
+
+  .tutor-skill-pc {
+    flex: none;
+    font-size: .62rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tutor-skill-chat {
+    flex: none;
+    font-size: .6rem;
+    color: var(--tutor-accent-strong);
+  }
+
+  .tutor-skill .tutor-conv-del {
+    right: -25px;
+  }
+
+  .tutor-skill:hover .tutor-conv-del,
+  .tutor-skill:focus-within .tutor-conv-del {
+    opacity: 1;
+  }
+
+  /* Context bar above the composer in a subtopic chat */
+  .tutor-focus[hidden] {
+    display: none;
+  }
+
+  .tutor-chat-tools.has-focus {
+    margin-bottom: .5rem;
+  }
+
+  .tutor-focus {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+  }
+
+  .tutor-focus-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    min-width: 0;
+    max-width: 100%;
+    font-size: .7rem;
+    font-weight: 600;
+    color: var(--tutor-ink);
+  }
+
+  .tutor-focus-label span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tutor-chip-btn {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: var(--tutor-accent-strong);
+    border-radius: 999px;
+    padding: .25rem .6rem;
+    font-family: inherit;
+    font-size: .68rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+
+  .tutor-chip-btn:hover:not(:disabled) {
+    background: var(--tutor-accent-soft);
+    border-color: var(--tutor-accent-bright);
+  }
+
+  .tutor-chip-btn:disabled {
+    opacity: .5;
+    cursor: default;
+  }
+
+  .tutor-q-solution {
+    margin-top: .55rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #1e293b;
+    border-radius: .6rem;
+    padding: .55rem .65rem;
+    font-size: .76rem;
+    line-height: 1.45;
+  }
+
+  .tutor-q-solution strong {
+    color: var(--tutor-ink);
+  }
+
   .tutor-conv {
     position: relative;
     display: flex;
@@ -1119,7 +1354,7 @@
           <span class="block font-display text-sm font-bold text-ink-900 leading-tight">KI-Tutor</span>
         </span>
       </div>
-      <span class="tutor-brand-sub">Frag mich zu Chemie, Biologie, Physik oder Mathe</span>
+      <span class="tutor-brand-sub">Chemie nach Lehrplan · alles andere unter Allgemein</span>
       <button type="button" id="new-chat" class="tutor-new-btn">
         <span class="text-base leading-none">+</span> Neue Unterhaltung
       </button>
@@ -1137,13 +1372,13 @@
       <div id="tutor-welcome" class="tutor-welcome">
         <div class="tutor-welcome-mark">✦</div>
         <h1>Womit kann ich dir helfen?</h1>
-        <p>Frag mich zu Chemie, Bio, Physik oder Mathematik – oder lass dich mit einer Übungsfrage abfragen.</p>
+        <p>Wähle links einen Chemie-Baustein zum gezielten Üben – oder frag mich frei zu Chemie, Bio, Physik oder Mathe.</p>
         <div class="tutor-suggestions">
           <button type="button" class="tutor-suggestion" data-q="Erkläre mir die Photosynthese."
             data-subject="biologie">
             <span class="text-lg">🌿</span><span>Erkläre mir die Photosynthese.</span>
           </button>
-          <button type="button" class="tutor-suggestion" data-q="Übe mit mir pH-Werte." data-subject="chemie">
+          <button type="button" class="tutor-suggestion" data-skill="ph_skala">
             <span class="text-lg">🧪</span><span>Übe mit mir pH-Werte.</span>
           </button>
           <button type="button" class="tutor-suggestion" data-q="Was besagt das zweite Newtonsche Gesetz?"
@@ -1161,6 +1396,12 @@
     <div class="tutor-composer-wrap">
       <div class="tutor-chat-tools">
         <button type="button" id="sidebar-toggle" class="tutor-menu-btn" aria-label="Unterhaltungen öffnen">☰</button>
+        <div id="tutor-focus" class="tutor-focus" hidden aria-label="Aktueller Baustein">
+          <span class="tutor-focus-label"><span class="tutor-unit-pill" id="tutor-focus-unit"></span><span id="tutor-focus-title"></span></span>
+          <button type="button" class="tutor-chip-btn" data-quick="Gib mir eine neue Übung zu diesem Baustein.">Neue Übung</button>
+          <button type="button" class="tutor-chip-btn" data-quick="Erklär mir diesen Baustein noch einfacher, mit einem Beispiel.">Einfacher erklären</button>
+          <button type="button" class="tutor-chip-btn" data-quick="Was mache ich bei diesem Baustein falsch?">Was mache ich falsch?</button>
+        </div>
       </div>
       <form id="tutor-form" class="tutor-composer">
         <textarea id="tutor-input" maxlength="1000" rows="1" placeholder="Frag mich etwas zu Naturwissenschaften…"
@@ -1188,6 +1429,10 @@
   }};
   const initialSubject = {{ initial_subject| tojson }};
   const SUBJECT_LABELS = {{ tutor_labels| tojson }};
+  const CURRICULUM = {{ curriculum| tojson }};
+  const SKILL_INFO = new Map();
+  (Array.isArray(CURRICULUM) ? CURRICULUM : []).forEach(u => (u.skills || []).forEach(s =>
+    SKILL_INFO.set(s.id, { ...s, unit: u.unit, unitName: u.name })));
 
   const convList = document.getElementById('conversation-list');
   const messagesEl = document.getElementById('tutor-messages');
@@ -1200,6 +1445,7 @@
 
   let conversations = Array.isArray(initialConversations) ? initialConversations.slice() : [];
   let currentId = null;
+  let currentSkill = null;
   let currentSubject = SUBJECT_LABELS[initialSubject] ? initialSubject : 'science';
   let isSending = false;
   let isLoading = false;
@@ -1229,6 +1475,28 @@
     try {
       localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...collapsedGroups]));
     } catch (_) { }
+  }
+
+  // Units in the Chemie group start closed; a unit opens when one of its
+  // subtopics is opened and stays open until the student closes it.
+  const OPEN_UNITS_KEY = 'tutor-open-units';
+  let openUnits = new Set();
+  try {
+    const savedUnits = JSON.parse(localStorage.getItem(OPEN_UNITS_KEY) || '[]');
+    if (Array.isArray(savedUnits)) openUnits = new Set(savedUnits.map(String));
+  } catch (_) { }
+
+  function saveOpenUnits() {
+    try {
+      localStorage.setItem(OPEN_UNITS_KEY, JSON.stringify([...openUnits]));
+    } catch (_) { }
+  }
+
+  function openUnitOf(skill) {
+    const info = SKILL_INFO.get(skill);
+    if (!info) return;
+    openUnits.add(String(info.unit));
+    saveOpenUnits();
   }
 
   function setGroupCollapsed(group, collapsed) {
@@ -1285,32 +1553,65 @@
     }
   }
 
-  const SIDEBAR_GROUPS = [
-    ['chemie', 'Chemie', '⚗️'],
-    ['mathematik', 'Mathematik', '∑'],
-    ['biologie', 'Biologie', '🧬'],
-    ['physik', 'Physik', '⚛'],
-    ['science', 'Allgemein', '✦'],
-  ];
+  const CHEVRON = `<svg class="tutor-conv-group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>`;
+
+  function isSkillChat(conv) { return !!(conv && conv.skill && SKILL_INFO.has(conv.skill)); }
+  function skillConversation(skill) { return conversations.find(c => c.skill === skill) || null; }
+
+  function groupShell(key, title, icon, body, extraHeadClass = '') {
+    const collapsed = collapsedGroups.has(key);
+    return `<div class="tutor-conv-group${collapsed ? ' is-collapsed' : ''}" data-group="${key}">
+        <div class="tutor-conv-group-head${extraHeadClass}">
+          <button type="button" class="tutor-conv-group-title" data-group-toggle="${key}" aria-expanded="${!collapsed}" aria-controls="tutor-group-${key}">
+            <span class="tutor-conv-group-icon" aria-hidden="true">${icon}</span>
+            <span>${title}</span>
+            ${CHEVRON}
+          </button>
+        </div>
+        <div class="tutor-conv-group-body" id="tutor-group-${key}">
+          ${body}
+        </div>
+      </div>`;
+  }
+
+  function renderCurriculum() {
+    return (CURRICULUM || []).map(u => {
+      const open = openUnits.has(String(u.unit));
+      const rows = (u.skills || []).map(s => {
+        const conv = skillConversation(s.id);
+        const color = s.practised ? s.fg : '#94a3b8';
+        return `<div class="tutor-skill${currentSkill === s.id ? ' is-active' : ''}${conv ? ' has-chat' : ''}">
+            <button type="button" class="tutor-skill-open" data-skill="${esc(s.id)}" title="${esc(s.title)} · ${esc(s.status)}">
+              <span class="tutor-skill-dot" style="background:${esc(s.practised ? s.fg : '#cbd5e1')}" aria-hidden="true"></span>
+              <span class="tutor-skill-title">${esc(s.title)}</span>
+              ${conv ? '<span class="tutor-skill-chat" title="Unterhaltung vorhanden" aria-label="Unterhaltung vorhanden">●</span>' : ''}
+              <span class="tutor-skill-pc" style="color:${esc(color)}">${s.practised ? `${s.pc} %` : '–'}</span>
+            </button>
+            ${conv ? `<button type="button" class="tutor-conv-del" data-del="${esc(conv.id)}" title="Verlauf zu diesem Baustein löschen" aria-label="Verlauf zu ${esc(s.title)} löschen">×</button>` : ''}
+          </div>`;
+      }).join('');
+      return `<div class="tutor-unit${open ? '' : ' is-closed'}">
+          <button type="button" class="tutor-unit-head" data-unit-toggle="${u.unit}" aria-expanded="${open}" aria-controls="tutor-unit-${u.unit}">
+            <span class="tutor-unit-pill">Unit ${u.unit}</span>
+            <span class="tutor-unit-name">${esc(u.name)}</span>
+            <span class="tutor-unit-pc" style="color:${esc(u.fg)}">${u.pc} %</span>
+            ${CHEVRON}
+          </button>
+          <div class="tutor-unit-body" id="tutor-unit-${u.unit}">${rows}</div>
+        </div>`;
+    }).join('');
+  }
 
   function renderSidebar() {
-    if (!conversations.length) {
-      convList.innerHTML = '<div class="px-2 py-4 text-[11px] text-slate-500 text-center">Noch keine Unterhaltungen.</div>';
-      return;
-    }
-    const grouped = new Map(SIDEBAR_GROUPS.map(([key]) => [key, []]));
-    conversations.forEach(conv => {
-      const key = grouped.has(conv.subject) ? conv.subject : 'science';
-      grouped.get(key).push(conv);
-    });
-    convList.innerHTML = SIDEBAR_GROUPS.map(([key, title, icon]) => {
-      const items = grouped.get(key);
-      if (key === 'science' && !items.length) return '';
-      const collapsed = collapsedGroups.has(key);
-      const body = items.length
-        ? items.map(c => `
+    // Chemie = the curriculum (one chat per subtopic). Everything else the
+    // student starts is a free chat and lives under "Allgemein".
+    const free = conversations.filter(c => !isSkillChat(c));
+    const freeBody = free.length
+      ? free.map(c => `
           <div class="tutor-conv ${c.id === currentId ? 'is-active' : ''}" data-id="${esc(c.id)}">
-            <span class="tutor-conv-drag" data-drag="${esc(c.id)}" title="In ein Fach ziehen" aria-label="Unterhaltung in ein Fach ziehen" role="button" tabindex="0">
+            <span class="tutor-conv-drag" data-drag="${esc(c.id)}" title="Reihenfolge ändern" aria-label="Unterhaltung verschieben" role="button" tabindex="0">
               <span></span><span></span><span></span>
             </span>
             <button type="button" class="tutor-conv-open" data-open="${esc(c.id)}">
@@ -1319,23 +1620,24 @@
             </button>
             <button type="button" class="tutor-conv-del" data-del="${esc(c.id)}" title="Unterhaltung löschen" aria-label="Unterhaltung löschen">×</button>
           </div>`).join('')
-        : '<div class="tutor-conv-group-empty">Unterhaltung hierher ziehen</div>';
-      return `<div class="tutor-conv-group${collapsed ? ' is-collapsed' : ''}" data-group="${key}">
-        <div class="tutor-conv-group-head${key === 'science' ? ' is-fallback' : ''}">
-          <button type="button" class="tutor-conv-group-title" data-group-toggle="${key}" aria-expanded="${!collapsed}" aria-controls="tutor-group-${key}">
-            <span class="tutor-conv-group-icon${key === 'physik' ? ' is-physik' : ''}" aria-hidden="true">${icon}</span>
-            <span>${title}</span>
-            <svg class="tutor-conv-group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m6 9 6 6 6-6"></path>
-            </svg>
-          </button>
-        </div>
-        <div class="tutor-conv-group-body" id="tutor-group-${key}">
-          ${body}
-        </div>
-      </div>`;
-    }).join('');
+      : '<div class="tutor-conv-group-empty">Freie Fragen landen hier.</div>';
+    convList.innerHTML = (SKILL_INFO.size ? groupShell('chemie', 'Chemie · Lehrplan', '⚗️', renderCurriculum()) : '')
+      + groupShell('science', 'Allgemein', '✦', freeBody, ' is-fallback');
+    updateFocusBar();
     syncSidebarGutter();
+  }
+
+  const focusBar = document.getElementById('tutor-focus');
+  const chatTools = document.querySelector('.tutor-chat-tools');
+  function updateFocusBar() {
+    const info = currentSkill ? SKILL_INFO.get(currentSkill) : null;
+    focusBar.hidden = !info;
+    chatTools.classList.toggle('has-focus', !!info);
+    if (info) {
+      document.getElementById('tutor-focus-unit').textContent = `Unit ${info.unit}`;
+      document.getElementById('tutor-focus-title').textContent = info.title;
+    }
+    input.placeholder = info ? `Frag zu „${info.title}“ …` : 'Frag mich etwas zu Naturwissenschaften…';
   }
 
   function setSubject(subject) {
@@ -1372,7 +1674,7 @@
       const beforeIndex = conversations.findIndex(c => Number(c.id) === Number(beforeId));
       conversations.splice(beforeIndex >= 0 ? beforeIndex : conversations.length, 0, conv);
     } else {
-      const groupItems = conversations.filter(c => (c.subject || 'science') === subject);
+      const groupItems = conversations.filter(c => !isSkillChat(c));
       const last = groupItems[groupItems.length - 1];
       const lastIndex = last ? conversations.findIndex(c => Number(c.id) === Number(last.id)) : -1;
       conversations.splice(lastIndex >= 0 ? lastIndex + 1 : conversations.length, 0, conv);
@@ -1510,16 +1812,34 @@
       ${options}
       <div class="tutor-q-actions">
         <button type="button" class="tutor-hint-btn">💬 Tipp</button>
+        <button type="button" class="tutor-hint-btn tutor-solution-btn" hidden>📘 Lösungsweg zeigen</button>
         <button type="button" class="tutor-check-btn">Prüfen</button>
       </div>
       <div class="tutor-q-hint hidden"></div>
-      <div class="tutor-q-feedback hidden" aria-live="polite"></div>`;
+      <div class="tutor-q-feedback hidden" aria-live="polite"></div>
+      <div class="tutor-q-solution" hidden></div>`;
 
     const hintBox = card.querySelector('.tutor-q-hint');
     const feedback = card.querySelector('.tutor-q-feedback');
     const checkBtn = card.querySelector('.tutor-check-btn');
     const hintBtn = card.querySelector('.tutor-hint-btn');
+    const solutionBtn = card.querySelector('.tutor-solution-btn');
+    const solutionBox = card.querySelector('.tutor-q-solution');
     const hint = q.hint || 'Lies die Frage genau und überlege, welcher Schritt zuerst kommt.';
+
+    // The worked solution comes with the question (computed by the question
+    // engine), so it is shown as is — no model is asked to re-derive it.
+    solutionBtn.addEventListener('click', () => {
+      // Numbers read with a decimal comma, like the question text.
+      const value = q.answer == null ? '' : String(q.answer);
+      const shown = q.kind === 'num' ? value.replace('.', ',') : value;
+      const answer = `${shown}${q.unit ? ' ' + q.unit : ''}`.trim();
+      solutionBox.innerHTML = (q.explanation ? `<strong>Lösungsweg:</strong> ${formatText(q.explanation)}<br>` : '')
+        + `<strong>Richtig:</strong> ${esc(answer)}`;
+      solutionBox.hidden = false;
+      solutionBtn.hidden = true;
+      scrollBottom();
+    });
 
     hintBtn.addEventListener('click', () => {
       hintBox.classList.toggle('hidden');
@@ -1581,6 +1901,7 @@
         });
         checkBtn.disabled = true;
         checkBtn.textContent = 'Gelöst';
+        solutionBtn.hidden = true;
         scrollBottom();
         return;
       }
@@ -1588,6 +1909,7 @@
       feedback.classList.add('is-wrong');
       const trap = trapFeedback(q, given);
       feedback.innerHTML = `<strong>Noch nicht.</strong> ${formatText(trap || 'Versuch es noch einmal – du schaffst das.')}`;
+      if (solutionBox.hidden) solutionBtn.hidden = false;
       if (isMC) {
         card.querySelectorAll('.opt').forEach(el => {
           const radio = el.querySelector('input');
@@ -1603,10 +1925,12 @@
   }
 
   async function upsertConversation(data) {
+    const existing = conversations.find(c => c.id === data.conversation_id);
     const item = {
       id: data.conversation_id,
       title: data.title || 'Neue Unterhaltung',
       subject: data.subject || currentSubject,
+      skill: data.skill || (existing && existing.skill) || null,
       preview: preview(data.answer),
       updated: new Date().toISOString(),
     };
@@ -1665,6 +1989,23 @@
     }
   }
 
+  function showConversation(conv) {
+    currentId = conv.id;
+    currentSkill = isSkillChat(conv) ? conv.skill : null;
+    currentSubject = SUBJECT_LABELS[conv.subject] ? conv.subject : 'science';
+    if (currentSkill) openUnitOf(currentSkill);
+    showWelcome(false);
+    messagesEl.innerHTML = '';
+    (conv.messages || []).forEach(m => {
+      appendMessage(m.role === 'user' ? 'user' : 'assistant', m.message || '', m.sources || [], m.images || [], m.question || null);
+    });
+    renderSidebar();
+    updateUrl();
+    closeSidebar();
+    if (!(conv.messages || []).length) showWelcome(true);
+    scrollBottom();
+  }
+
   async function loadConversation(id) {
     if (isSending) return;
     isLoading = true;
@@ -1674,21 +2015,47 @@
       if (!response.ok) throw new Error('load failed');
       const conv = await response.json();
       if (token !== loadToken) return;
-      currentId = conv.id;
-      currentSubject = SUBJECT_LABELS[conv.subject] ? conv.subject : 'science';
-      showWelcome(false);
-      messagesEl.innerHTML = '';
-      (conv.messages || []).forEach(m => {
-        appendMessage(m.role === 'user' ? 'user' : 'assistant', m.message || '', m.sources || [], m.images || [], m.question || null);
-      });
-      renderSidebar();
-      updateUrl();
-      closeSidebar();
-      if (!(conv.messages || []).length) showWelcome(true);
-      scrollBottom();
+      showConversation(conv);
     } catch (_) {
       if (token === loadToken) {
         appendMessage('assistant', 'Diese Unterhaltung konnte nicht geladen werden.', [], [], null);
+      }
+    } finally {
+      if (token === loadToken) isLoading = false;
+    }
+  }
+
+  // Open the chat of one curriculum subtopic; the server creates it on first
+  // use with an explanation and a code-made exercise for exactly that topic.
+  async function openSkill(skill) {
+    if (isSending || !SKILL_INFO.has(skill)) return;
+    const existing = skillConversation(skill);
+    if (existing) { loadConversation(Number(existing.id)); return; }
+    isLoading = true;
+    const token = ++loadToken;
+    currentId = null;
+    currentSkill = skill;
+    openUnitOf(skill);
+    messagesEl.innerHTML = '';
+    showWelcome(false);
+    renderSidebar();
+    closeSidebar();
+    const thinking = appendThinking();
+    try {
+      const response = await fetch(`/api/tutor/skill/${encodeURIComponent(skill)}`, { method: 'POST' });
+      if (!response.ok) throw new Error('open failed');
+      const conv = await response.json();
+      if (token !== loadToken) return;
+      thinking.remove();
+      const last = (conv.messages || []).slice(-1)[0];
+      conversations = conversations.filter(c => c.id !== conv.id);
+      conversations.unshift({ id: conv.id, title: conv.title, subject: conv.subject, skill: conv.skill,
+        preview: last ? last.message : '', updated: conv.updated });
+      showConversation(conv);
+    } catch (_) {
+      if (token === loadToken) {
+        thinking.remove();
+        appendMessage('assistant', 'Dieser Baustein konnte gerade nicht geöffnet werden. Bitte versuche es noch einmal.', [], [], null);
       }
     } finally {
       if (token === loadToken) isLoading = false;
@@ -1700,6 +2067,7 @@
     loadToken++;
     isLoading = false;
     currentId = null;
+    currentSkill = null;
     if (!keepSubject) currentSubject = 'science';
     messagesEl.innerHTML = '';
     showWelcome(true);
@@ -1731,6 +2099,23 @@
     if (toggle) {
       const group = toggle.closest('.tutor-conv-group');
       if (group) setGroupCollapsed(group, !group.classList.contains('is-collapsed'));
+      return;
+    }
+    const unitToggle = event.target.closest('[data-unit-toggle]');
+    if (unitToggle) {
+      const key = String(unitToggle.dataset.unitToggle);
+      const unit = unitToggle.closest('.tutor-unit');
+      const open = !openUnits.has(key);
+      if (open) openUnits.add(key); else openUnits.delete(key);
+      saveOpenUnits();
+      if (unit) unit.classList.toggle('is-closed', !open);
+      unitToggle.setAttribute('aria-expanded', String(open));
+      requestAnimationFrame(syncSidebarGutter);
+      return;
+    }
+    const skillBtn = event.target.closest('[data-skill]');
+    if (skillBtn) {
+      openSkill(skillBtn.dataset.skill);
       return;
     }
     const del = event.target.closest('[data-del]');
@@ -1816,7 +2201,7 @@
   function updateDropTarget(clientX, clientY) {
     if (!dragActive || !dragPlaceholder) return;
     const el = document.elementFromPoint(clientX, clientY);
-    const group = el?.closest('.tutor-conv-group');
+    const group = el?.closest('.tutor-conv-group[data-group="science"]');
     if (!group) {
       convList.querySelectorAll('.tutor-conv-group.is-drop-target').forEach(node => node.classList.remove('is-drop-target'));
       return;
@@ -1929,7 +2314,7 @@
     }
 
     const el = document.elementFromPoint(event.clientX, event.clientY);
-    const group = el?.closest('.tutor-conv-group');
+    const group = el?.closest('.tutor-conv-group[data-group="science"]');
     if (!group) {
       cleanupDragState();
       return;
@@ -1941,8 +2326,10 @@
     }
     const beforeId = next ? Number(next.dataset.id) : null;
     const id = draggingConvId;
-    const subject = group.dataset.group;
-    cleanupDragState(subject);
+    // Only reordering within "Allgemein": the subject stays as it is.
+    const moved = conversations.find(c => Number(c.id) === Number(id));
+    const subject = (moved && SUBJECT_LABELS[moved.subject]) ? moved.subject : 'science';
+    cleanupDragState('science');
     moveConversation(id, subject, beforeId);
   });
 
@@ -1962,9 +2349,15 @@
 
   document.querySelectorAll('.tutor-suggestion').forEach(button => {
     button.addEventListener('click', () => {
+      if (button.dataset.skill) { openSkill(button.dataset.skill); return; }
       setSubject(button.dataset.subject || 'science');
       sendMessage(button.dataset.q || '');
     });
+  });
+
+  focusBar.addEventListener('click', event => {
+    const quick = event.target.closest('[data-quick]');
+    if (quick && currentSkill && !isSending && !isLoading) sendMessage(quick.dataset.quick);
   });
 
   renderSidebar();
@@ -1972,7 +2365,14 @@
   const params = new URLSearchParams(window.location.search);
   const cParam = params.get('c');
   const subjectParam = params.get('subject');
-  if (cParam && conversations.some(c => String(c.id) === cParam)) {
+  const skillParam = params.get('skill');
+  if (skillParam && SKILL_INFO.has(skillParam)) {
+    // Entry from the learning profile: drop ?skill so a reload reopens by id.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('skill');
+    window.history.replaceState(null, '', url);
+    openSkill(skillParam);
+  } else if (cParam && conversations.some(c => String(c.id) === cParam)) {
     loadConversation(Number(cParam));
   } else if (subjectParam && SUBJECT_LABELS[subjectParam]) {
     currentSubject = subjectParam;

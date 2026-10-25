@@ -82,6 +82,7 @@ unreachable or the key is missing.
 | Teacher | KPIs, green/red score bars with pass line, pass/fail doughnut, right-vs-wrong per skill, weekly trend, mastery heatmap, class filter 9a/9b |
 | Lücken-Agent | 5-step workflow: load data → detect weak skills → trace root causes in the prerequisite graph → form support groups → recommend actions |
 | Lernprofil | Per student (`/student/profile`, teacher: `/teacher/student/{id}` from the "Lernprofile" list): weak skills under 60 % with evidence (*x von y richtig*), the weak prerequisite to fix first, 14-day trend, "im Chat gefragt", all 25 skills by unit, test history, last mistakes with the correct answer. Skills without answers show as *noch nicht geübt*, never as a gap |
+| KI-Tutor sidebar | **Chemie · Lehrplan**: all 6 units with their 25 subtopics and the student's level; each subtopic is one chat that starts with an explanation of the student's latest test mistake and a code-made exercise for exactly that subtopic. Quick chips: *Neue Übung*, *Einfacher erklären*, *Was mache ich falsch?*; after a wrong try a card shows the engine's own *Lösungsweg*. **Allgemein**: every other chat. "Lücke mit dem KI-Tutor klären" on the profile opens the subtopic the next step points to |
 | Note | Example grade key (1–6) on the result page, profile and class list. The 4/5 line sits on the pass mark (20/30 = Note 4), so *bestanden* always means Note 4 or better. Not an official key — schools set their own (`NOTENSCHLUESSEL` in `questions.py`). Not shown for 5-question subtopic checks |
 | Mobile | Responsive layout + installable PWA, all assets bundled (no CDN needed) |
 
@@ -123,6 +124,8 @@ Reset all data: delete the `data/` folder and restart.
 - [ ] KI-Tutor answers a chemistry question with the RAG server **running** (same answer — chat never waits for it)
 - [ ] Lernprofil: wrong answers in a test show up under "Letzte Fehler"; after the retry round they read "später richtig ✓"
 - [ ] Teacher → "Lernprofile" → a student: same Lernstand, score and Note as in the list
+- [ ] Lernprofil → "Lücke mit dem KI-Tutor klären" opens the recommended subtopic under Chemie; "Neue Übung" stays on that subtopic; a wrong answer offers "Lösungsweg zeigen"
+- [ ] "Neue Unterhaltung" + a free question lands under Allgemein, never under Chemie
 - [ ] Note any wrong chemistry in a question (screenshot + test number)
 
 ## Known limits of v1

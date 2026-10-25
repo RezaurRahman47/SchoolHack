@@ -27,20 +27,20 @@ mathematics questions. It works out of the box with one OpenRouter key:
 cp .env.example .env     # then put OPENROUTER_API_KEY=sk-or-... into .env
 ```
 
-The tutor then answers from the model's knowledge, and chemistry questions for
-the practice card still come from the deterministic question engine.
+The chat, the Socratic hints and the teacher summary all go to OpenRouter — the
+request goes straight to the model, with nothing in front of it. Chemistry
+practice questions still come from the deterministic question engine.
 
-**Optional:** the RAG service on port 8080 adds textbook passages and figures to
-chemistry answers. Chat works with or without it.
+**Optional:** the RAG service on port 8080 serves the textbook extras (figures,
+quiz/flashcard/statement generators). It never sits in front of the chat, and
+chat works with or without it.
 
 ```bash
 cd ../vectorstore
 ./run.sh
 ```
 
-The app picks the textbook mode up automatically while the service answers, and
-falls back to the in-app model when it is down — no restart needed. The RAG URL
-is configurable, so moving it to a VPS later needs no code change:
+The RAG URL is configurable, so moving it to a VPS later needs no code change:
 `RAG_BASE=https://rag.example.com/api` in `.env`. Health check:
 `curl http://localhost:8080/api/status`.
 
@@ -56,20 +56,19 @@ is configurable, so moving it to a VPS later needs no code change:
 For a link that works anywhere (team testing without same Wi-Fi), deploy the folder to Render / Railway / Fly.io
 with the start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, or run `ngrok http 8000`.
 
-## Keys at a glance (optional)
+## The key
 
 ```bash
-cp .env.example .env     # then fill in what you need
+cp .env.example .env     # then put your key in
 ```
 
 | Key | What it turns on |
 |---|---|
-| `OPENROUTER_API_KEY` | the KI-Tutor and the chemistry chat (**required for chat**) |
-| `ANTHROPIC_API_KEY` | Claude-written Socratic hints and the teacher summary (optional; the built-in hints work without it) |
+| `OPENROUTER_API_KEY` | **the only key the app uses**: KI-Tutor chat, Socratic hints, teacher summary |
 
 `CHAT_MODEL` overrides the chat model (default `google/gemma-4-31b-it`).
-`RAG_FAILURE_COOLDOWN` sets how many seconds the app skips a failed RAG service
-(default `60`) before probing it again.
+Hints and the teacher summary fall back to built-in text when the model is
+unreachable or the key is missing.
 
 ## What's in v1
 
@@ -101,7 +100,7 @@ app/
   agent.py       teacher gap-finder agent
   chat_llm.py    in-app chat model (OpenRouter) — the tutor without the RAG server
   vectorstore.py optional RAG/textbook client (sources + figures)
-  llm.py         Claude API wrapper (optional)
+  llm.py         hints + teacher summary on OpenRouter (same key as chat)
   templates/     Jinja2 HTML pages
   static/        Tailwind CSS, Chart.js, fonts, icons, PWA files
 ```
@@ -117,12 +116,12 @@ Reset all data: delete the `data/` folder and restart.
 - [ ] Teacher login → charts load → 9a / 9b filter → "Analyse starten" shows gaps and groups
 - [ ] Student login cannot open `/teacher`
 - [ ] Phone: layout readable, app installs to home screen
-- [ ] KI-Tutor answers a chemistry question with the RAG server **stopped** (no textbook sources shown)
-- [ ] KI-Tutor answers a chemistry question with the RAG server **running** (sources/pages shown)
+- [ ] KI-Tutor answers a chemistry question with the RAG server **stopped**
+- [ ] KI-Tutor answers a chemistry question with the RAG server **running** (same answer — chat never waits for it)
 - [ ] Note any wrong chemistry in a question (screenshot + test number)
 
 ## Known limits of v1
 
 - One shared demo account per portal (admin/admin) – no real user management yet
 - Mathe, Biologie, Physik are placeholders
-- Questions come from templates; Claude-generated question banks are the next step
+- Questions come from templates; model-generated question banks are the next step

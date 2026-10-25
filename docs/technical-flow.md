@@ -12,7 +12,7 @@ How School Hack is built and where data goes. These diagrams match the **Technic
 | Storage | Browser `localStorage`, per device | SQLite in `backend-python/data/` |
 | Accounts | Demo login `admin / admin` | Demo login `admin / admin`, student and teacher portals |
 | Test | Every skill twice, shuffled | Every skill twice, weighted toward weak skills |
-| AI (optional) | Claude when the page runs on claude.ai | Claude when `ANTHROPIC_API_KEY` is set |
+| AI (optional) | Claude when the page runs on claude.ai | OpenRouter model when `OPENROUTER_API_KEY` is set |
 | Without AI | Built-in hints and summary | Built-in hints and summary |
 
 ## Runtime architecture
@@ -37,7 +37,7 @@ flowchart LR
     subgraph DA["Data & AI"]
         skills["🕸️ Skill graph<br/>SKILLS · prerequisites"]
         store[("💾 Progress<br/>localStorage")]
-        claude["✨ Claude (optional)<br/>only phrases text"]
+        model["✨ OpenRouter model (optional)<br/>chat, hints, summary"]
         klass["📊 Class data<br/>24 demo students + you"]
     end
     subgraph B["Behind the scenes"]
@@ -53,18 +53,18 @@ flowchart LR
     student -- "hint?" --> tutor
     skills -- "skills" --> engine
     grader -- "saves" --> store
-    tutor -- "asks" --> claude
-    claude -. "no Claude?" .-> fallback
+    tutor -- "asks" --> model
+    model -. "no key?" .-> fallback
     rlp -- "based on" --> skills
     store -. "or" .-> server
     teacher -- "analyse" --> agent
     klass -- "loads" --> agent
-    agent -. "summary" .-> claude
+    agent -. "summary" .-> model
     agent -- "gaps" --> teacher
 
     class student,teacher people
     class engine,grader,tutor,agent logic
-    class skills,store,claude,klass data
+    class skills,store,model,klass data
     class rlp,server,fallback back
 ```
 
@@ -93,7 +93,7 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>💡 Getting a hint</b>: Claude when available, built-in hints otherwise</summary>
+<summary><b>💡 Getting a hint</b>: the model when a key is set, built-in hints otherwise</summary>
 <br>
 
 ```mermaid
@@ -101,11 +101,11 @@ sequenceDiagram
     autonumber
     actor S as 🧒 Student
     participant H as 💡 Hint helper
-    participant C as ✨ Claude (optional)
+    participant C as ✨ OpenRouter model (optional)
     participant F as 📦 Built-in hints
 
     S->>H: "Atomi, give me a hint!"
-    alt Claude is available (claude.ai, or API key in Python)
+    alt A key is available (claude.ai, or OPENROUTER_API_KEY in Python)
         H->>C: Question + answer computed by code + method, "do not reveal the answer"
         C-->>H: 2 friendly sentences with a guiding question
     else Local or no permission
@@ -130,14 +130,14 @@ sequenceDiagram
     participant A as 🤖 Gap finder
     participant K as 📊 Class data
     participant SG as 🕸️ Skill graph
-    participant C as ✨ Claude (optional)
+    participant C as ✨ OpenRouter model (optional)
 
     T->>A: Run analysis (all · 9a · 9b)
     A->>K: Load mastery and answers per skill
     A->>A: Weak = mastery < 60 % or > 40 % wrong
     A->>SG: Prerequisite below 65 %? → likely cause
     A->>A: Groups by each student's weakest skill, actions
-    opt Claude is available
+    opt A key is available
         A->>C: Skill names + percentages only (no names)
         C-->>A: Two-sentence summary
     end
@@ -149,7 +149,7 @@ In the Python version the same flow runs on the server: `GET /api/teacher/overvi
 </details>
 
 <details>
-<summary><b>💬 KI-Tutor chat</b>: one server, the RAG service only adds sources</summary>
+<summary><b>💬 KI-Tutor chat</b>: straight to the model, one server, one key</summary>
 <br>
 
 ```mermaid
@@ -157,25 +157,25 @@ sequenceDiagram
     autonumber
     actor S as 🧒 Student
     participant API as FastAPI (main.py)
-    participant R as 🔎 RAG service :8080 (optional)
+    participant DB as SQLite (db.py)
     participant M as ✨ OpenRouter (chat_llm.py)
 
     S->>API: POST /api/tutor/chat
-    API->>R: "reachable?" — skipped for 60 s after a failure
-    alt RAG service answers
-        R-->>API: Grounded answer + textbook pages and figures
-    else RAG service is down
-        API->>M: full conversation + prompt rules
-        M-->>API: Short answer (+ optional quiz request)
-    end
-    API-->>S: answer · sources · images · optional practice question
+    API->>DB: conversation history + save the question
+    API->>M: history + prompt rules (one request)
+    M-->>API: Short answer (+ optional quiz request)
+    API->>API: chemistry question from the engine, others generated + self-checked
+    API->>DB: save the answer
+    API-->>S: answer · optional practice question
 ```
 
-Chat never depends on the RAG service: `chat_llm.py` calls OpenRouter from the
-app itself, so one server and one `OPENROUTER_API_KEY` are enough. When the
-service is running, its grounded answer and textbook pages win; when it stops,
-the app switches to the in-app model within `RAG_FAILURE_COOLDOWN` (60 s) and
-switches back on its own.
+The chat goes straight to the model: no retrieval step in front of it, so no
+second server can block it. `chat_llm.py` needs one `OPENROUTER_API_KEY` and
+nothing else; hints (`llm.py`) and the teacher summary use the same key and
+model chain. Textbook figures and the quiz/flashcard generators are the only
+parts that still call the optional RAG service on :8080 — `vectorstore.py`
+skips it for `RAG_FAILURE_COOLDOWN` seconds (default 60) after a connection
+failure instead of waiting for a timeout.
 
 </details>
 
@@ -215,9 +215,9 @@ sequenceDiagram
 | Stars, streak, mastery, tests | `localStorage` (`sh_state_v1`) | SQLite | ❌ |
 | Language choice | `localStorage` (`sh_lang`) | n/a | ❌ |
 | Student names | Demo names in code | SQLite | ❌ never |
-| Question, answer, method (for a hint) | in memory | in memory | ✅ Claude, only if a key is available |
-| Skill names + class percentages (summary) | in memory | in memory | ✅ Claude, only if a key is available |
-| Chat message + conversation history | in memory | SQLite + request | ✅ OpenRouter (in-app chat); the textbook passages it retrieves stay local |
+| Question, answer, method (for a hint) | in memory | in memory | ✅ model, only if a key is available |
+| Skill names + class percentages (summary) | in memory | in memory | ✅ model, only if a key is available |
+| Chat message + conversation history | in memory | SQLite + request | ✅ OpenRouter (straight to the model, no retrieval in front) |
 
 ## Components
 
@@ -230,5 +230,5 @@ sequenceDiagram
 | `backend-python/app/agent.py` | Explainable teacher gap finder and suggested actions. |
 | `backend-python/app/chat_llm.py` | In-app chat model (OpenRouter): the KI-Tutor and chemistry chat without the RAG server. |
 | `backend-python/app/vectorstore.py` | Optional client for the RAG service: textbook passages and figures, with a fail-fast cooldown. |
-| `backend-python/app/llm.py` | Optional Claude integration with local fallback. |
+| `backend-python/app/llm.py` | Hints and teacher summary on OpenRouter (same key as the chat), built-in fallback. |
 | `backend-python/app/templates/`, `static/` | Server-rendered pages, styles, charts, icons and PWA files. |

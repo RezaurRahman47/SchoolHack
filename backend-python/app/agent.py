@@ -2,7 +2,7 @@
 
 Runs a small, explainable workflow over class data:
   1. load class data  2. detect weak skills  3. trace root causes in the skill graph
-  4. form support groups  5. recommend actions (+ optional Claude summary)
+  4. form support groups  5. recommend actions (+ optional model summary)
 Every step is returned as a trace so the dashboard can show the workflow.
 """
 from __future__ import annotations
@@ -86,7 +86,7 @@ def run(klasse: str | None = None) -> dict:
                    + (f" Ursache liegt vermutlich bei „{top['root_cause']}“." if top and top["root_cause"] else "")
                    + f" Bestehensquote aktuell {data['kpi']['pass_rate']} %.") if top else "Keine größeren Lücken gefunden."
     trace.append({"step": "Maßnahmen empfehlen",
-                  "detail": "Zusammenfassung von Claude" if llm.available() else "Regelbasiert (kein API-Key gesetzt)"})
+                  "detail": "Zusammenfassung vom KI-Modell" if llm.available() else "Regelbasiert (kein API-Key gesetzt)"})
 
     return {"summary": summary, "gaps": gaps, "groups": groups_list, "actions": actions, "trace": trace,
             "llm": llm.available()}

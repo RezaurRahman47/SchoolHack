@@ -532,25 +532,19 @@ def rag_context(request: Request, skill: str = "", query: str = ""):
 
 @app.post("/api/rag-chat")
 async def rag_chat(request: Request):
-    """Ask the Chemie RAG chat endpoint and return the grounded answer."""
+    """Chat answer straight from the model (same as the KI-Tutor path)."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
     body = await request.json()
     question = body.get("question", "").strip()
     if not question:
         return JSONResponse({"error": "question required"}, 400)
-    result = None
-    if vectorstore.reachable():
-        result = await run_in_threadpool(vectorstore.rag_chat, question)
-    if result is None:
-        # Textbook mode is optional: still answer, just without sources.
-        result = await run_in_threadpool(chat_llm.chat, question)
-    return result
+    return await run_in_threadpool(chat_llm.chat, question)
 
 
 @app.get("/api/rag-image/{filename}")
 def rag_image(request: Request, filename: str):
-    """Proxy textbook images from the RAG server (works from phones too)."""
+    """Proxy textbook figures from the optional RAG server (works from phones too)."""
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
     fetched = vectorstore.fetch_image(filename)
@@ -626,19 +620,15 @@ async def subtopic_chat(request: Request):
     # 1. Save user question in DB
     db.save_chat_message(sid, skill, "user", msg)
 
-    # 2. Answer with the RAG service when it is running (textbook-grounded);
-    #    otherwise the in-app model answers below, without book sources.
-    #    The skill name is passed as a topic hint, never concatenated into the
-    #    search query (that used to pollute the embedding).
+    # 2. One short answer from the model. The skill name is passed as a topic
+    #    hint, never concatenated into the question.
     sub_info = subtopics_data.get_subtopic_data(skill) or {}
     # The page keeps its core principle in the browser (subtopics_data is
     # intentionally empty now); accept it as a grounded fallback.
     core = clean_topic(body.get("core_principle"), fallback="", max_len=1200)
     if not core:
         core = str(sub_info.get("core_principle") or "")[:1200]
-    chat_resp = None
-    if vectorstore.reachable():
-        chat_resp = await run_in_threadpool(vectorstore.rag_chat, msg, skill_name, core)
+    chat_resp = await run_in_threadpool(chat_llm.chat, msg, skill_name, core)
 
     answer = ""
     sources: list[dict] = []
@@ -662,19 +652,6 @@ async def subtopic_chat(request: Request):
 
     if not answer:
         sources, images = [], []
-        local = await run_in_threadpool(chat_llm.chat, msg, skill_name, core)
-        answer = clean_answer(str((local or {}).get("answer") or ""))
-        if is_refusal(answer):
-            answer = ""
-        if not answer:
-            # Last resort: the Claude-written tutor, if a real key is configured.
-            fallback_prompt = (f"Lernabschnitt (nur Hinweis): {skill_name}\n"
-                               + (f"Merksatz: {core}\n" if core else "")
-                               + f"Frage: {msg}")
-            fallback = await run_in_threadpool(llm.ask, llm.CHAT_SYSTEM, fallback_prompt, 240)
-            answer = clean_answer(fallback or "")
-            if is_refusal(answer):
-                answer = ""
 
     if not answer and core:
         answer = clean_answer(f"Merksatz: {core}")
@@ -842,19 +819,12 @@ async def tutor_chat(request: Request):
 
     chemistry_skills = [{"id": skill, "name": info["name"], "topic": info["topic"]}
                         for skill, info in SKILLS.items()]
-    # The RAG service answers with textbook grounding when it runs; otherwise
-    # the in-app model answers from knowledge (no sources, same rules).
-    response = None
-    if vectorstore.reachable():
-        response = await run_in_threadpool(
-            vectorstore.tutor_chat, message, model_history,
-            subject if subject != "science" else "", chemistry_skills,
-        )
-    if response is None:
-        response = await run_in_threadpool(
-            chat_llm.tutor_chat, message, model_history,
-            subject if subject != "science" else "", chemistry_skills,
-        )
+    # Always one direct request to the OpenRouter model — no retrieval step in
+    # front of it, so chat cannot depend on another server being up.
+    response = await run_in_threadpool(
+        chat_llm.tutor_chat, message, model_history,
+        subject if subject != "science" else "", chemistry_skills,
+    )
 
     answer = ""
     quiz_request = None
@@ -894,15 +864,9 @@ async def tutor_chat(request: Request):
                 engine_question = generate(skill, random.Random(), f"tutor-{random.randrange(10**9)}")
                 question = _tutor_question(engine_question, "chemie")
         elif quiz_subject in {"biologie", "physik", "mathematik"}:
-            generated = None
-            if vectorstore.reachable():
-                generated = await run_in_threadpool(
-                    vectorstore.science_question, quiz_subject, quiz_topic
-                )
-            if generated is None and chat_llm.available():
-                generated = await run_in_threadpool(
-                    chat_llm.science_question, quiz_subject, quiz_topic
-                )
+            generated = await run_in_threadpool(
+                chat_llm.science_question, quiz_subject, quiz_topic
+            )
             question = _valid_ai_question(generated, quiz_subject, quiz_topic)
 
     if question is None and (quiz_request or wants_quiz) and not is_soft_refusal(answer):

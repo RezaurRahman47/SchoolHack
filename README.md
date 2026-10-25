@@ -41,7 +41,7 @@ cp .env.example .env   # add OPENROUTER_API_KEY=sk-or-... for the chat
 run.bat        # Windows (or ./run.sh on macOS / Linux)
 ```
 
-Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. **One server is enough for the KI-Tutor**: with an `OPENROUTER_API_KEY` the chat answers from the app itself. The RAG service on :8080 is optional and only adds textbook sources, pages and figures. For Claude-written hints and teacher summaries, set `ANTHROPIC_API_KEY` too; without it, the built-in hints and summaries are used. See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
+Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. **The chat needs one key**: with `OPENROUTER_API_KEY` the KI-Tutor, the hints and the teacher summary all go straight to the OpenRouter model — no second server, no second key. The RAG service on :8080 is optional and only serves the textbook extras (figures, quiz/flashcard generators). See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
 </details>
 
 ## 🐳 Docker (recommended for teammates)
@@ -126,7 +126,7 @@ the same scripts inside WSL.
 | **Learning** | Only wrong questions come back, round after round | Filter by class (9a / 9b) |
 
 > [!IMPORTANT]
-> **Code grades, AI never does.** Every answer is checked in code. Claude is optional and only phrases hints and the teacher summary. It never sees student names.
+> **Code grades, AI never does.** Every answer is checked in code. The model (OpenRouter) is optional and only phrases the chat, the hints and the teacher summary. It never sees student names.
 
 ## 🗺️ Archify: how it fits together
 
@@ -190,16 +190,16 @@ flowchart LR
     engine -- "questions" --> student
     student -- "answer" --> grader["✅ Grader · in code"]
     grader -- "saves" --> store[("💾 localStorage<br/>or SQLite")]
-    student -- "hint?" --> tutor["💡 Hint helper"]
-    tutor -. "optional" .-> claude["✨ Claude"]
+    student -- "chat / hint?" --> tutor["💡 Hint helper"]
     tutor -- "always" --> tips["📦 Built-in hints"]
+    tutor -. "optional, one key" .-> model["✨ OpenRouter model<br/>(chat · hints · summary)"]
     teacher["👩‍🏫 Teacher"] -- "analyse" --> agent["🤖 Gap finder"]
     store --> agent
-    agent -. "summary, no names" .-> claude
+    agent -. "summary, no names" .-> model
 
     class engine,grader,tutor,agent logic
     class store data
-    class claude,tips opt
+    class model,tips opt
 ```
 
 **[→ Full technical flow](docs/technical-flow.md)**: sequences for tests, hints and the gap finder, the Python routes, and where data lives.
@@ -364,7 +364,8 @@ OPENROUTER_API_KEY=sk-or-...
 ```
 
 The default `RAG_BASE=http://localhost:8080/api` is correct for a local demo.
-`backend-python\.env` is optional unless you also want the Claude-written hints.
+`backend-python\.env` should carry your `OPENROUTER_API_KEY` — the only key the app
+uses (the same key also works from `vectorstore\.env`).
 
 **5. Models for the RAG service (optional, one time, ~3.8 GB)**
 
@@ -459,7 +460,7 @@ answers. Without a valid key the app still runs; the AI tutor then shows a short
 - [ ] ports 8000 (and 8080, for the RAG server) free
 - [ ] `run_demo.sh` / the PowerShell windows running
 - [ ] <http://localhost:8000> opens; `admin` / `admin` works
-- [ ] one KI-Tutor question answered with a source and (optionally) an image
+- [ ] one KI-Tutor question answered (chat needs no RAG server)
 
 ### If the Mac stays at home
 

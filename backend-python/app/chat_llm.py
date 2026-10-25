@@ -240,6 +240,22 @@ def _call(system: str, user: str, max_tokens: int = 500, accept=None) -> str:
                            {"role": "user", "content": user}], max_tokens, accept)
 
 
+def ask(system: str, prompt: str, max_tokens: int = 600) -> str | None:
+    """One system+user answer for the tutor extras (hints, teacher summary).
+
+    Returns ``None`` when no key is configured or every model failed, so callers
+    fall back to their built-in text. Wording is returned as written, without
+    the chat length limits.
+    """
+    if not available():
+        return None
+    try:
+        return _call(system, prompt, max_tokens).strip() or None
+    except Exception as exc:  # network/key problems must never break the lesson
+        print("OpenRouter error:", exc)
+        return None
+
+
 def _parse_json(text: str) -> dict | None:
     match = re.search(r"\{[\s\S]*\}", str(text or ""))
     if not match:

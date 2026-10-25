@@ -10,7 +10,7 @@ Adaptive tests, a friendly tutor called Atomi, a teacher dashboard with an expla
 ![Languages](https://img.shields.io/badge/UI-DE%20%7C%20EN-ffc93c)
 ![AI](https://img.shields.io/badge/AI-optional%2C%20never%20grades-ff8fb3)
 
-[🚀 Quick start](#-quick-start) · [🎒 Local demo](#-run-the-full-demo-locally) · [🗺️ Archify](#%EF%B8%8F-archify-how-it-fits-together) · [💼 Business flow](docs/business-flow.md) · [⚙️ Technical flow](docs/technical-flow.md) · [🛠️ Change things](#%EF%B8%8F-where-to-change-things)
+[🚀 Quick start](#-quick-start) · [🎒 Clone → key → run](#-clone--key--run-teammates-no-docker) · [🗺️ Archify](#%EF%B8%8F-archify-how-it-fits-together) · [💼 Business flow](docs/business-flow.md) · [⚙️ Technical flow](docs/technical-flow.md) · [🛠️ Change things](#%EF%B8%8F-where-to-change-things)
 
 </div>
 
@@ -44,15 +44,41 @@ run.bat        # Windows (or ./run.sh on macOS / Linux)
 Open <http://localhost:8000> and sign in with `admin` / `admin`. The SQLite database is created in `backend-python/data/` on first start. **The chat needs one key**: with `OPENROUTER_API_KEY` the KI-Tutor, the hints and the teacher summary all go straight to the OpenRouter model — no second server, no second key. The RAG service on :8080 is optional and only serves the textbook extras (figures, quiz/flashcard generators). See [backend-python/README.md](backend-python/README.md) for details and the team test checklist.
 </details>
 
-## 🐳 Docker (recommended for teammates)
-
-If `setup.sh` / the Windows venv steps are painful, run the app with Docker
-Desktop — no Python, virtualenv or model download on the host.
+## 🎒 Clone → key → run (teammates, no Docker)
 
 ```bash
-# The KI-Tutor currently lives on anil-dev, NOT on main:
-git clone --depth 1 --branch anil-dev https://github.com/RezaurRahman47/SchoolHack.git
+git clone https://github.com/RezaurRahman47/SchoolHack.git
 cd SchoolHack
+
+# Pick one: it creates its own venv, installs in a few seconds,
+# and starts on http://localhost:8000 (login admin / admin).
+./setup.sh app && ./run_demo.sh app      # macOS / Linux
+# Windows: see docs/SETUP_WINDOWS.md
+
+# then put your key in backend-python/.env:
+#   OPENROUTER_API_KEY=sk-or-...
+```
+
+That is the whole app: KI-Tutor chat, tests, Lernprofil, teacher dashboard.
+One key in `backend-python/.env` powers the chat, the hints and the teacher
+summary; a single process, no second server. **Without a key the app still
+starts** — practice questions and tests work, the chat says it is not reachable
+and the tutor page shows a short setup note.
+
+Want the optional textbook extras too (figures, book-grounded quizzes,
+flashcards, statements)? That is the RAG service on :8080. It is never in front
+of the chat, and it needs ~3.8 GB of local models once:
+
+```bash
+./setup.sh && ./run_demo.sh      # app :8000 + RAG :8080
+```
+
+## 🐳 Docker (optional)
+
+If you prefer containers over a local venv, run the app with Docker Desktop —
+no Python and no model download on the host:
+
+```bash
 cp .env.example .env      # set OPENROUTER_API_KEY=sk-or-...
 docker compose up --build app     # app :8000 only — chat works
 ```
@@ -77,21 +103,16 @@ template and only works through the running app.
 Full guide, port overrides, offline model transfer and troubleshooting:
 **[docs/DOCKER.md](docs/DOCKER.md)**.
 
-## 🎒 Full demo on a fresh laptop (teammates / hackathon)
+## 🧪 Full local demo (app + RAG)
 
-> [!IMPORTANT]
-> The current student portal, AI tutor and RAG overhaul lives on the
-> **`anil-dev`** branch. A plain `git clone` checks out `main`, which does **not**
-> contain `tutor.html`. Add `--branch anil-dev` until `anil-dev` is merged into
-> `main`.
-
-The textbook RAG index is committed, so a clone works **without the PDF**:
+The RAG index is committed, so a clone works **without the PDF**. Add
+`SKIP_MODELS=1` if the two models are already cached, or copy
+`~/.cache/huggingface/hub/models--google--embeddinggemma-2` and
+`models--BAAI--bge-reranker-v2-m3` from another machine first.
 
 ```bash
-git clone --branch anil-dev https://github.com/RezaurRahman47/SchoolHack.git
-cd SchoolHack
-./setup.sh                 # Python >= 3.10; creates both venvs
-# add your own key to vectorstore/.env or backend-python/.env
+./setup.sh                 # Python >= 3.10; app venv + RAG venv + models
+# add your own key to backend-python/.env (or vectorstore/.env)
 ./run_demo.sh              # RAG :8080 + SchoolHack :8000
 ```
 

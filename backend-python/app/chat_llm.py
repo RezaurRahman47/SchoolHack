@@ -1,10 +1,10 @@
 """In-app chat model (OpenRouter).
 
 The tutor talks to the LLM from *this* app, so a single server and one
-``OPENROUTER_API_KEY`` are enough — the RAG service on :8080 is optional
-enrichment (textbook sources, figures, quizzes) and never a hard dependency.
-When it is reachable, ``main.py`` prefers its grounded answers and only falls
-back to the functions here.
+``OPENROUTER_API_KEY`` are enough. Every chat answer comes from here; the RAG
+service on :8080 is optional enrichment (textbook sources, figures, quizzes)
+and is never consulted for a chat answer, so the chat cannot depend on another
+server being up.
 
 Prompts are kept in sync with ``vectorstore/rag_v2/agent.py`` so a question
 answered with or without the RAG service reads the same.

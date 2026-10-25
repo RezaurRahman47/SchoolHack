@@ -566,7 +566,7 @@ async def hint(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# RAG / vectorstore endpoints
+# Chat answers (model) + optional RAG extras (figures, quizzes)
 # ---------------------------------------------------------------------------
 @app.get("/api/rag-context")
 def rag_context(request: Request, skill: str = "", query: str = ""):
@@ -639,7 +639,11 @@ MAX_CHAT_CHARS = 600
 
 @app.post("/api/subtopic/chat")
 async def subtopic_chat(request: Request):
-    """Save student question, query RAG vectorstore, persist conversation, and return answer."""
+    """Save the student's question, answer it with the model, and store both.
+
+    The model answers directly; the RAG service is never consulted here, so a
+    subtopic chat works with no second server running.
+    """
     if role(request) not in {"student", "teacher"}:
         return JSONResponse({"error": "login"}, 401)
     try:

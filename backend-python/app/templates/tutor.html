@@ -1016,6 +1016,25 @@
     color: #94a3b8;
   }
 
+  .tutor-key-note {
+    width: 100%;
+    margin: 0 0 .5rem;
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+    border-radius: .7rem;
+    padding: .5rem .7rem;
+    font-size: .72rem;
+    line-height: 1.4;
+  }
+
+  .tutor-key-note code {
+    font-size: .7rem;
+    background: #fef3c7;
+    border-radius: .3rem;
+    padding: 0 .25rem;
+  }
+
   /* Question card (reuses .opt / .input / .num from test.html) */
   .tutor-q-card {
     margin-top: .75rem;
@@ -1394,6 +1413,13 @@
     </div>
 
     <div class="tutor-composer-wrap">
+      {% if not llm %}
+      <div class="tutor-key-note" role="status">
+        <strong>Der KI-Tutor ist noch nicht eingerichtet.</strong>
+        Es ist kein <code>OPENROUTER_API_KEY</code> gesetzt, deshalb können freie Fragen nicht
+        beantwortet werden. Übungsfragen und Tests funktionieren weiter.
+      </div>
+      {% endif %}
       <div class="tutor-chat-tools">
         <button type="button" id="sidebar-toggle" class="tutor-menu-btn" aria-label="Unterhaltungen öffnen">☰</button>
         <div id="tutor-focus" class="tutor-focus" hidden aria-label="Aktueller Baustein">

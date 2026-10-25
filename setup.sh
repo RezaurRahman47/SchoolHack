@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
-# One-time setup for the full ChemTutor demo (SchoolHack + local RAG).
+# One-time setup for ChemTutor.
+#
+#   ./setup.sh         full stack  (app + local RAG service and its models)
+#   ./setup.sh app     app only    (chat + tests; no torch, no model download)
+#
+# Chat needs just one OpenRouter key; the RAG service is optional enrichment
+# (textbook sources, figures, quiz/flashcard generators).
 set -e
 cd "$(dirname "$0")"
 ROOT="$(pwd)"
 
-echo "== ChemTutor demo setup =="
+MODE="${1:-full}"
+if [ "$MODE" != "app" ] && [ "$MODE" != "full" ]; then
+  echo "Unknown mode '$MODE'. Use: ./setup.sh [full|app]"
+  exit 1
+fi
+
+echo "== ChemTutor setup ($MODE) =="
 
 # --- pick a Python >= 3.10 ------------------------------------------------
 PY=""
@@ -24,15 +36,19 @@ if [ -z "$PY" ]; then
 fi
 echo "Using $($PY --version) ($PY)"
 
-# --- RAG environment ------------------------------------------------------
-if [ ! -x vectorstore/.venv-v2/bin/python ]; then
-  echo "Creating vectorstore/.venv-v2 ..."
-  "$PY" -m venv vectorstore/.venv-v2
-  vectorstore/.venv-v2/bin/python -m pip install -q --upgrade pip
-  echo "Installing RAG dependencies (torch etc., first run can take 5–10 min) ..."
-  vectorstore/.venv-v2/bin/python -m pip install -r vectorstore/requirements-v2.txt
+# --- RAG environment (optional: only the textbook extras need it) ----------
+if [ "$MODE" = "full" ]; then
+  if [ ! -x vectorstore/.venv-v2/bin/python ]; then
+    echo "Creating vectorstore/.venv-v2 ..."
+    "$PY" -m venv vectorstore/.venv-v2
+    vectorstore/.venv-v2/bin/python -m pip install -q --upgrade pip
+    echo "Installing RAG dependencies (torch etc., first run can take 5–10 min) ..."
+    vectorstore/.venv-v2/bin/python -m pip install -r vectorstore/requirements-v2.txt
+  else
+    echo "vectorstore/.venv-v2 already exists — skipping install."
+  fi
 else
-  echo "vectorstore/.venv-v2 already exists — skipping install."
+  echo "App-only: skipping the RAG venv and its ~3.8 GB of models."
 fi
 
 # --- SchoolHack environment ----------------------------------------------
@@ -46,34 +62,41 @@ else
 fi
 
 # --- env files ------------------------------------------------------------
-[ -f vectorstore/.env ] || cp vectorstore/.env.example vectorstore/.env
 [ -f backend-python/.env ] || cp backend-python/.env.example backend-python/.env
+if [ "$MODE" = "full" ]; then
+  [ -f vectorstore/.env ] || cp vectorstore/.env.example vectorstore/.env
+fi
 
-if grep -q '^OPENROUTER_API_KEY=sk-or-\.\.\.' vectorstore/.env 2>/dev/null \
-   && grep -q '^OPENROUTER_API_KEY=sk-or-\.\.\.' backend-python/.env 2>/dev/null; then
+if ! grep -qE '^OPENROUTER_API_KEY=sk-or-[^.]{20,}' \
+     backend-python/.env vectorstore/.env 2>/dev/null; then
   echo
-  echo "!! Add your OpenRouter key before the demo, in either file:"
-  echo "   vectorstore/.env  or  backend-python/.env"
+  echo "!! Add your OpenRouter key before the demo:"
+  echo "   backend-python/.env"
   echo "   OPENROUTER_API_KEY=sk-or-..."
 fi
 
 # --- models ---------------------------------------------------------------
 # Only the optional RAG service (textbook sources) needs these; chat works
 # without them. Skip with: SKIP_MODELS=1 ./setup.sh
-if [ "${SKIP_MODELS:-0}" != "1" ]; then
+if [ "$MODE" = "full" ] && [ "${SKIP_MODELS:-0}" != "1" ]; then
   echo "Downloading/caching embedding + reranker models (~3.8 GB, one time) ..."
   vectorstore/.venv-v2/bin/python scripts/download_models.py || {
     echo "Model download failed. You can rerun: vectorstore/.venv-v2/bin/python scripts/download_models.py"
   }
-else
+elif [ "$MODE" = "full" ]; then
   echo "SKIP_MODELS=1 — skipping model download."
 fi
 
 # --- verification ---------------------------------------------------------
-vectorstore/.venv-v2/bin/python scripts/check_setup.py || true
+if [ -x vectorstore/.venv-v2/bin/python ]; then
+  vectorstore/.venv-v2/bin/python scripts/check_setup.py || true
+fi
 
 echo
-echo "Setup done."
-echo "Next: put your OpenRouter key in vectorstore/.env or backend-python/.env, then:"
-echo "  ./run_demo.sh        full stack (chat + textbook sources, uses :8080)"
-echo "  ./run_demo.sh app    app only   (chat without the RAG server)"
+echo "Setup done ($MODE)."
+echo "Next: put your OpenRouter key in backend-python/.env (or vectorstore/.env), then:"
+if [ "$MODE" = "full" ]; then
+  echo "  ./run_demo.sh        full stack (chat + textbook sources, uses :8080)"
+else
+  echo "  ./run_demo.sh app    app only   (chat without the RAG server)"
+fi

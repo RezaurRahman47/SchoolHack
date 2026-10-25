@@ -265,10 +265,18 @@ def q_indikator(rng):
         ("Rotkohlsaft", ("sauer", "rot")), ("Rotkohlsaft", ("basisch", "grün/gelb")),
     ])
     lsg, color = case
+    adj = {"sauer": "sauren", "neutral": "neutralen", "basisch": "basischen"}[lsg]
+    adj_expl = {"sauer": "saurer", "neutral": "neutraler", "basisch": "basischer"}[lsg]
     all_colors = ["rot", "grün", "blau/violett", "pink", "farblos", "grün/gelb", "orange"]
-    return Question("", "indikator", "mc", f"Welche Farbe zeigt {ind} in einer {lsg}en Lösung?", color,
-                    _mc(rng.sample([c for c in all_colors if c != color], 3), color, rng),
-                    explanation=f"{ind} färbt sich in {lsg}er Lösung {color}.")
+    wrong = [c for c in all_colors if c != color]
+    # "grün" and "grün/gelb" would both look plausible for Rotkohlsaft.
+    if color == "grün/gelb":
+        wrong.remove("grün")
+    elif color == "grün":
+        wrong.remove("grün/gelb")
+    return Question("", "indikator", "mc", f"Welche Farbe zeigt {ind} in einer {adj} Lösung?", color,
+                    _mc(rng.sample(wrong, 3), color, rng),
+                    explanation=f"{ind} färbt sich in {adj_expl} Lösung {color}.")
 
 
 def q_saeurebildung(rng):

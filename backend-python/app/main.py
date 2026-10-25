@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import agent, db, llm, subtopics_data, vectorstore
+from . import agent, db, llm, subtopic_quizzes, subtopics_data, vectorstore
 from .chat_text import clean_answer, clean_topic, is_refusal, is_soft_refusal
 from .questions import (PASS_MARK, SKILLS, VISIBLE_SKILLS, VISIBLE_TOPICS,
                         SUBTOPIC_TITLES, SUBTOPIC_COVERS, SUBTOPIC_ORDER,
@@ -227,7 +227,8 @@ def chemie(request: Request):
              for k, v in VISIBLE_SKILLS.items()]
     nodes.sort(key=lambda n: SUBTOPIC_ORDER.get(n["id"], len(SUBTOPIC_ORDER)))
     return render(request, "chemie.html", nodes=nodes, topics=VISIBLE_TOPICS, topic_meta=TOPIC_META,
-                  tests=db.student_tests(sid), pass_mark=PASS_MARK)
+                  tests=db.student_tests(sid), pass_mark=PASS_MARK,
+                  network=_learning_network(m))
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +402,19 @@ def new_test(request: Request):
     return RedirectResponse(f"/student/test/{tid}", 303)
 
 
+@app.post("/student/subtopic/{sub_id}/test")
+def new_subtopic_test(request: Request, sub_id: str):
+    """Start a five-question check for one subtopic in the normal test screen."""
+    if (r := need(request, "student")):
+        return r
+    quiz = subtopic_quizzes.get_quiz(sub_id)
+    if not quiz:
+        return RedirectResponse("/student/chemie", 303)
+    questions = [{**q, "subtopic": sub_id} for q in quiz["questions"]]
+    tid = db.create_test(db.student_id(), questions, kind=f"subtopic:{sub_id}")
+    return RedirectResponse(f"/student/test/{tid}", 303)
+
+
 def _round_state(test: dict) -> tuple[int, list[dict], list[dict]]:
     """Return (current_round, questions_for_round, answers)."""
     ans = db.answers_for(test["id"])
@@ -473,8 +487,13 @@ def result(request: Request, tid: int):
     skill_rows = sorted(({"name": SKILLS[s]["name"], "correct": sum(v), "total": len(v)} for s, v in by_skill.items()),
                         key=lambda x: x["correct"] / x["total"])
     review = [{"q": qs[a["qid"]], "given": a["given"], "feedback": grade(qs[a["qid"]], a["given"])[1]} for a in wrong]
-    return render(request, "result.html", test=test, first=first, passed=first >= PASS_MARK, pass_mark=PASS_MARK,
-                  round=last, remaining=len(wrong), last_total=len(last_rows), review=review, skill_rows=skill_rows)
+    kind = test.get("kind") or "test"
+    is_subtopic = kind.startswith("subtopic:")
+    total = len(test["questions"])
+    pass_mark = 3 if is_subtopic else PASS_MARK
+    return render(request, "result.html", test=test, first=first, passed=first >= pass_mark,
+                  pass_mark=pass_mark, total=total, round=last, remaining=len(wrong),
+                  last_total=len(last_rows), review=review, skill_rows=skill_rows)
 
 
 @app.post("/api/hint")

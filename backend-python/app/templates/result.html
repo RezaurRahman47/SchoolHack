@@ -4,13 +4,13 @@
 <div class="max-w-2xl mx-auto px-4 py-8">
   <div class="card p-8 text-center border-2 {{ 'border-green-300' if passed else 'border-red-300' }}">
     <div class="text-6xl">{{ '🎉' if passed else '💪' }}</div>
-    <div class="font-display text-7xl font-bold num mt-3 {{ 'text-pass' if passed else 'text-fail' }}">{{ first }}<span class="text-3xl text-slate-400">/30</span></div>
+    <div class="font-display text-7xl font-bold num mt-3 {{ 'text-pass' if passed else 'text-fail' }}">{{ first }}<span class="text-3xl text-slate-400">/{{ total }}</span></div>
     <div class="font-display text-2xl font-bold mt-2 {{ 'text-pass' if passed else 'text-fail' }}">{{ 'Bestanden!' if passed else 'Noch nicht bestanden' }}</div>
     <div class="text-slate-500 mt-1">Bestanden ab {{ pass_mark }}</div>
   </div>
 
   {% if not remaining %}
-  <div class="rounded-xl bg-green-50 border-2 border-green-200 p-5 mt-5 text-center text-xl font-semibold text-ink-900">Alle 30 Fragen richtig ✓</div>
+  <div class="rounded-xl bg-green-50 border-2 border-green-200 p-5 mt-5 text-center text-xl font-semibold text-ink-900">Alle {{ total }} Fragen richtig ✓</div>
   {% endif %}
 
   {% if review %}

@@ -1,8 +1,8 @@
 # School Hack — ChemTutor
 
 Chemistry practice app for **Klasse 9 (Berlin)** with a student portal, a KI-Tutor
-chat and a teacher dashboard. Python + FastAPI + SQLite: one program, one OpenRouter
-key, no other server needed.
+chat and a teacher dashboard. Python + FastAPI + SQLite: one program and one
+OpenRouter key.
 
 > This file only explains **how to start the app on your own laptop**, step by step.
 > If you have never started a Python project before, follow the steps in order and
@@ -37,10 +37,6 @@ Signing up and creating a key are free. Most models need a little credit on your
 OpenRouter account; if the account has none, the chat answers *"nicht erreichbar"*
 just like a missing key. Without a key the app still starts and everything else
 works — only the chat stays silent.
-
-> The textbook extras (book pictures, book quizzes) run in a second, optional
-> service. **You do not need it** to start the app. If you want it anyway, see the
-> last section.
 
 ---
 
@@ -178,12 +174,6 @@ dependencies and read `.env` for you:
 
 On Windows, double-click `run.bat`.
 
-From the project root you can also start it like this:
-
-```bash
-./run_demo.sh app                # macOS / Linux
-```
-
 ---
 
 ## If something goes wrong
@@ -193,25 +183,9 @@ From the project root you can also start it like this:
 | `python3: command not found` | Python is not installed — see **Before you start** |
 | `command not found: uvicorn` | The venv is not active → `source .venv/bin/activate`, or always use `python -m uvicorn ...` |
 | Chat answers *"Der KI-Tutor ist gerade nicht erreichbar."* | The key in `backend-python/.env` is missing or wrong — or the OpenRouter account has no credit |
-| `Address already in use` (port 8000) | Another server is already running on 8000 → stop it, or start with `--port 8001` and open <http://localhost:8001> |
+| `Address already in use` (port 8000) | Another program is already using port 8000 → close it, or start with `--port 8001` and open <http://localhost:8001> |
 | The page looks old after an update | Hard reload the browser: `Cmd + Shift + R` (Mac) / `Ctrl + Shift + R` (Windows) |
 | `ModuleNotFoundError: No module named 'app'` | You are in the wrong folder → `cd backend-python` and run the command there |
-
----
-
-## Optional: textbook pictures and book quizzes (port 8080)
-
-The chat never needs this service. It only adds book figures, book-grounded
-quizzes, flashcards and statements — and it downloads about **3.8 GB** of models
-the first time. Only do this if you really want those extras:
-
-```bash
-cd SchoolHack                    # project root
-./setup.sh                       # installs the app + the RAG service + models
-./run_demo.sh                    # starts the app on :8000 and the RAG service on :8080
-```
-
-Windows users: see [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md).
 
 ---
 
@@ -220,4 +194,3 @@ Windows users: see [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md).
 - [backend-python/README.md](backend-python/README.md) — the app in detail, plus the team test checklist
 - [docs/technical-flow.md](docs/technical-flow.md) — how the parts fit together
 - [docs/business-flow.md](docs/business-flow.md) — what the product is for
-- [docs/DOCKER.md](docs/DOCKER.md) — running it in Docker (not needed for local work)
